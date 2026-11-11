@@ -4,6 +4,7 @@ from collections import Counter
 from datetime import date, timedelta
 from decimal import Decimal, InvalidOperation
 from urllib.parse import urlencode
+from django.apps import apps
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import authenticate, get_user_model, login, logout
@@ -738,6 +739,28 @@ def politica_privacidad(request):
     )
 
 
+def google_login_url():
+    """Ruta de «Continuar con Google» si django-allauth está instalado y tiene Google configurado; si no, ''.
+
+    Sin allauth (o sin las credenciales de Google) el botón no se muestra: nunca se ofrece un acceso que no funcione.
+    """
+    if not apps.is_installed('allauth.socialaccount.providers.google'):
+        return ''
+    try:
+        url = reverse('google_login')
+    except NoReverseMatch:
+        return ''
+    proveedor = getattr(settings, 'SOCIALACCOUNT_PROVIDERS', {}).get('google', {})
+    if proveedor.get('APP', {}).get('client_id') or proveedor.get('APPS'):
+        return url
+    try:
+        from allauth.socialaccount.models import SocialApp
+
+        return url if SocialApp.objects.filter(provider='google').exists() else ''
+    except Exception:  # tablas de allauth sin migrar u otra configuración incompleta
+        return ''
+
+
 @never_cache
 def login_view(request):
     if request.user.is_authenticated:
@@ -779,6 +802,8 @@ def login_view(request):
                 error = 'Usuario, correo electrónico o contraseña incorrectos.'
             else:
                 login(request, user)
+                if not request.POST.get('recordarme'):
+                    request.session.set_expiry(0)  # sin «Recordarme»: la sesión termina al cerrar el navegador
                 return redirect('dashboard')
     return render(
         request,
@@ -788,11 +813,9 @@ def login_view(request):
             'error': error,
             'registration_form': registration,
             'identifier': identifier,
-            'headline': (
-                'Optimiza tus decisiones agrícolas con datos reales de tu campo.'
-                if mode == 'login'
-                else 'Registra tu cuenta de agricultor.'
-            ),
+            # «Recordarme» viene marcado (conserva la sesión de siempre); si el envío falla se respeta lo elegido.
+            'remember': request.method != 'POST' or bool(request.POST.get('recordarme')),
+            'google_login_url': google_login_url(),
         },
     )
 

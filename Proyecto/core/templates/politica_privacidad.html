@@ -1,15 +1,15 @@
-{% load static %}
 <!DOCTYPE html>
 <html lang="es">
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>Privacidad, seguridad y cookies · AgroAsesor</title>
-        <link rel="stylesheet" href="{% static 'css/login.css' %}?v=5">
+        {% include "partials/access_head.html" %}
     </head>
     <body class="access-body">
         <main class="access-shell recovery-shell">
             <section class="access-panel">
+                {% include "partials/access_brand.html" %}
                 <h1>Privacidad, seguridad y cookies</h1>
                 <p class="lead">Información sobre los datos de tu cuenta y las tecnologías necesarias para operar AgroAsesor. Versión {{ policy_version }}.</p>
                 <div class="policy-content">
@@ -34,6 +34,7 @@
                 </div>
                 <p class="switch"><a href="{% url 'login' %}?mode=register">Volver al registro</a></p>
             </section>
+            <p class="access-foot">AgroAsesor · Melipilla, Chile</p>
         </main>
     </body>
 </html>

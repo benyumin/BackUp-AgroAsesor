@@ -6,125 +6,193 @@
         <title>{% if mode == "register" %}Crear cuenta{% else %}Iniciar sesión{% endif %} · AgroAsesor</title>
         {% include "partials/access_head.html" %}
     </head>
-    <body class="access-body access-body--foto">
-        <main class="access-shell">
-            {% include "partials/access_visual.html" %}
-            <section class="access-panel">
+    <body class="access-body">
+        <main class="access-shell{% if mode == "register" %} access-shell--registro{% endif %}">
+            <section class="access-panel" aria-labelledby="access-title">
                 <div class="access-content">
-                {% if mode == "register" %}
-                    <h1>Crear Cuenta</h1>
-                    <p class="lead">Regístrate con tus propios datos para comenzar a organizar tus predios y potreros.</p>
-                {% else %}
-                    <h1>Iniciar Sesión</h1>
-                    <p class="lead">Ingresa tus credenciales profesionales para acceder a la plataforma agrícola.</p>
-                {% endif %}
-                <form method="post" class="access-form">
-                    {% csrf_token %}
-                    <input type="hidden" name="mode" value="{{ mode }}">
+                    {% include "partials/access_brand.html" %}
+                    <nav class="access-tabs" aria-label="Acceso a la cuenta">
+                        <a class="access-tab{% if mode != "register" %} is-active{% endif %}"
+                           href="?mode=login"
+                           {% if mode != "register" %}aria-current="page"{% endif %}>Ingresar</a>
+                        <a class="access-tab{% if mode == "register" %} is-active{% endif %}"
+                           href="?mode=register"
+                           {% if mode == "register" %}aria-current="page"{% endif %}>Crear cuenta</a>
+                    </nav>
                     {% if mode == "register" %}
-                        {{ registration_form.non_field_errors }}
-                        <label class="field"
-                               for="{{ registration_form.nombre_completo.id_for_label }}">
-                            <span>{{ registration_form.nombre_completo.label }}</span>
-                            {{ registration_form.nombre_completo }}
-                            {{ registration_form.nombre_completo.errors }}
-                        </label>
-                        <label class="field" for="{{ registration_form.email.id_for_label }}">
-                            <span>{{ registration_form.email.label }}</span>
-                            {{ registration_form.email }}
-                            {{ registration_form.email.errors }}
-                        </label>
-                        <div class="row-2">
-                            <label class="field" for="{{ registration_form.telefono.id_for_label }}">
-                                <span>{{ registration_form.telefono.label }}</span>
-                                {{ registration_form.telefono }}
-                                {{ registration_form.telefono.errors }}
+                        <h1 id="access-title">Crea tu cuenta</h1>
+                        <p class="lead">Regístrate con tus propios datos para comenzar a organizar tus predios y potreros.</p>
+                    {% else %}
+                        <h1 id="access-title">¡Bienvenido de nuevo!</h1>
+                        <p class="lead">Ingresa a tu cuenta para gestionar tus predios y actividades agrícolas.</p>
+                    {% endif %}
+                    <form method="post" class="access-form">
+                        {% csrf_token %}
+                        <input type="hidden" name="mode" value="{{ mode }}">
+                        {% if mode == "register" %}
+                            {{ registration_form.non_field_errors }}
+                            <label class="field"
+                                   for="{{ registration_form.nombre_completo.id_for_label }}">
+                                <span>{{ registration_form.nombre_completo.label }}</span>
+                                {{ registration_form.nombre_completo }}
+                                {{ registration_form.nombre_completo.errors }}
                             </label>
-                            <label class="field" for="{{ registration_form.comuna.id_for_label }}">
-                                <span>{{ registration_form.comuna.label }}</span>
-                                {{ registration_form.comuna }}
-                                {{ registration_form.comuna.errors }}
+                            <label class="field" for="{{ registration_form.email.id_for_label }}">
+                                <span>{{ registration_form.email.label }}</span>
+                                {{ registration_form.email }}
+                                {{ registration_form.email.errors }}
                             </label>
-                        </div>
-                        <label class="field" for="{{ registration_form.rut.id_for_label }}">
-                            <span>{{ registration_form.rut.label }}</span>
-                            {{ registration_form.rut }}
-                            <small class="pass-help">{{ registration_form.rut.help_text }}</small>
-                            {{ registration_form.rut.errors }}
-                        </label>
-                        <div class="row-2">
-                            <label class="field" for="{{ registration_form.password1.id_for_label }}">
-                                <span>{{ registration_form.password1.label }}</span>
-                                <span class="pass-box">
-                                    {{ registration_form.password1 }}
-                                    <button class="eye"
-                                            type="button"
-                                            data-eye="id_password1"
-                                            aria-label="Mostrar contraseña"></button>
-                                </span>
-                                {{ registration_form.password1.errors }}
+                            <div class="row-2">
+                                <label class="field" for="{{ registration_form.telefono.id_for_label }}">
+                                    <span>{{ registration_form.telefono.label }}</span>
+                                    {{ registration_form.telefono }}
+                                    {{ registration_form.telefono.errors }}
+                                </label>
+                                <label class="field" for="{{ registration_form.comuna.id_for_label }}">
+                                    <span>{{ registration_form.comuna.label }}</span>
+                                    {{ registration_form.comuna }}
+                                    {{ registration_form.comuna.errors }}
+                                </label>
+                            </div>
+                            <label class="field" for="{{ registration_form.rut.id_for_label }}">
+                                <span>{{ registration_form.rut.label }}</span>
+                                {{ registration_form.rut }}
+                                <small class="pass-help">{{ registration_form.rut.help_text }}</small>
+                                {{ registration_form.rut.errors }}
                             </label>
-                            <label class="field" for="{{ registration_form.password2.id_for_label }}">
-                                <span>{{ registration_form.password2.label }}</span>
-                                <span class="pass-box">
-                                    {{ registration_form.password2 }}
-                                    <button class="eye"
-                                            type="button"
-                                            data-eye="id_password2"
-                                            aria-label="Mostrar contraseña"></button>
-                                </span>
-                                {{ registration_form.password2.errors }}
-                            </label>
-                        </div>
-                        <small class="pass-help">{{ registration_form.password1.help_text }}</small>
-                        <div class="policy-consent">
-                            <label for="{{ registration_form.acepta_politicas.id_for_label }}">
-                                {{ registration_form.acepta_politicas }}
-                                <span>He leído y acepto la <a href="{% url 'politica_privacidad' %}"
+                            <div class="row-2">
+                                <label class="field" for="{{ registration_form.password1.id_for_label }}">
+                                    <span>{{ registration_form.password1.label }}</span>
+                                    <span class="pass-box">
+                                        {{ registration_form.password1 }}
+                                        <button class="eye"
+                                                type="button"
+                                                data-eye="id_password1"
+                                                aria-label="Mostrar contraseña"></button>
+                                    </span>
+                                    {{ registration_form.password1.errors }}
+                                </label>
+                                <label class="field" for="{{ registration_form.password2.id_for_label }}">
+                                    <span>{{ registration_form.password2.label }}</span>
+                                    <span class="pass-box">
+                                        {{ registration_form.password2 }}
+                                        <button class="eye"
+                                                type="button"
+                                                data-eye="id_password2"
+                                                aria-label="Mostrar contraseña"></button>
+                                    </span>
+                                    {{ registration_form.password2.errors }}
+                                </label>
+                            </div>
+                            <small class="pass-help">{{ registration_form.password1.help_text }}</small>
+                            <div class="policy-consent">
+                                <label for="{{ registration_form.acepta_politicas.id_for_label }}">
+                                    {{ registration_form.acepta_politicas }}
+                                    <span>He leído y acepto la <a href="{% url 'politica_privacidad' %}"
     target="_blank"
     rel="noopener">Política de privacidad, seguridad y cookies</a>.</span>
+                                </label>
+                                {{ registration_form.acepta_politicas.errors }}
+                            </div>
+                        {% else %}
+                            <label class="field" for="username">
+                                <span>Correo electrónico</span>
+                                <span class="icon-box">
+                                    <svg class="field-icon"
+                                         viewBox="0 0 24 24"
+                                         width="18"
+                                         height="18"
+                                         fill="none"
+                                         stroke="currentColor"
+                                         stroke-width="1.8"
+                                         stroke-linecap="round"
+                                         stroke-linejoin="round"
+                                         aria-hidden="true">
+                                        <rect width="20" height="16" x="2" y="4" rx="2" />
+                                        <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+                                    </svg>
+                                    <input id="username"
+                                           name="username"
+                                           type="text"
+                                           required
+                                           autocomplete="username"
+                                           placeholder="ejemplo@agroasesor.cl"
+                                           value="{{ identifier }}">
+                                </span>
                             </label>
-                            {{ registration_form.acepta_politicas.errors }}
+                            <label class="field" for="password">
+                                <span>Contraseña</span>
+                                <span class="pass-box icon-box">
+                                    <svg class="field-icon"
+                                         viewBox="0 0 24 24"
+                                         width="18"
+                                         height="18"
+                                         fill="none"
+                                         stroke="currentColor"
+                                         stroke-width="1.8"
+                                         stroke-linecap="round"
+                                         stroke-linejoin="round"
+                                         aria-hidden="true">
+                                        <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+                                        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                                    </svg>
+                                    <input id="password"
+                                           name="password"
+                                           type="password"
+                                           required
+                                           autocomplete="current-password"
+                                           placeholder="Tu contraseña">
+                                    <button class="eye"
+                                            type="button"
+                                            data-eye="password"
+                                            aria-label="Mostrar contraseña"></button>
+                                </span>
+                            </label>
+                            <div class="access-options">
+                                <label class="remember" for="recordarme">
+                                    <input id="recordarme"
+                                           name="recordarme"
+                                           type="checkbox"
+                                           value="1"
+                                           {% if remember %}checked{% endif %}>
+                                    <span>Recordarme</span>
+                                </label>
+                                <a class="forgot" href="{% url 'password_reset' %}">¿Olvidaste tu contraseña?</a>
+                            </div>
+                        {% endif %}
+                        {% for message in messages %}<p class="aviso" role="status">{{ message }}</p>{% endfor %}
+                        {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+                        <button class="submit" type="submit">
+                            {% if mode == "register" %}Crear cuenta{% else %}Iniciar sesión{% endif %}
+                        </button>
+                    </form>
+                    {% if google_login_url %}
+                        {# Inicio de sesión con Google (django-allauth). Se envía por POST con el token CSRF, como pide allauth. #}
+                        <div class="access-divider" role="presentation">
+                            <span>O continúa con</span>
                         </div>
-                    {% else %}
-                        <label class="field" for="username">
-                            <span>Correo electrónico</span>
-                            <input id="username"
-                                   name="username"
-                                   type="text"
-                                   required
-                                   autocomplete="username"
-                                   placeholder="ejemplo@agroasesor.cl"
-                                   value="{{ identifier }}">
-                        </label>
-                        <label class="field" for="password">
-                            <span>Contraseña</span>
-                            <span class="pass-box">
-                                <input id="password"
-                                       name="password"
-                                       type="password"
-                                       required
-                                       autocomplete="current-password">
-                                <button class="eye"
-                                        type="button"
-                                        data-eye="password"
-                                        aria-label="Mostrar contraseña"></button>
-                            </span>
-                        </label>
-                        <a class="forgot" href="{% url 'password_reset' %}">¿Olvidaste tu contraseña?</a>
+                        <form method="post" action="{{ google_login_url }}" class="access-social">
+                            {% csrf_token %}
+                            <input type="hidden" name="process" value="login">
+                            <button class="access-google" type="submit">
+                                <svg viewBox="0 0 48 48" width="20" height="20" aria-hidden="true">
+                                    <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
+                                    <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
+                                    <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
+                                    <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
+                                </svg>
+                                Continuar con Google
+                            </button>
+                        </form>
                     {% endif %}
-                    {% for message in messages %}<p class="aviso" role="status">{{ message }}</p>{% endfor %}
-                    {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
-                    <button class="submit"
-                            type="submit">{% if mode == "register" %}Crear cuenta{% else %}Ingresar{% endif %}</button>
-                </form>
-                {% if mode == "register" %}
-                    <p class="switch">¿Ya tienes cuenta? <a href="?mode=login">Inicia sesión</a></p>
-                {% else %}
-                    <p class="switch">¿No tienes cuenta? <a href="?mode=register">Regístrate aquí</a></p>
-                {% endif %}
+                    {% if mode == "register" %}
+                        <p class="switch">¿Ya tienes cuenta? <a href="?mode=login">Inicia sesión</a></p>
+                    {% else %}
+                        <p class="switch">¿No tienes cuenta? <a href="?mode=register">Regístrate aquí</a></p>
+                    {% endif %}
                 </div>
             </section>
+            <p class="access-foot">AgroAsesor · Melipilla, Chile</p>
         </main>
         <script>
       document.querySelectorAll('[data-eye]').forEach((button) => {

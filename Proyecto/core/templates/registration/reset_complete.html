@@ -6,11 +6,11 @@
         <title>Contraseña actualizada · AgroAsesor</title>
         {% include "partials/access_head.html" %}
     </head>
-    <body class="access-body access-body--foto">
+    <body class="access-body">
         <main class="access-shell access-shell--recuperar">
-            {% include "partials/access_visual.html" with headline="Protegemos la seguridad de tus datos y la administración de tus cultivos." %}
             <section class="access-panel">
                 <div class="access-content">
+                    {% include "partials/access_brand.html" %}
                     <span class="access-status" aria-hidden="true">
                         <svg viewBox="0 0 24 24"
                              width="28"
@@ -29,6 +29,7 @@
                     <a class="submit" href="{% url 'login' %}">Iniciar sesión</a>
                 </div>
             </section>
+            <p class="access-foot">AgroAsesor · Melipilla, Chile</p>
         </main>
     </body>
 </html>
