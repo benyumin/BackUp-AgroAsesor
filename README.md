@@ -8,3 +8,5 @@ calculen semillas e insumos usando solo datos con fuente verificada.
 - **`backend_flask/`**: API Flask de solo lectura que Django usa por detrás en `/api/v1/`.
   Ver [backend_flask/README.md](backend_flask/README.md).
 
+
+.
