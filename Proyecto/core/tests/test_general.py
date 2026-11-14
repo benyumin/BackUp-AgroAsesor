@@ -16,7 +16,6 @@ from ..models import (
     AceptacionPoliticas,
     ActividadAgricola,
     CalculoAgricola,
-    ConfiguracionAgronomica,
     Cultivo,
     Insumo,
     Predio,
@@ -1935,9 +1934,8 @@ class AgronomicCalendarTests(TestCase):
         self.assertEqual(response.json()['status'], 'insufficient')
         self.assertIsNone(response.json()['source'])
 
-    def test_sowing_window_classifies_inside_near_and_outside_using_configuration(self):
+    def test_sowing_window_classifies_inside_near_and_outside_using_margin(self):
         self.create_reference()
-        ConfiguracionAgronomica.objects.create(margen_ventana_dias=15)
         cases = [
             ('2026-02-05', 'within'),
             ('2026-01-17', 'near'),
@@ -2932,7 +2930,6 @@ class CatalogCsvAndUsoTests(TestCase):
             'cultivos.csv': 'nombre;densidad_siembra;unidad_siembra\nCultivo TEST;1,5;kg\n',
             'problemas.csv': 'nombre;tipo;cultivos\nProblema TEST;pest;Cultivo TEST\n',
             'insumos.csv': 'nombre;tipo;dosis_hectarea;unidad_dosis\nInsumo TEST;Fungicida;2,5;L/ha\n',
-            'usos.csv': 'cultivo;problema;insumo;fuente_nombre;fecha_verificacion\nCultivo TEST;Problema TEST;Insumo TEST;Fuente TEST;2026-01-15\n',
             'calendario.csv': 'cultivo;zona;siembra_inicio_mes;siembra_inicio_dia;siembra_fin_mes;siembra_fin_dia\nCultivo TEST;Zona TEST;9;1;11;30\n',
             'rendimientos.csv': 'cultivo;zona;rendimiento_ton_ha\nCultivo TEST;Zona TEST;12,5\n',
         }
@@ -2952,7 +2949,6 @@ class CatalogCsvAndUsoTests(TestCase):
         self.run_import(folder, '--aplicar')
         self.run_import(folder, '--aplicar')
         self.run_import(folder, '--aplicar', '--actualizar')
-        from ..models import UsoInsumoCultivo
 
         crop = Cultivo.objects.get(nombre='Cultivo TEST')
         self.assertEqual(crop.densidad_siembra, Decimal('1.5'))
@@ -2960,8 +2956,6 @@ class CatalogCsvAndUsoTests(TestCase):
         ref = ReferenciaAgronomica.objects.get()
         self.assertEqual((ref.siembra_inicio_mes, ref.rendimiento_ton_ha), (9, Decimal('12.5')))
         self.assertEqual(Insumo.objects.get().dosis_hectarea, Decimal('2.5'))
-        self.assertEqual(UsoInsumoCultivo.objects.count(), 1)
-        self.assertTrue(UsoInsumoCultivo.objects.get().recomendable)
 
     def test_initial_csv_loads_only_crop_names_and_zone_without_invented_technical_data(self):
         """data/ carga cultivos, la zona y los 5 insumos de referencia (con su categoría y cultivo) sin inventar datos."""
@@ -3008,28 +3002,6 @@ class CatalogCsvAndUsoTests(TestCase):
         with self.assertRaises(CommandError):
             self.run_import(self.folder(files), '--aplicar')
         self.assertFalse(Zona.objects.filter(nombre='Zona TEST').exists())
-
-    def test_uso_requires_source_and_stops_being_recommended_when_inactive(self):
-        from datetime import date
-        from django.core.exceptions import ValidationError
-        from ..models import UsoInsumoCultivo
-
-        self.run_import('--categorias')
-        self.run_import(self.folder(self.files()), '--aplicar')
-        uso = UsoInsumoCultivo.objects.get()
-        uso.fuente_nombre = ' '
-        with self.assertRaises(ValidationError):
-            uso.full_clean()
-        uso.refresh_from_db()
-        uso.fecha_verificacion = date(2999, 1, 1)
-        with self.assertRaises(ValidationError):
-            uso.full_clean()
-        uso.refresh_from_db()
-        uso.insumo.vigente = False
-        self.assertFalse(uso.recomendable)
-        uso.insumo.vigente = True
-        uso.activo = False
-        self.assertFalse(uso.recomendable)
 
 
 class PredioPotreroFlowAndPrivacyTests(TestCase):
@@ -3409,14 +3381,13 @@ class DemoCatalogEndToEndTests(TestCase):
         )
 
     def test_import_counts_and_demo_labels(self):
-        from ..models import ProblemaAgricola, UsoInsumoCultivo, Zona
+        from ..models import ProblemaAgricola, Zona
 
         self.assertEqual(Zona.objects.filter(activo=True).count(), 2)
         self.assertEqual(Cultivo.objects.count(), 3)
         self.assertEqual(ProblemaAgricola.objects.count(), 3)
         self.assertEqual(ReferenciaAgronomica.objects.count(), 3)
         self.assertEqual(Insumo.objects.count(), 4)
-        self.assertEqual(UsoInsumoCultivo.objects.count(), 3)
         for model in (Zona, Cultivo, ProblemaAgricola, Insumo):
             self.assertFalse(model.objects.exclude(nombre__contains='DEMO').exists(), model)
         for reference in ReferenciaAgronomica.objects.all():  # calendario + rendimientos se fusionaron

@@ -139,7 +139,7 @@ python manage.py importar_catalogo data --aplicar --actualizar    # además corr
 
 - Separador `;` o `,`, UTF-8, decimales con coma o punto y fechas `AAAA-MM-DD`.
 - Las listas (problemas, cultivos, objetivos de control) van separadas por `|`. Una celda vacía significa «sin dato».
-- El orden de carga es zonas → cultivos → problemas → insumos → usos → calendario y rendimientos.
+- El orden de carga es zonas → cultivos → problemas → insumos → calendario y rendimientos.
 - Es seguro repetirlo: no duplica registros ni borra valores guardados.
 
 ## Pruebas

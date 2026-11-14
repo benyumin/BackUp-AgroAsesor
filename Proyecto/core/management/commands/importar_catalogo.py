@@ -30,7 +30,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
 from core.catalog import ensure_insumo_categories
-from core.models import Cultivo, Insumo, ProblemaAgricola, ReferenciaAgronomica, TipoInsumo, UsoInsumoCultivo, Zona
+from core.models import Cultivo, Insumo, ProblemaAgricola, ReferenciaAgronomica, TipoInsumo, Zona
 
 TEMPLATE = {
     "_instrucciones": (
@@ -159,18 +159,6 @@ TEMPLATE = {
             "pureza_pct": None,
         }
     ],
-    "usos": [
-        {
-            "cultivo": "",
-            "problema": "",
-            "insumo": "",
-            "tipo": "",
-            "fuente_nombre": "",
-            "fuente_url": "",
-            "fecha_verificacion": None,
-            "activo": True,
-        }
-    ],
 }
 
 CSV_SECTIONS = {
@@ -178,7 +166,6 @@ CSV_SECTIONS = {
     'cultivos': 'cultivos',
     'problemas': 'problemas',
     'insumos': 'insumos',
-    'usos': 'usos',
     'calendario': 'referencias',
     'rendimientos': 'referencias',
 }
@@ -446,27 +433,3 @@ class Command(BaseCommand):
                 self._get(ProblemaAgricola, name, 'El problema') for name in record.get('problemas', []) if name
             ]
             self._save('Insumos', Insumo, {'nombre': record['nombre'], 'tipo': tipo}, values, {'problemas': problems})
-        for record in data.get('usos', []):
-            if not (record.get('cultivo') and record.get('problema') and record.get('insumo')):
-                continue
-            crop = self._get(Cultivo, record['cultivo'], 'El cultivo')
-            problem = self._get(ProblemaAgricola, record['problema'], 'El problema')
-            products = Insumo.objects.filter(nombre=record['insumo'])
-            if record.get('tipo'):
-                products = products.filter(tipo__nombre=record['tipo'])
-            if products.count() != 1:
-                raise CommandError(
-                    f'El insumo «{record["insumo"]}» '
-                    + (
-                        'no existe en el catálogo ni en el archivo.'
-                        if not products.exists()
-                        else 'está repetido: indica también su tipo.'
-                    )
-                )
-            values = _clean_values(UsoInsumoCultivo, record, {'cultivo', 'problema', 'insumo', 'tipo'})
-            self._save(
-                'Usos cultivo → problema → insumo',
-                UsoInsumoCultivo,
-                {'cultivo': crop, 'problema': problem, 'insumo': products.get()},
-                values,
-            )
