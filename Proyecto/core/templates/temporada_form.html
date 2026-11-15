@@ -2,13 +2,13 @@
 {% load static %}
 {% block title %}{{ heading }} · AgroAsesor{% endblock %}
 {% block extra_css %}
-    <link rel="stylesheet" href="{% static 'css/activities.css' %}?v=11">
+    <link rel="stylesheet" href="{% static 'css/activities.css' %}?v=12">
 {% endblock %}
 {% block content %}
     <div class="page-hero">
         <div>
             <h1 class="page-title">{{ heading }}</h1>
-            <p class="page-sub">{{ predio.nombre }} · {{ potrero.nombre }}. La temporada vigente (la más reciente) es la que planifica el potrero: al guardarla, el cultivo, la variedad y las fechas del potrero quedan al día para las calculadoras y el calendario. Las temporadas anteriores se conservan intactas.</p>
+            <p class="page-sub">{{ predio.nombre }} · {{ potrero.nombre }}. Indica el cultivo, la temporada y las fechas previstas. Es la temporada vigente del potrero; las temporadas anteriores se conservan.</p>
             {% if is_past_season %}<p class="page-sub"><strong>Esta es una temporada anterior.</strong> Puedes corregirla; los datos vigentes del potrero no cambian.</p>{% endif %}
         </div>
         <a class="button secondary"
@@ -27,7 +27,7 @@
                 </div>
             {% endfor %}
             <div class="toolbar">
-                <button class="button" type="submit">Guardar temporada</button>
+                <button class="button" type="submit">Guardar planificación</button>
                 <a class="button secondary"
                    href="{% url 'predio_detail' predio.pk %}#potrero-{{ potrero.pk }}">Cancelar</a>
             </div>

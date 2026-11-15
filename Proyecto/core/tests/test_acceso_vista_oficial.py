@@ -297,7 +297,7 @@ class RecuperarContrasenaVistaOficialTests(TestCase):
         self.assertEqual(r.status_code, 200)
         self.assertContains(r, 'recovery-shell')
         self.assertContains(r, 'policy-content')
-        self.assertContains(r, 'css/login.css?v=8')
+        self.assertContains(r, 'css/login.css?v=9')
 
 
 class ComposicionComunTests(TestCase):
@@ -312,7 +312,7 @@ class ComposicionComunTests(TestCase):
             self.assertIn('<span>Módulo de Acceso v2.1</span>', html, url)
             self.assertIn('class="access-panel"', html, url)
             self.assertIn('css/tema-figma.css', html, url)
-            self.assertIn('css/login.css?v=8', html, url)
+            self.assertIn('css/login.css?v=9', html, url)
             self.assertLess(html.index('css/tema-figma.css'), html.index('css/login.css'), url)
             self.assertRegex(html, r'(?s)<link href="[^"]*(outfit\.css|family=Outfit)[^"]*"')
             self.assertNotRegex(html, r'family=Inter|inter\.css', url)  # una sola tipografía
@@ -342,7 +342,7 @@ class DisenoAccesoCssTests(TestCase):
             ('--acc-bg', 'var(--bg, #f6f8f7)'),
         ):
             self.assertIn(f'{variable}: {valor};', raiz)
-        self.assertIn('--acc-font: Outfit', raiz)
+        self.assertIn('--acc-font: var(--font-sans)', raiz)  # Outfit, definida en tema-figma.css
         self.assertIn('font-family: var(--acc-font);', css_rule('.access-body'))
         css = css_text().casefold()
         for naranjo in ('orange', '#c26217', '#a85413', '194, 98, 23'):

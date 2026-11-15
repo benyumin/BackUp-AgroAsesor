@@ -293,7 +293,15 @@ class TerrainTests(TestCase):
         response = self.client.post(
             f'/predios/{p.pk}/potreros/nuevo/', self.plot_data(nombre='Potrero siembra'), follow=True
         )
-        self.assertContains(response, 'Ya aparece en Siembra')
+        self.assertContains(response, 'Potrero creado.')
+        # Las fechas se registran en la planificación de la temporada, no al crear el potrero.
+        plot = Potrero.objects.get(nombre='Potrero siembra')
+        season = plot.temporadas.get()
+        self.client.post(
+            f'/predios/{p.pk}/potreros/{plot.pk}/temporadas/{season.pk}/editar/',
+            {'cultivo': self.crop.pk, 'variedad': '', 'temporada_agricola': '2026-2027', 'fecha_siembra': '2026-10-02',
+             'fecha_cosecha': '2027-03-01', 'estado': 'planned', 'observaciones': ''},
+        )
         page = self.client.get('/calendario/?anio=2026')
         self.assertContains(page, 'Potrero siembra')
         self.assertContains(page, '02/10/2026')
@@ -377,19 +385,23 @@ class TerrainTests(TestCase):
             [
                 'Inicio',
                 'Mis predios',
-                'Mapa',
-                'Catálogo agrícola',
+                'Actividades',
+                'Calendario',
                 'Calculadoras',
                 'Semillas',
                 'Fertilizantes',
                 '¿Me alcanza?',
-                'Actividades',
-                'Toma de decisiones',
+                'Catálogo agrícola',
                 'Reportes',
-                'Calendario',
-                'Buscar',
             ],
         )
+        self.assertEqual(
+            regex.findall(r'<p class="nav-section">([^<]+)</p>', nav),
+            ['Mi terreno', 'Trabajo del campo', 'Herramientas', 'Informes'],
+        )
+        # Las pantallas que salieron del menú siguen existiendo: el buscador está en la barra superior.
+        self.assertIn('action="/busqueda/"', html)
+        self.assertEqual(self.client.get('/busqueda/').status_code, 200)
         for href in regex.findall(r'href="([^"#]+)', nav):
             response = self.client.get(href.replace('&amp;', '&'))
             self.assertEqual(response.status_code, 200, f'{href} no abre')
@@ -448,9 +460,9 @@ class TerrainTests(TestCase):
             self.assertNotContains(predio_page, ruido)
         Cultivo.objects.all().delete()
         potrero_page = self.client.get(self.url)
-        self.assertContains(potrero_page, '1 · ¿Qué vas a plantar?')
-        self.assertContains(potrero_page, '2 · ¿Dónde queda?')
-        self.assertContains(potrero_page, 'Agregar más detalles')
+        self.assertContains(potrero_page, '<h2>Información del potrero</h2>')
+        self.assertContains(potrero_page, '<h2>Ubicación y superficie</h2>')
+        self.assertNotContains(potrero_page, 'Agregar más detalles')
         for ruido in ('terrain-guide', 'Cada lote del predio', 'Aparecerá en Siembra', 'Nombre y cultivo'):
             self.assertNotContains(potrero_page, ruido)
         self.assertNotContains(potrero_page, 'id="step-confirm"')
@@ -772,7 +784,7 @@ class TerrainTests(TestCase):
         self.assertContains(response, 'Historial del predio')
         self.assertContains(response, 'Potrero creado')
         self.assertContains(response, 'Superficie utilizada')
-        self.assertContains(response, 'Siguiente paso')
+        self.assertNotContains(response, 'class="next-step-line"')
         self.assertContains(response, 'Ver planificación')  # el potrero de este flujo ya tiene cultivo
         self.assertNotContains(response, 'Planificación de siembra')
         self.assertContains(response, 'data-map-layer="normal"')
@@ -966,7 +978,6 @@ class TerrainTests(TestCase):
             self.plot_data(superficie_ha='-1'),
             self.plot_data(superficie_ha='0'),
             self.plot_data(superficie_ha='11'),
-            self.plot_data(fecha_cosecha='2026-01-01'),
             self.plot_data(latitud='91', longitud='1'),
             self.plot_data(latitud='-33'),
             self.plot_data(latitud='nan', longitud='1'),
@@ -1085,7 +1096,7 @@ class TerrainTests(TestCase):
         self.assertEqual(response.context['potrero_superficie_disponible'], Decimal('8'))
         self.assertEqual(response.context['form'].fields['superficie_ha'].widget.attrs['max'], '8.0000')
         self.assertContains(response, 'Ver el predio')
-        self.assertContains(response, 'dentro del límite verde')
+        self.assertContains(response, 'dentro del límite del predio')
 
     def test_potrero_surface_offers_remaining_area_shortcut_and_no_silent_block(self):
         Potrero.objects.create(predio=self.predio, nombre='Existente', superficie_ha=Decimal('2'))
@@ -1150,8 +1161,7 @@ class TerrainTests(TestCase):
                     '/',
                     '/predios/',
                     '/calendario/',
-                    '/decisiones/',
-                    '/busqueda/',
+                    '/decisiones/?herramienta=llevar&amp;tipo=semillas',
                     '/reportes/',
                     '/actividades/',
                     '/productos/',
@@ -1164,10 +1174,13 @@ class TerrainTests(TestCase):
         self.assertNotContains(response, 'Calcula, planifica y optimiza los recursos de tus predios')  # sin encabezado
         for text in ('Cuánto llevar', '¿Me alcanza?'):
             self.assertContains(response, text)
-        enlaces = [item for item in response.context['menu'] if item.get('href') == '/decisiones/']
-        self.assertEqual(
-            [item['label'] for item in enlaces], ['Toma de decisiones']
-        )  # un solo enlace al centro de decisiones
+        # El centro de decisiones se abre desde el grupo «Calculadoras»: ya no hay una segunda entrada que lo repita.
+        menu = response.context['menu']
+        self.assertEqual([item for item in menu if item.get('href') == '/decisiones/'], [])
+        grupo = next(item for item in menu if item.get('label') == 'Calculadoras')
+        self.assertEqual([sub['label'] for sub in grupo['children']], ['Semillas', 'Fertilizantes', '¿Me alcanza?'])
+        self.assertTrue(grupo['open'])
+        self.assertEqual([sub['label'] for sub in grupo['children'] if sub['active']], ['Semillas'])
 
     def test_csrf_required_to_save_terrain(self):
         client = Client(enforce_csrf_checks=True)
@@ -1439,12 +1452,16 @@ class ServerCalculationTests(TestCase):
             dose='1.6',
             unit='kg',
         )
-        # Superar la dosis máxima documentada ya no bloquea: calcula y entrega una advertencia.
-        self.assertEqual(excessive.status_code, 200)
-        data = excessive.json()
-        self.assertTrue(data['above_max'])
-        self.assertEqual((data['max_dose'], data['max_unit']), (1.5, 'kg/ha'))
-        self.assertEqual(data['origin'], 'adjusted')
+        # Superar la dosis máxima documentada no se calcula: el resultado no se puede presentar como válido.
+        self.assertEqual(excessive.status_code, 400)
+        self.assertIn('supera el máximo documentado', excessive.json()['error'])
+        self.assertIn('1,5 kg/ha', excessive.json()['error'])
+        within = self.calculate(
+            operation='dose', plot_id=self.plot.pk, crop=self.crop.nombre, product_id=product.pk, area='1',
+            dose='1.5', unit='kg',
+        )
+        self.assertEqual(within.status_code, 200)
+        self.assertFalse(within.json()['above_max'])
 
         product.vigencia_hasta = timezone.localdate() - timedelta(days=1)
         product.save(update_fields=['vigencia_hasta'])
@@ -2715,8 +2732,9 @@ class DecisionCenterIntegrationTests(IntegrationBase):
         self.assertFalse(catalog['stats']['inventoryTracked'])
         self.assertEqual({item['category'] for item in catalog['insumos']}, {'seed', 'fertilizer'})
         self.assertEqual(catalog['varieties'][str(self.maize.pk)], ['V1'])
-        for tool in ('data-tool="llevar"', 'data-tool="alcanza"', 'Cálculo avanzado'):
+        for tool in ('data-tool="llevar"', 'data-tool="alcanza"'):
             self.assertContains(response, tool)
+        self.assertNotContains(response, 'Cálculo avanzado')  # «Opciones avanzadas» ya no se muestra
 
     def test_calculator_panel_and_initial_tool_come_from_the_url(self):
         response = self.client.get('/decisiones/')
@@ -3474,12 +3492,11 @@ class DemoCatalogEndToEndTests(TestCase):
             unit='L/ha',
         ).json()
         self.assertEqual(forced['dose'], 2)
-        # En el fertilizante, superar el máximo de 150 kg/ha calcula igual pero con advertencia.
+        # En el fertilizante, superar el máximo de 150 kg/ha no se calcula.
         fert = Insumo.objects.get(nombre='FERTILIZANTE DEMO NPK')
         over = self.calc(operation='dose', calculation_type='insumos', product_id=fert.pk, dose='200', unit='kg/ha')
-        self.assertEqual(over.status_code, 200)
-        self.assertTrue(over.json()['above_max'])
-        self.assertEqual(over.json()['origin'], 'adjusted')
+        self.assertEqual(over.status_code, 400)
+        self.assertIn('supera el máximo documentado', over.json()['error'])
         ok = self.calc(
             operation='dose', calculation_type='insumos', product_id=fert.pk, dose='100', unit='kg/ha'
         ).json()
@@ -3562,8 +3579,9 @@ class ButtonHierarchyAndNextStepTests(TestCase):
         farm = self.farm()
         Potrero.objects.create(predio=farm, nombre='Lote sin cultivo', superficie_ha=Decimal('1'))
         detail = self.page(f'/predios/{farm.pk}/')
-        self.assertIn('Siguiente paso', detail)
-        self.assertIn('Asigna un cultivo a «Lote sin cultivo»', detail)
+        # La ficha ya no repite el «Siguiente paso»: lo muestra la barra de pasos y el botón del potrero.
+        self.assertNotIn('class="next-step-line"', detail)
+        self.assertIn('>Asignar cultivo</a>', detail)  # único botón del potrero
         self.assertNotIn(
             'class="btn-primary-agro"', detail.split('<main>')[1]
         )  # el siguiente paso es una llamada discreta
@@ -3590,7 +3608,8 @@ class ButtonHierarchyAndNextStepTests(TestCase):
             fecha_cosecha=timezone.localdate() + timedelta(days=150),
         )
         detail = self.page(f'/predios/{farm.pk}/')
-        self.assertIn('→ Calcula lo que necesitas para «Lote con cultivo»', detail)
+        self.assertNotIn('class="next-step-line"', detail)
+        self.assertIn('>Editar planificación</a>', detail)  # planificación completa: un solo botón
         self.assertNotIn('Asignar cultivo', detail)
         listing = self.page(f'/predios/?predio={farm.pk}')
         self.assertIn('Cambiar cultivo', listing)
@@ -3610,7 +3629,7 @@ class ButtonHierarchyAndNextStepTests(TestCase):
         calendar = self.page('/calendario/')
         self.assertNotIn('Programar primera labor', calendar)
         self.assertIn('Programar labor</a>', calendar)
-        self.assertIn('→ Calcula lo que necesitas para «Lote con cultivo»', self.page(f'/predios/{farm.pk}/'))
+        self.assertNotIn('class="next-step-line"', self.page(f'/predios/{farm.pk}/'))
 
     def test_5_new_predio_shows_only_the_usage_decision(self):
         farm = self.farm(geojson=self.feature)
@@ -3715,8 +3734,9 @@ class VisualVarietyTests(TestCase):
         ):
             self.assertIn(text, html)
         self.assertIn(f'/reportes/?predio={self.farm.pk}', html)
-        self.assertNotIn('Eliminar predio', html)  # no existe aún un flujo de borrado con confirmación
-        self.assertNotIn('Eliminar potrero', html)
+        # Eliminar va al final del menú y siempre pasa por la confirmación (core/registros.py).
+        self.assertIn(f'href="/registros/predio/{self.farm.pk}/eliminar/"', html)
+        self.assertIn('Eliminar predio…', html)
         # El menú del potrero cambia según el estado: sin cultivo «Asignar», con cultivo «Cambiar».
         self.assertEqual(html.count('data-assign-label>Asignar cultivo'), 1)
         self.assertEqual(html.count('data-assign-label>Cambiar cultivo'), 1)
@@ -3764,7 +3784,7 @@ class VisualVarietyTests(TestCase):
         self.assertNotIn('Lote ajeno', json.dumps(data))
 
     def test_next_step_is_a_single_suggestion_with_five_states(self):
-        from ..views import _farm_next_step
+        from ..views.contexto_predios import _farm_next_step
 
         farm = Predio.objects.create(propietario=self.user, nombre='Estados', superficie_ha=1)
         self.assertEqual(_farm_next_step(farm, [])['key'], 'potrero')
@@ -3809,8 +3829,11 @@ class VisualVarietyTests(TestCase):
         source = (Path(__file__).resolve().parent.parent / 'static' / 'js' / 'predios-map.js').read_text(
             encoding='utf-8'
         )
-        for marker in ("'Próxima acción'", "'Abrir predio'", "'Labores pendientes'", "'Potreros'", 'farm.nextStep'):
+        for marker in ("'Abrir predio'", "'Labores pendientes'", "'Potreros'", "'Planificar siembra'"):
             self.assertIn(marker, source)
+        # El recuadro «Próxima acción» ya no se genera (llevaba a una página con error).
+        for gone in ('Próxima acción', 'nextAction', 'drawer-next', 'Definir planificación'):
+            self.assertNotIn(gone, source)
 
     def test_siembra_shows_month_line_menus_and_no_new_predio_button(self):
         html = self.html('/calendario/')
@@ -3854,8 +3877,7 @@ class VisualVarietyTests(TestCase):
         self.assertIn('Labores vencidas · 1', html)
         self.assertGreaterEqual(html.count('class="row-menu-trigger"'), 3)  # predio + 2 potreros
         self.assertIn('Registrar nueva temporada', html)
-        self.assertIn('Siguiente paso', html)
-        self.assertEqual(html.count('class="next-step-line"'), 1)
+        self.assertEqual(html.count('class="next-step-line"'), 0)  # sin recuadro repetido en la ficha
 
 
 class CropPickerTests(TestCase):
@@ -4059,32 +4081,36 @@ class CalculatorGuidedFlowTests(IntegrationBase):
 
     def test_steps_status_and_button_hierarchy(self):
         html = self.page()
-        for step in ('plot', 'crop', 'area', 'dose', 'unit', 'go'):
+        # Tres pasos agrupados: dónde (potrero y cultivo), superficie y dosis (con su unidad) y calcular.
+        for step in ('plot', 'crop', 'area', 'dose', 'go'):
             self.assertIn(f'data-step="{step}"', html)
         llevar_panel = html.split('id="tool-llevar"', 1)[1].split('id="tool-alcanza"', 1)[0]
-        self.assertEqual(llevar_panel.count('class="calc-step"'), 6)
+        self.assertEqual(llevar_panel.count('class="calc-step"'), 5)
+        for group in ('Paso 1 · Dónde vas a trabajar', 'Paso 2 · Superficie y dosis', 'Paso 3 · Calcular'):
+            self.assertIn(group, llevar_panel)
+        self.assertNotIn('id="calc-summary"', llevar_panel)  # el potrero y el cultivo ya se ven en las tarjetas
         for marker in (
             'id="calc-status"',
-            'id="calc-summary"',
             'id="calc-plot-picker"',
             'id="calc-crop-picker"',
             'id="calc-area-tools"',
             'id="calc-submit-hint"',
-            'Opciones avanzadas',
-            'Cálculo avanzado de semillas',
             'calc-flow.js',
             'decisiones.css',
         ):
             self.assertIn(marker, html)
         for removed in ('id="calc-stats"', 'info-strip', 'calc-strip', 'id="ctx-line"', 'class="calc-head"'):
             self.assertNotIn(removed, html)  # sin estadísticas decorativas ni cabeceras repetidas
-        # Prioridad: «Calcular ahora» es el botón principal; PDF, Reportes y «¿Me alcanza?» son secundarios.
+        # Prioridad: «Calcular ahora» en el formulario; en el resumen, «Descargar PDF» es el único botón y
+        # «Ver en Reportes», «¿Me alcanza?» y «Planificar actividad» quedan como enlaces de texto.
         compact = re.sub(r'\s+', ' ', html)  # sin depender de cómo se formatearon los atributos
         self.assertRegex(compact, r'<button class="btn-primary-agro calc-submit" type="submit" id="calc-submit">')
-        self.assertRegex(compact, r'<button class="btn-secondary-agro btn-sm" type="button" id="calc-pdf">')
-        self.assertIn('Ver en Reportes', html)
-        self.assertIn('id="calc-go-cover"', html)
-        self.assertIn('Ir a «¿Me alcanza?»', html)
+        self.assertRegex(compact, r'<button class="btn-primary-agro btn-sm" type="button" id="calc-pdf">')
+        self.assertRegex(compact, r'<a class="text-link" id="calc-plan" href="/actividades/nueva/" hidden>')
+        self.assertRegex(compact, r'<a class="text-link" id="calc-go-reports" href="/reportes/\?tipo=calculos">Ver en Reportes</a>')
+        self.assertIn('id="calc-go-cover">¿Me alcanza?</a>', compact)
+        # Resumen visual: el dibujo del terreno se carga antes que la tarjeta de resultado.
+        self.assertLess(html.index('js/terreno-mini.js'), html.index('js/calc-resultado.js'))
 
     def test_native_form_controls_remain_the_source_of_truth(self):
         html = self.page()
@@ -4099,9 +4125,6 @@ class CalculatorGuidedFlowTests(IntegrationBase):
             'calc-error',
             'calc-result',
             'calc-notes',
-            'adv-seed',
-            'adv-nutrient',
-            'calc-advanced',
         ):
             self.assertIn(f'id="{field}"', html)
         self.assertIn('data-mode="semillas"', html)
@@ -4634,7 +4657,7 @@ class DecisionsContinuityStaticTests(TestCase):
         for name in ('calc-flow.js', 'tool-flow.js'):
             js = self.source('js', name)
             self.assertIn('Siguiente paso: ', js, name)
-            self.assertIn('plot.editUrl', js, name)
+            self.assertIn('.editUrl', js, name)
             self.assertIn('Asignar cultivo', js, name)
 
     def test_search_examples_come_from_the_real_catalog(self):
@@ -4771,10 +4794,12 @@ class FlowStatesTests(IntegrationBase):
         for text in (
             'Dato documentado del catálogo',
             'Ajustado manualmente',
-            'Valor ingresado manualmente. Este cálculo corresponde a una simulación.',
-            'No puede superar las ',
+            'No puede superar ',
         ):
             self.assertIn(text, panel)
+        # Sin avisos de «simulación» en esta calculadora: la superficie de más se valida en calc-limites.js.
+        self.assertNotIn('el resultado será una simulación', panel)
+        self.assertIn('Excede la superficie del potrero', self.source('js', 'calc-limites.js'))
         self.assertNotIn('ctx-line', self.source('js', 'decisiones.js'))
 
     def test_base_catalog_has_the_extra_central_chile_crops_by_name_only(self):

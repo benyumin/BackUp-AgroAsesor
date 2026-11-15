@@ -53,6 +53,20 @@ def test_potrero_ajeno_404(client_bd):
     assert pedir(client_bd, "/api/v1/predios/2/potreros", usuario=1).status_code == 404
 
 
+def test_archivados_no_se_entregan(client_bd, bd_path):
+    """Un potrero o predio archivado en la plataforma deja de aparecer en la API (sus datos siguen en la base)."""
+    con = sqlite3.connect(bd_path)
+    con.execute("UPDATE core_potrero SET archivado_en = '2026-11-15 10:00:00' WHERE id = 1")
+    con.commit()
+    assert pedir(client_bd, "/api/v1/potreros/1", usuario=1).status_code == 404
+    assert all(p["id"] != 1 for p in pedir(client_bd, "/api/v1/predios/1/potreros", usuario=1).get_json()["potreros"])
+    con.execute("UPDATE core_predio SET archivado_en = '2026-11-15 10:00:00' WHERE id = 1")
+    con.commit()
+    con.close()
+    assert pedir(client_bd, "/api/v1/predios", usuario=1).get_json()["predios"] == []
+    assert pedir(client_bd, "/api/v1/predios/1", usuario=1).status_code == 404
+
+
 def test_cultivos_solo_activos_y_estado_de_verificacion(client_bd):
     cultivos = pedir(client_bd, "/api/v1/cultivos").get_json()["cultivos"]
     assert [c["nombre"] for c in cultivos] == ["Trigo"]

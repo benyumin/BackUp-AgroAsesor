@@ -13,7 +13,7 @@ from django.contrib.auth.backends import ModelBackend
 from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import redirect, resolve_url
-from django.utils.http import url_has_allowed_host_and_scheme, urlencode
+from django.utils.http import url_has_allowed_host_and_scheme
 
 
 class EmailBackend(ModelBackend):

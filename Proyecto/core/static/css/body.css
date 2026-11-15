@@ -29,7 +29,7 @@ body {
 }
 
 .app-body {
-    font-family: "Source Sans 3", "Segoe UI", sans-serif;
+    font-family: var(--font-sans, Outfit, "Segoe UI", sans-serif); /* única tipografía; variables en tema-figma.css */
     background: var(--bg);
     color: var(--ink);
 }
@@ -106,7 +106,7 @@ body {
     text-decoration: none;
     padding: 8px 12px;
     border-radius: 12px;
-    font-weight: 500;
+    font-weight: var(--fw-medium);
 }
 
 .nav-link:hover,
@@ -117,7 +117,7 @@ body {
 .nav-link.is-active {
     background: #3f8f4d;
     color: #fff;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
 }
 
 .status-dot {
@@ -214,20 +214,20 @@ body {
     color: var(--green-dark);
     display: grid;
     place-items: center;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
 }
 
 .profile-info {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
     line-height: 1.15;
 }
 
 .profile-info small {
     color: var(--muted);
-    font-weight: 500;
+    font-weight: var(--fw-medium);
 }
 
 .popover-anchor {
@@ -328,7 +328,7 @@ main {
 }
 
 .field .help {
-    font-weight: 500;
+    font-weight: var(--fw-medium);
     font-size: 0.82rem;
     color: var(--muted);
 }
@@ -425,7 +425,7 @@ main {
 
 .text-link {
     color: var(--green);
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
     text-decoration: none;
 }
 
@@ -442,7 +442,7 @@ main {
     color: #fff;
     padding: 10px 16px;
     border-radius: 12px;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
     text-decoration: none;
 }
 
@@ -473,7 +473,7 @@ main {
     border: 1px solid transparent;
     border-radius: 12px;
     font: inherit;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
     line-height: 1.2;
     text-decoration: none;
     cursor: pointer;
@@ -518,7 +518,7 @@ main {
     padding: 6px 10px;
     background: transparent;
     color: var(--green);
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
 }
 
 .btn-ghost-agro:hover {
@@ -593,7 +593,7 @@ main {
 
 .field span,
 .field label {
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
     font-size: 0.92rem;
 }
 
@@ -624,7 +624,7 @@ main {
     background: var(--green-soft);
     color: var(--green-dark);
     font-size: 0.78rem;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
 }
 
 .badge.amber {
@@ -643,7 +643,7 @@ main {
 
 .error {
     color: var(--red);
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
 }
 
 .muted {
@@ -655,12 +655,6 @@ main {
     flex-wrap: wrap;
     gap: 8px;
     align-items: center;
-}
-
-.app-footer {
-    padding: 4px 20px 14px;
-    color: var(--muted);
-    font-size: 0.82rem;
 }
 
 .hamburger {
@@ -763,10 +757,6 @@ main>.page-container>.callout {
     margin: 0 0 14px;
 }
 
-.app-footer .page-container {
-    text-align: center;
-}
-
 .page-hero {
     align-items: center;
 }
@@ -782,7 +772,6 @@ main>.page-container>.callout {
 
     .sidebar,
     .topbar,
-    .app-footer,
     .no-print,
     .scrim,
     .callout {
@@ -837,7 +826,7 @@ main>.page-container>.callout {
     border: 1px solid transparent;
     border-radius: 999px;
     font-size: .66rem;
-    font-weight: 800;
+    font-weight: var(--fw-semibold);
     letter-spacing: .05em;
     text-transform: uppercase;
     white-space: nowrap;
@@ -893,7 +882,7 @@ main>.page-container>.callout {
     display: inline-flex;
     align-items: center;
     gap: 5px;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
 }
 
 .meta-item svg {
@@ -904,7 +893,7 @@ main>.page-container>.callout {
 }
 
 .meta-item.muted-item {
-    font-weight: 500;
+    font-weight: var(--fw-medium);
     color: #8a968d;
 }
 
@@ -925,7 +914,7 @@ main>.page-container>.callout {
     color: var(--muted);
     font: inherit;
     font-size: 1.3rem;
-    font-weight: 800;
+    font-weight: var(--fw-semibold);
     line-height: 1;
     cursor: pointer;
     transition: background .15s, color .15s, border-color .15s;
@@ -982,7 +971,7 @@ main>.page-container>.callout {
     color: var(--ink);
     font: inherit;
     font-size: .9rem;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
     text-align: left;
     text-decoration: none;
     cursor: pointer;
@@ -1108,14 +1097,14 @@ main>.page-container>.callout {
 .next-hint-label {
     color: var(--green);
     font-size: .64rem;
-    font-weight: 800;
+    font-weight: var(--fw-semibold);
     letter-spacing: .09em;
     text-transform: uppercase;
 }
 
 .next-hint-text {
     color: var(--ink);
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
 }
 
 .plan-meter {
@@ -1195,7 +1184,7 @@ main>.page-container>.callout {
     color: var(--muted);
     font: inherit;
     font-size: .85rem;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
     cursor: pointer;
     transition: background .15s, color .15s;
 }
@@ -1265,7 +1254,7 @@ main>.page-container>.callout {
     display: block;
     color: var(--muted);
     font-size: .72rem;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
     letter-spacing: .02em;
 }
 
@@ -1376,7 +1365,7 @@ main>.page-container>.callout {
     text-decoration: none;
     padding: 9px 12px;
     border-radius: 10px;
-    font-weight: 500;
+    font-weight: var(--fw-medium);
     font-size: 0.97rem;
     border: 1px solid transparent;
 }
@@ -1401,13 +1390,13 @@ main>.page-container>.callout {
     background: rgba(255, 255, 255, 0.12);
     border-color: rgba(255, 255, 255, 0.38);
     color: #fff;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
 }
 
 .sidebar .nav-sublink.is-active {
     background: #2a7a47;
     color: #fff;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
     border-color: transparent;
 }
 
@@ -1684,7 +1673,7 @@ i[data-lucide="check"]:empty::before {
     color: var(--ink);
     font: inherit;
     font-size: 0.88rem;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
     cursor: pointer;
     transition: background 0.15s, border-color 0.15s;
 }
@@ -1692,7 +1681,7 @@ i[data-lucide="check"]:empty::before {
 .crop-filter small {
     color: var(--muted);
     font-size: 0.74rem;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
 }
 
 .crop-filter:hover {
@@ -1771,7 +1760,7 @@ i[data-lucide="check"]:empty::before {
 .crop-more>summary {
     cursor: pointer;
     padding: 10px 0;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
     color: var(--green-dark);
 }
 
@@ -1850,7 +1839,7 @@ i[data-lucide="check"]:empty::before {
     gap: 4px;
     color: var(--muted);
     font-size: 0.82rem;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
     text-align: center;
     text-decoration: none;
 }
@@ -1884,7 +1873,7 @@ i[data-lucide="check"]:empty::before {
     background: var(--paper);
     color: var(--muted);
     font-size: 0.78rem;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
 }
 
 .journey-step.is-done .journey-dot {
@@ -1922,7 +1911,7 @@ i[data-lucide="check"]:empty::before {
     margin: 0;
     color: var(--green-dark);
     font-size: 0.9rem;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
 }
 
 .journey-row {
@@ -1935,7 +1924,7 @@ i[data-lucide="check"]:empty::before {
 .journey-kicker {
     color: var(--green-dark);
     font-size: 0.72rem;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
     letter-spacing: 0.05em;
     text-transform: uppercase;
 }
@@ -1974,7 +1963,7 @@ i[data-lucide="check"]:empty::before {
     color: var(--green-dark);
     font: inherit;
     font-size: 0.88rem;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
     line-height: 1.2;
     text-decoration: none;
     white-space: nowrap;
@@ -2073,7 +2062,7 @@ i[data-lucide="check"]:empty::before {
     display: block;
     color: var(--muted);
     font-size: 0.78rem;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
     letter-spacing: 0.03em;
     text-transform: uppercase;
 }
@@ -2146,7 +2135,7 @@ i[data-lucide="check"]:empty::before {
 
 .adm-stat span {
     font-size: .85rem;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
     color: var(--muted);
 }
 
@@ -2189,7 +2178,7 @@ i[data-lucide="check"]:empty::before {
 }
 
 .adm-rank-name {
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
     overflow-wrap: anywhere;
 }
 
@@ -2261,7 +2250,7 @@ i[data-lucide="check"]:empty::before {
     border-radius: 999px;
     background: var(--green-soft);
     color: var(--green-dark);
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
     text-decoration: none;
 }
 

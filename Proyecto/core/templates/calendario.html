@@ -1,8 +1,8 @@
 {% extends "body.html" %}
-{% load static agro_assets %}
+{% load static agro_assets ayudas %}
 {% block title %}Calendario de siembra · AgroAsesor{% endblock %}
 {% block extra_css %}
-    <link rel="stylesheet" href="{% static 'css/calendario.css' %}?v=15">
+    <link rel="stylesheet" href="{% static 'css/calendario.css' %}?v=16">
 {% endblock %}
 {% block content %}
     <div class="page-hero">
@@ -11,6 +11,7 @@
             <p class="page-sub">Tus predios y potreros en un solo lugar, y las ventanas de siembra de referencia para decidir cuándo sembrar.</p>
         </div>
     </div>
+    {% ayuda 'calendario' %}
     <section class="sowing-registry"
              id="siembra-registro"
              aria-labelledby="sowing-registry-title">
@@ -345,7 +346,7 @@
                  data-admin-url="{% if request.user.is_staff %}{% url 'admin:core_referenciaagronomica_changelist' %}{% endif %}"
                  data-selected-variety="{% if calendar_selected_variety != '*' %}{{ calendar_selected_variety }}{% endif %}">
                 <div class="cal-scroll card" id="cal-board"></div>
-                <aside class="card" id="cal-detail" aria-live="polite">
+                <aside class="card" id="cal-detail" aria-live="polite" data-pdf-url="{% url 'calendario_pdf' 0 %}">
                 </aside>
             </div>
         {% else %}
@@ -367,7 +368,5 @@
 {% endblock %}
 {% block extra_js %}
     <script src="{% static 'js/siembra-registro.js' %}?v=2"></script>
-    <script src="{% vendor 'jspdf.umd.min.js' 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js' %}"></script>
-    <script src="{% static 'js/agro-pdf.js' %}?v=2"></script>
-    <script src="{% static 'js/calendario.js' %}?v=5"></script>
+    <script src="{% static 'js/calendario.js' %}?v=6"></script>
 {% endblock %}

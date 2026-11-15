@@ -452,7 +452,6 @@ CATEGORIAS_INSUMO = ['Fertilizante', 'Herbicida', 'Fungicida', 'Insecticida', 'A
 
 def ensure_insumo_categories():
     """Carga las categorías base de insumo (tabla maestra TipoInsumo). Se puede repetir sin duplicar."""
-    from .models import TipoInsumo
 
     created = 0
     for name in CATEGORIAS_INSUMO:

@@ -1,7 +1,9 @@
-/* «Cuánto llevar»: calculadora con el diseño y el flujo de AgroAsesor.
+/* «Cuánto llevar»: calculadora de semillas e insumos.
    - Mientras escribes se muestra una vista previa (superficie × dosis) que no guarda nada.
-   - «Calcular ahora» valida el cálculo en el servidor con las reglas del catálogo
-     (fuentes, dosis verificadas, productos fitosanitarios) y lo guarda en tu cuenta. */
+   - «Calcular ahora» envía los datos a /calcular/ (vista core.views.calculadora.calculate), que valida con las
+     reglas del catálogo (core/calculos.py) y guarda el resultado en la cuenta.
+   - La tarjeta de resultado se dibuja en calc-resultado.js; los pasos guiados y tarjetas de selección, en
+     calc-flow.js. */
 (function () {
   'use strict';
 
@@ -22,6 +24,7 @@
   const catalog = readJson('agro-catalog', {});
   const farm = readJson('agro-farms', { predios: [], plots: [] });
   const calculateUrl = hub.dataset.calculateUrl;
+  const pdfUrlTemplate = hub.dataset.pdfUrl;
   const isStaff = hub.dataset.staff === '1';
   const plots = farm.plots || [];
   const crops = (catalog.cultivos || []).filter((crop) => crop.active !== false);
@@ -47,6 +50,9 @@
   if (!params.has('plot') && params.has('potrero')) params.set('plot', params.get('potrero'));
 
   const $ = (id) => document.getElementById(id);
+  const R = window.AgroCalcResultado;
+  const L = window.AgroCalcLimites;
+  if (!R || !L) return;
   const ui = {
     modes: Array.from(document.querySelectorAll('#calc-modes [data-mode]')),
     form: $('calc-form'),
@@ -67,6 +73,8 @@
     doseLabel: $('calc-dose-label'),
     doseHelp: $('calc-dose-help'),
     doseOrigin: $('calc-dose-origin'),
+    doseSource: $('calc-dose-source'),
+    doseSourceField: $('calc-dose-source-field'),
     unit: $('calc-unit'),
     examples: $('calc-examples'),
     exampleRow: $('calc-example-row'),
@@ -75,9 +83,8 @@
     pdf: $('calc-pdf'),
     result: $('calc-result'),
     notes: $('calc-notes'),
-    advanced: $('calc-advanced'),
-    advSeed: $('adv-seed'),
-    advNutrient: $('adv-nutrient'),
+    productInfo: $('calc-product-info'),
+    plan: $('calc-plan'),
   };
   if (!ui.form) return;
 
@@ -206,9 +213,6 @@
       if (first) select.value = first.value;
     }
   }
-  function metric(label, value) {
-    return '<div class="metric"><span>' + esc(label) + '</span><strong>' + esc(value) + '</strong></div>';
-  }
   function hasOption(select, value) {
     return Array.from(select.options).some((option) => option.value === String(value) && !option.disabled);
   }
@@ -232,6 +236,26 @@
   function plotLabel() {
     const option = ui.plot.selectedOptions[0];
     return option && option.value ? option.textContent : '';
+  }
+  // Potrero, predio y su geometría para el resumen visual (terreno-mini.js).
+  function plotNames() {
+    const plot = selectedPlot();
+    if (!plot) return { plotLabel: plotLabel(), plotName: '', farmName: '' };
+    const predio = (farm.predios || []).find((item) => String(item.id) === String(plot.predio)) || {};
+    return {
+      plotLabel: plotLabel(),
+      plotName: plot.name,
+      farmName: plot.farmName,
+      terrain: {
+        farm: predio.geojson || null,
+        plot: plot.geojson || plot.coordinates || null,
+        others: (farm.plots || [])
+          .filter((item) => String(item.predio) === String(plot.predio) && String(item.id) !== String(plot.id))
+          .map((item) => item.geojson || item.coordinates),
+        plotAreaHa: plot.areaHa,
+        farmAreaHa: predio.area,
+      },
+    };
   }
   function doseUnitLabel(unit) {
     return String(unit || 'kg/ha');
@@ -377,64 +401,16 @@
     return CATEGORY_EMOJI[groupKeys.get(crop.group)] || '🌱';
   }
 
+  // Ficha del producto elegido (fabricante, composición, dosis registrada, fuente) en un desplegable junto al
+  // selector. Los datos del potrero y del cultivo ya están a la vista en las tarjetas de selección.
   function renderNotes() {
-    const crop = selectedCrop();
-    if (!crop) {
-      ui.notes.innerHTML = '';
-      ui.notes.hidden = true;
-      return;
-    }
-    ui.notes.hidden = false;
-    const sel = selection();
-    const hasDensity = crop.density !== null && crop.density !== undefined;
-    const hasYield = crop.yield !== null && crop.yield !== undefined;
-    const sources = [];
-    if (hasDensity)
-      sources.push(
-        crop.densitySource
-          ? 'Densidad: ' + crop.densitySource
-          : 'Densidad sin fuente registrada (el resultado será una simulación)',
-      );
-    if (hasYield)
-      sources.push(crop.yieldSource ? 'Rendimiento: ' + crop.yieldSource : 'Rendimiento sin fuente registrada');
-    const sourceUrl = safeUrl(crop.densityUrl);
-    ui.notes.innerHTML =
-      '<div class="calc-crop-head"><span class="calc-crop-emoji" aria-hidden="true">' +
-      esc(cropEmoji(crop)) +
-      '</span>' +
-      '<div><h3>' +
-      esc(crop.name) +
-      '</h3>' +
-      (crop.group ? '<span class="badge">' + esc(crop.group) + '</span>' : '') +
-      '</div></div>' +
-      (crop.description ? '<p class="calc-crop-desc">' + esc(crop.description) + '</p>' : '') +
-      '<div class="metric-grid calc-metrics">' +
-      metric('Unidad base', crop.unit || 'kg') +
-      metric('Densidad de siembra', hasDensity ? fmt(crop.density) + ' ' + (crop.unit || 'kg') + '/ha' : 'Sin dato') +
-      metric('Rendimiento ref.', hasYield ? fmt(crop.yield, 1) + ' t/ha' : '—') +
-      '</div>' +
-      '<p class="calc-source-note"><strong>Fuente de datos:</strong> ' +
-      (sources.length ? esc(sources.join(' · ')) : 'el catálogo no tiene datos de siembra de este cultivo') +
-      '.' +
-      (sourceUrl
-        ? ' <a class="text-link" href="' + esc(sourceUrl) + '" target="_blank" rel="noopener noreferrer">Ver fuente</a>'
-        : '') +
-      '</p>' +
-      (sel.item ? productCard(sel.item, crop) : '');
+    const item = selection().item;
+    if (!ui.notes || !ui.productInfo) return;
+    ui.notes.innerHTML = item ? productCard(item, selectedCrop()) : '';
+    ui.productInfo.hidden = !item;
   }
 
   // ---------- resultado ----------
-  function bagsHtml(amount, unit) {
-    if (unit !== 'kg') return '';
-    const count = Math.min(12, Math.max(1, Math.round(amount / 25) || 1));
-    return (
-      '<div class="bags" aria-hidden="true">' +
-      '<b></b>'.repeat(count) +
-      '</div>' +
-      '<p class="muted">Cada saco dibujado representa unos 25 kg, solo como referencia visual.</p>'
-    );
-  }
-
   // Qué falta para poder calcular (misma regla que validate(), pero por paso, para la interfaz guiada).
   function readiness() {
     const ctx = baseContext();
@@ -462,7 +438,7 @@
         hint:
           area === null
             ? 'Ingresa una superficie mayor que 0'
-            : 'No puede superar ' + (ctx.plot ? fmt(ctx.plot.areaHa, 3) : '') + ' ha',
+            : 'No puede superar ' + (ctx.plot ? R.superficie(ctx.plot.areaHa) : '') + ' ha',
       },
     ];
     if (!seeds) {
@@ -473,14 +449,16 @@
         hint:
           phyto && ctx.sel.kind === 'product'
             ? 'Elige el objetivo de control'
-            : 'Elige un producto o la simulación manual',
+            : 'Elige un producto o el ingreso manual',
       });
     }
+    // Una dosis sobre el máximo documentado tampoco deja calcular (ni descargar el PDF).
+    const sobreMaximo = dose !== null && (limites(NaN, dose) || {}).tipo === 'dosis';
     items.push({
       key: 'dose',
       label: seeds ? 'Densidad por hectárea' : 'Dosis por hectárea',
-      ok: dose !== null,
-      hint: 'Ingresa un valor mayor que 0',
+      ok: dose !== null && !sobreMaximo,
+      hint: sobreMaximo ? 'Supera la dosis máxima documentada' : 'Ingresa un valor mayor que 0',
     });
     items.push({ key: 'unit', label: 'Unidad', ok: Boolean(ui.unit.value), hint: 'Elige la unidad' });
     return { items, ready: items.every((item) => item.ok) };
@@ -495,7 +473,6 @@
       ready: info.ready,
       missing: info.items.filter((item) => !item.ok),
       saved: Boolean(shown && shown.saved),
-      simulation: Boolean(shown && shown.saved && shown.badge && !shown.badge.ok),
     };
   }
 
@@ -527,7 +504,7 @@
     const info = readiness();
     ui.result.__spec = null;
     ui.result.innerHTML =
-      '<div class="calc-result-top"><p class="result-kicker">Resultado</p><span class="badge amber">Pendiente</span></div>' +
+      '<div class="calc-result-top"><p class="result-kicker">Resultado</p><span class="calc-tag is-preview">Pendiente</span></div>' +
       '<p class="result-value is-empty" aria-hidden="true"><strong>—</strong></p>' +
       '<h2 class="calc-empty-title">' +
       esc(title) +
@@ -535,98 +512,63 @@
       text +
       '</p>' +
       (info.ready || bare ? '' : checklistHtml(info));
-    notify({ saved: false, simulation: false });
+    notify({ saved: false });
   }
 
-  function typeLabel(spec) {
-    if (spec.typeLabel) return spec.typeLabel;
-    if (!spec.saved) return 'Vista previa · aún no se guarda';
-    if (spec.badge.adjusted) return 'Ajuste manual · simulación, no es el valor del catálogo';
-    if (spec.badge.origin === 'catalog') return 'Dato catalogado · sin respaldo completo';
-    return spec.badge.ok ? 'Cálculo real · dato documentado' : 'Simulación · dato sin fuente verificada';
+  // Origen de la dosis (misma clasificación que core/calculos.py). Se muestra solo como un dato en «Más detalles».
+  function originLabel(data, seeds) {
+    const what = seeds ? 'Densidad' : 'Dosis';
+    if (data.origin === 'documented' || (data.origin === undefined && data.verified)) {
+      return what + ' documentada · ' + (data.source || 'catálogo');
+    }
+    if (data.origin === 'catalog') return what + ' del catálogo (sin fuente completa)';
+    if (data.origin === 'adjusted' || data.adjusted) {
+      return what + ' ajustada por ti (catálogo: ' + R.dosis(data.catalog_dose) + ' ' + data.catalog_unit + ')';
+    }
+    return what + ' ingresada por ti';
   }
 
-  // Filas del resumen que ocupan el ancho completo (textos largos); el resto va en indicadores de dos columnas.
-  const WIDE_ROWS = ['Potrero', 'Tipo de cálculo'];
-
+  // Dibuja el resumen: válido (R.html) o fuera de límite (R.htmlExceso). Prepara «Planificar actividad».
   function paint(spec) {
-    const sourceLink =
-      spec.sourceUrl && safeUrl(spec.sourceUrl)
-        ? '<p class="calc-source"><a class="text-link" href="' +
-          esc(safeUrl(spec.sourceUrl)) +
-          '" target="_blank" rel="noopener noreferrer">Ver fuente técnica</a></p>'
-        : '';
-    const facts = (spec.facts || []).filter((row) => row[1] !== '' && row[1] !== null && row[1] !== undefined);
-    const links = [];
-    if (spec.plan) {
+    ui.result.innerHTML = spec.problema ? R.htmlExceso(spec) : R.html(spec);
+    ui.result.__spec = spec.problema ? null : spec;
+    if (ui.plan) {
       const query = new URLSearchParams();
-      Object.keys(spec.plan).forEach((key) => {
-        const value = spec.plan[key];
+      Object.entries(spec.plan || {}).forEach(([key, value]) => {
         if (value !== '' && value !== null && value !== undefined) query.set(key, value);
       });
-      links.push(
-        '<a class="btn-secondary-agro btn-sm" href="/actividades/nueva/?' +
-          esc(query.toString()) +
-          '">Planificar como actividad</a>',
-      );
+      ui.plan.hidden = !(spec.saved && spec.plan);
+      ui.plan.href = ui.plan.href.split('?')[0] + (spec.plan ? '?' + query.toString() : '');
     }
-    const ctxRows = [
-      ['Potrero', spec.plotLabel],
-      ['Cultivo', spec.cropName],
-      ['Producto', spec.productName],
-    ]
-      .concat(spec.metrics || [])
-      .concat([['Tipo de cálculo', typeLabel(spec)]])
-      .filter((row) => row[1] !== '' && row[1] !== null && row[1] !== undefined);
-    ui.result.innerHTML =
-      '<div class="calc-result-top"><p class="result-kicker">' +
-      esc(spec.kicker) +
-      '</p>' +
-      '<span class="badge' +
-      (spec.badge.ok ? '' : ' amber') +
-      '">' +
-      esc(spec.badge.text) +
-      '</span></div>' +
-      '<p class="result-value"><strong>' +
-      esc(fmt(spec.amount)) +
-      '</strong><span>' +
-      esc(spec.unit) +
-      '</span></p>' +
-      (spec.headline ? '<p class="calc-headline">' + spec.headline + '</p>' : '') +
-      '<dl class="calc-ctx">' +
-      ctxRows
-        .map(
-          (row) =>
-            '<div class="calc-ctx-item' +
-            (WIDE_ROWS.indexOf(row[0]) >= 0 ? ' is-wide' : '') +
-            '"><dt>' +
-            esc(row[0]) +
-            '</dt><dd>' +
-            esc(row[1]) +
-            '</dd></div>',
-        )
-        .join('') +
-      '</dl>' +
-      '<div class="formula-box"><p class="formula-line">' +
-      esc(spec.formulaTitle || 'Cantidad = superficie × dosis') +
-      '</p><p>' +
-      spec.formulaHtml +
-      '</p></div>' +
-      bagsHtml(spec.amount, spec.unit) +
-      (facts.length
-        ? '<dl class="calc-facts">' +
-          facts.map((row) => '<dt>' + esc(row[0]) + '</dt><dd>' + esc(row[1]) + '</dd>').join('') +
-          '</dl>'
-        : '') +
-      sourceLink +
-      (spec.warnings || []).map((warning) => '<p class="alert">' + esc(warning) + '</p>').join('') +
-      (spec.notes || []).map((note) => '<p class="muted calc-note">' + esc(note) + '</p>').join('') +
-      (links.length ? '<div class="next-links">' + links.join('') + '</div>' : '') +
-      (spec.saved
-        ? '<p class="callout">Cálculo guardado en tu cuenta. Ya puedes exportarlo en PDF desde aquí o verlo en Reportes.</p>'
-        : '');
-    ui.result.__spec = spec;
+    if (ui.pdf) ui.pdf.disabled = Boolean(spec.problema);
     notify({ painted: true });
+  }
+
+  // Valor fuera de límite: marca el campo y muestra el resumen en rojo, sin cantidad.
+  function paintExceso(problema, area, dose) {
+    const ctx = baseContext();
+    ui.error.textContent = problema.titulo + '. ' + problema.detalle;
+    fieldError(problema.campo === 'area' ? ui.area : ui.dose, problema.titulo + '.');
+    paint({
+      problema,
+      kicker: mode === 'semillas' ? 'Semilla necesaria' : 'Insumo necesario',
+      ...plotNames(),
+      cropName: ctx.crop ? ctx.crop.name : '',
+      area,
+      dose,
+      doseUnit: ctx.unit,
+    });
+  }
+
+  function limites(area, dose) {
+    const ctx = baseContext();
+    return L.revisar({
+      area,
+      plotArea: ctx.plot ? ctx.plot.areaHa : NaN,
+      dose,
+      unit: ctx.unit,
+      product: ctx.sel.item,
+    });
   }
 
   function baseContext() {
@@ -638,20 +580,6 @@
     };
   }
 
-  function formulaHtml(area, dose, doseUnit, amount, unit) {
-    return (
-      esc(fmt(area)) +
-      ' ha × ' +
-      esc(fmt(dose)) +
-      ' ' +
-      esc(doseUnit) +
-      ' = <strong>' +
-      esc(fmt(amount)) +
-      ' ' +
-      esc(unit) +
-      '</strong>'
-    );
-  }
 
   function previewSpec(area, dose) {
     const ctx = baseContext();
@@ -662,16 +590,12 @@
       kicker: mode === 'semillas' ? 'Semilla necesaria' : 'Insumo necesario',
       amount,
       unit,
-      badge: { ok: false, text: 'Vista previa · aún sin guardar' },
-      plotLabel: plotLabel(),
+      ...plotNames(),
       cropName: ctx.crop ? ctx.crop.name : '',
-      productName: ctx.sel.item ? ctx.sel.item.name : ctx.sel.kind === 'manual' ? 'Producto manual' : '',
-      formulaHtml: formulaHtml(area, dose, ctx.unit, amount, unit),
-      metrics: [
-        ['Superficie', fmt(area, 3) + ' ha'],
-        ['Dosis', fmt(dose) + ' ' + ctx.unit],
-      ],
-      warnings: [],
+      area,
+      dose,
+      doseUnit: ctx.unit,
+      facts: [['Producto', ctx.sel.item ? ctx.sel.item.name : '']],
       availability: {
         plot: ctx.plot ? ctx.plot.id : '',
         crop: ctx.crop ? ctx.crop.id : '',
@@ -730,10 +654,9 @@
       showEmpty('Revisa los datos', 'Corrige el valor indicado para ver cuánto necesitas.');
       return false;
     }
-    if (plot && area > plot.areaHa + 1e-9) {
-      ui.error.textContent = 'La superficie no puede ser mayor a la disponible (' + fmt(plot.areaHa, 3) + ' ha).';
-      fieldError(ui.area, 'No puede superar las ' + fmt(plot.areaHa, 3) + ' ha del potrero.');
-      showEmpty('Revisa los datos', 'Corrige el valor indicado para ver cuánto necesitas.');
+    const problema = plot ? limites(area, dose) : null;
+    if (problema) {
+      paintExceso(problema, area, dose);
       return false;
     }
     paint(previewSpec(area, dose));
@@ -749,8 +672,7 @@
         'El catálogo no tiene cultivos activos.' +
         (isStaff ? ' Regístralos desde la administración.' : ' Solicítalo al administrador.');
     } else if (plot && crop && plot.cropId && String(plot.cropId) !== String(crop.id)) {
-      ui.cropHelp.textContent =
-        'Simulación con otro cultivo: el registro del potrero (' + plot.crop + ') no se modifica.';
+      ui.cropHelp.textContent = 'Otro cultivo: el registro del potrero (' + plot.crop + ') no se modifica.';
     } else if (plot && crop && !plot.cropId) {
       ui.cropHelp.textContent = 'El potrero no tiene cultivo asignado; el cálculo no lo asigna.';
     } else {
@@ -762,7 +684,7 @@
     const plot = selectedPlot();
     ui.plotHelp.textContent = plot
       ? 'Superficie disponible: ' +
-        fmt(plot.areaHa, 3) +
+        fmt(plot.areaHa, 4) +
         ' ha · Cultivo actual: ' +
         (plot.crop || 'sin cultivo') +
         ' · Dosis del catálogo (base de datos)'
@@ -791,6 +713,14 @@
     node.className = 'calc-dose-origin';
     node.textContent = '';
     const value = positive(ui.dose.value);
+    const documented =
+      catalogDose &&
+      catalogDose.verified &&
+      value !== null &&
+      Math.abs(value - catalogDose.value) < 1e-9 &&
+      bareUnit(ui.unit.value) === bareUnit(catalogDose.unit);
+    // «¿De dónde sale esta dosis?» solo tiene sentido cuando el dato no está documentado.
+    if (ui.doseSourceField) ui.doseSourceField.hidden = value === null || documented || isPhyto(selection().item);
     if (value === null) return;
     if (catalogDose) {
       const unchanged =
@@ -806,10 +736,8 @@
         node.textContent =
           'Ajustado manualmente · el catálogo indica ' + fmt(catalogDose.value, 3) + ' ' + catalogDose.unit;
       }
-    } else {
-      node.classList.add('is-manual');
-      node.textContent = 'Valor ingresado manualmente. Este cálculo corresponde a una simulación.';
     }
+    // Dosis escrita a mano sin valor de catálogo: no se agrega ningún aviso.
   }
 
   // Error pegado al campo que lo causa (además del mensaje general del formulario).
@@ -867,7 +795,7 @@
             (item.doseVerified ? ' · ' + fmt(item.dose, 3) + ' ' + item.unit : ' · sin densidad verificada'),
         }),
       );
-      options.push({ value: 'manual', label: 'Ingreso manual (simulación)' });
+      options.push({ value: 'manual', label: 'Ingreso manual' });
       setOptions(ui.product, options, null, keep);
       if (requested && hasOption(ui.product, 'p:' + requested)) ui.product.value = 'p:' + requested;
       ui.productField.hidden = !seeds.length;
@@ -903,7 +831,7 @@
           }),
         });
       });
-      groups.push({ group: 'Otro', items: [{ value: 'manual', label: 'Otro producto (simulación manual)' }] });
+      groups.push({ group: 'Otro', items: [{ value: 'manual', label: 'Otro producto (ingreso manual)' }] });
       setOptions(ui.product, groups, crop ? 'Selecciona un producto' : 'Selecciona primero un cultivo', keep);
       if (requested && hasOption(ui.product, requested)) ui.product.value = requested;
       ui.productField.hidden = false;
@@ -949,14 +877,13 @@
               crop.densitySource +
               (crop.densityVerifiedAt ? ' (verificada ' + fmtDate(crop.densityVerifiedAt) + ')' : '') +
               '.'
-            : 'La densidad general del catálogo no tiene fuente: el resultado será una simulación.';
+            : 'La densidad general del catálogo no tiene fuente documentada.';
       } else {
+        // Sin densidad documentada no se propone ningún valor: la persona escribe el suyo.
         setDose(null);
         ui.doseHelp.textContent = item
-          ? 'Densidad no documentada para esta semilla (falta: ' +
-            missingData(item, crop).join(', ') +
-            '). Si ingresas un valor, el resultado será una simulación, no una recomendación.'
-          : 'Ingresa la densidad de tu fuente técnica; el resultado se identificará como simulación.';
+          ? 'Esta semilla no tiene densidad documentada en el catálogo. Escribe la que vas a usar.'
+          : 'El catálogo no tiene una densidad documentada. Escribe la que vas a usar.';
       }
     } else if (item && item.doseVerified && item.dose) {
       setDose(item.dose, item.unit, 'verified');
@@ -969,12 +896,11 @@
       ui.doseHelp.textContent = item
         ? 'No hay dosis verificada. Falta: ' +
           missingData(item, crop).join(', ') +
-          '. Si ingresas una dosis, el resultado será una simulación.'
+          '. Puedes ingresar la dosis de tu fuente técnica.'
         : sel.kind === 'manual'
-          ? 'Ingresa la dosis de tu fuente técnica; el resultado se identificará como simulación.'
+          ? 'Ingresa la dosis de tu fuente técnica.'
           : 'Cantidad de producto por cada hectárea.';
     }
-    syncAdvanced();
     renderNotes();
     renderPreview();
   }
@@ -1016,7 +942,7 @@
     syncToolTabs();
     ui.title.textContent = seed ? 'Calcular semillas' : 'Calcular insumos';
     ui.hint.textContent = seed
-      ? 'La densidad sale del cultivo en la base de datos. Ajústala si no vas a sembrar todo el potrero.'
+      ? 'Elige el potrero, revisa la superficie y escribe la dosis por hectárea.'
       : 'Elige el producto del catálogo. La dosis de la ficha se copia sola; en productos fitosanitarios la dosis de etiqueta no se puede modificar.';
     ui.doseLabel.textContent = seed ? 'Dosis o densidad por hectárea' : 'Dosis recomendada por hectárea';
     const doseTitle = $('calc-dose-title');
@@ -1025,7 +951,7 @@
       doseTitle.textContent = seed ? 'Revisa la dosis por hectárea' : 'Elige el producto y revisa su dosis';
     if (doseIntro)
       doseIntro.textContent = seed
-        ? 'Se copia del catálogo; ajústala si hace falta.'
+        ? 'Si el catálogo tiene una densidad documentada, se completa sola.'
         : 'La dosis sale de la ficha del producto.';
     ui.productLabel.textContent = seed ? 'Semilla o variedad del catálogo' : 'Insumo del catálogo';
     fillUnits();
@@ -1056,18 +982,20 @@
       fieldError(ui.area, 'La superficie debe ser mayor que 0.');
       return 'La superficie debe ser mayor que 0.';
     }
-    if (area > ctx.plot.areaHa + 1e-9) {
-      fieldError(ui.area, 'No puede superar las ' + fmt(ctx.plot.areaHa, 4) + ' ha del potrero.');
-      return 'La superficie no puede superar las ' + fmt(ctx.plot.areaHa, 4) + ' ha registradas del potrero.';
-    }
     if (!ctx.crop) return 'Selecciona un cultivo del catálogo.';
     if (mode === 'insumos' && ctx.sel.kind === 'none')
-      return 'Selecciona un producto o la opción de simulación manual.';
+      return 'Selecciona un producto o la opción de ingreso manual.';
     if (isPhyto(ctx.sel.item) && !ui.target.value) return 'Selecciona el objetivo de control autorizado.';
-    if (positive(ui.dose.value) === null) {
+    const dose = positive(ui.dose.value);
+    if (dose === null) {
       const message = mode === 'semillas' ? 'Ingresa una densidad mayor que 0.' : 'Ingresa una dosis mayor que 0.';
       fieldError(ui.dose, message);
       return message;
+    }
+    const problema = limites(area, dose);
+    if (problema) {
+      paintExceso(problema, area, dose);
+      return problema.titulo + '. ' + problema.detalle;
     }
     return '';
   }
@@ -1096,98 +1024,37 @@
         crop: ctx.crop.name,
         product_id: item ? item.id : null,
         target: phyto ? ui.target.value : '',
+        dose_source: ui.doseSource && !ui.doseSourceField.hidden ? ui.doseSource.value.trim() : '',
       });
-      const warnings = [];
-      if (data.above_max) {
-        warnings.push(
-          '⚠ Dosis superior a la referencia registrada: el máximo del catálogo es ' +
-            fmt(data.max_dose, 3) +
-            ' ' +
-            data.max_unit +
-            '. Revisa la etiqueta del producto antes de aplicar.',
-        );
-      }
-      if (data.origin === 'catalog') {
-        warnings.push(
-          'Dato de catálogo sin respaldo completo (fuente o fecha pendientes). Úsalo como referencia, no como recomendación técnica.',
-        );
-      } else if (data.adjusted) {
-        warnings.push(
-          'Valor ajustado manualmente: el catálogo indica ' +
-            fmt(data.catalog_dose, 3) +
-            ' ' +
-            data.catalog_unit +
-            '. Este resultado es una simulación, no una recomendación técnica.',
-        );
-      } else if (data.simulation) {
-        warnings.push(
-          seeds
-            ? 'Simulación: la densidad usada no está documentada con una fuente verificada. No es una recomendación agronómica.'
-            : 'Simulación: la dosis no está documentada con una fuente verificada. No es una recomendación de aplicación.',
-        );
-      }
+      const notes = [];
       if (ctx.plot.cropId && String(ctx.plot.cropId) !== String(ctx.crop.id)) {
-        warnings.push('Calculado para un cultivo distinto al registrado en el potrero; el potrero no se modificó.');
+        notes.push('Calculado para un cultivo distinto al registrado en el potrero; el potrero no se modificó.');
       }
-      if (phyto)
-        warnings.push(
-          'Respeta la etiqueta autorizada: período de carencia, reingreso, equipo de protección y condiciones de aplicación.',
-        );
-      const notes = [
-        seeds
-          ? 'Ajusta la cantidad según el estado de la cama de siembra, la maquinaria y la recomendación técnica.'
-          : 'La dosis adecuada depende de análisis de suelo, estado del cultivo y recomendación técnica.',
-      ];
-      const productName = item
-        ? item.name
-        : ctx.sel.kind === 'manual'
-          ? 'Producto manual'
-          : seeds && ctx.sel.kind === 'crop'
-            ? ''
-            : '';
+      if (phyto) {
+        notes.push('Respeta la etiqueta autorizada: carencia, reingreso, equipo de protección y condiciones de aplicación.');
+      }
+      const productName = item ? item.name : ctx.sel.kind === 'manual' ? 'Producto manual' : '';
       const spec = {
         saved: true,
+        calculationId: data.calculation_id,
         kicker: seeds ? 'Semilla necesaria' : 'Insumo necesario',
         amount: data.amount,
         unit: data.unit,
-        badge: {
-          ok: Boolean(data.verified),
-          adjusted: Boolean(data.adjusted),
-          origin: data.origin,
-          text: data.verified
-            ? seeds
-              ? 'Densidad documentada'
-              : 'Dosis documentada'
-            : data.origin === 'catalog'
-              ? 'Dato de catálogo'
-              : data.adjusted
-                ? 'Ajustado manualmente'
-                : 'Simulación',
-        },
-        plotLabel: plotLabel(),
+        ...plotNames(),
         cropName: ctx.crop.name,
-        productName,
-        headline: seeds
-          ? 'Necesitas: <strong>' + esc(fmt(data.amount)) + ' ' + esc(data.unit) + '</strong> de semilla'
-          : 'Producto necesario para <strong>' +
-            esc(fmt(data.area, 3)) +
-            ' ha</strong>: ' +
-            esc(fmt(data.amount)) +
-            ' ' +
-            esc(data.unit),
-        formulaHtml: formulaHtml(data.area, data.dose, data.dose_unit, data.amount, data.unit),
-        metrics: [
-          ['Superficie', fmt(data.area, 3) + ' ha'],
-          ['Dosis', fmt(data.dose) + ' ' + data.dose_unit],
-        ],
+        area: data.area,
+        dose: data.dose,
+        doseUnit: data.dose_unit,
+        sourceUrl: data.verified ? data.source_url : '',
         facts: [
+          ['Tipo de cálculo', 'Cantidad por superficie (superficie × dosis)'],
+          ['Origen de la dosis', originLabel(data, seeds)],
+          ['Producto', productName],
           ['Equivalencia', packageText(data)],
           ['Objetivo de control', phyto ? ui.target.value : ''],
-          ['Fuente técnica', data.source || 'Sin fuente verificada'],
           ['Fecha de verificación', fmtDate(data.source_date)],
+          ['Fuente indicada por ti', data.declared_source || ''],
         ],
-        sourceUrl: data.source_url,
-        warnings,
         notes,
         availability: {
           plot: ctx.plot.id,
@@ -1206,22 +1073,23 @@
           superficie: data.area,
           objetivo: phyto ? ui.target.value : '',
         },
-        pdf: {
-          title: seeds ? 'Cálculo de semillas' : 'Cálculo de insumos',
-          file: seeds ? 'calculo-semillas.pdf' : 'calculo-insumos.pdf',
-          area: data.area,
-          dose: data.dose,
-          doseUnit: data.dose_unit,
-          amount: data.amount,
-          unit: data.unit,
-          product: productName || (seeds ? 'Semilla del catálogo' : ''),
-          source: data.source || 'Sin fuente verificada',
-        },
       };
       paint(spec);
       return spec;
     } catch (err) {
-      ui.error.textContent = err.message;
+      // El servidor aplica los mismos límites: si rechaza el valor, el resumen tampoco lo muestra como válido.
+      const enSuperficie = /superficie/i.test(err.message);
+      const enDosis = /dosis|densidad/i.test(err.message);
+      if (enSuperficie || enDosis) {
+        paintExceso(
+          { tipo: enSuperficie ? 'superficie' : 'dosis', campo: enSuperficie ? 'area' : 'dose',
+            titulo: 'No es posible calcular', detalle: err.message },
+          positive(ui.area.value),
+          positive(ui.dose.value),
+        );
+      } else {
+        ui.error.textContent = err.message;
+      }
       return null;
     } finally {
       ui.submit.disabled = false;
@@ -1229,29 +1097,13 @@
     }
   }
 
+  // El PDF lo genera el servidor (core/pdf) a partir del cálculo guardado: /calculos/<id>/pdf/.
   function pdfFor(spec) {
-    if (!window.AgroPdf) {
-      window.alert('No se pudo cargar el generador de PDF.');
+    if (!spec.calculationId || !pdfUrlTemplate) {
+      ui.error.textContent = 'Calcula y guarda el resultado antes de descargar el PDF.';
       return;
     }
-    const meta = spec.pdf || {};
-    const rows = [
-      { heading: spec.plotLabel },
-      { label: 'Cultivo', value: spec.cropName },
-      { label: 'Producto', value: meta.product || spec.productName || '—' },
-      { label: 'Superficie', value: fmt(meta.area !== undefined ? meta.area : 0, 3) + ' ha' },
-      { label: 'Dosis', value: fmt(meta.dose) + ' ' + (meta.doseUnit || '') },
-      { label: 'Cantidad a llevar', value: fmt(spec.amount) + ' ' + spec.unit },
-      { label: 'Tipo de cálculo', value: typeLabel(spec) },
-      { label: 'Estado del dato', value: spec.badge.text },
-      { label: 'Fuente técnica', value: meta.source || 'Sin fuente verificada' },
-    ]
-      .concat((spec.warnings || []).map((warning) => ({ label: 'Advertencia', value: warning })))
-      .concat((spec.notes || []).map((note) => ({ label: 'Nota', value: note })));
-    window.AgroPdf.download(meta.file || 'calculo.pdf', meta.title || 'Cálculo', rows, {
-      badge: spec.badge.ok ? '' : 'Simulación',
-      result: { label: spec.kicker, value: fmt(spec.amount) + ' ' + spec.unit },
-    });
+    window.location.assign(pdfUrlTemplate.replace('/0/', '/' + spec.calculationId + '/'));
   }
 
   // El PDF es del resultado que se ve. Si solo hay una vista previa, primero se valida y guarda.
@@ -1262,237 +1114,6 @@
   }
 
   // ---------- cálculos avanzados ----------
-  function syncAdvanced() {
-    const sel = selection();
-    const item = sel.item;
-    const seeds = mode === 'semillas';
-    const canNutrient =
-      !seeds &&
-      item &&
-      item.category === 'fertilizer' &&
-      item.verified &&
-      item.unit === 'kg/ha' &&
-      item.nutrientComposition;
-    ui.advSeed.hidden = !seeds;
-    ui.advNutrient.hidden = !canNutrient;
-    ui.advanced.hidden = ui.advSeed.hidden && ui.advNutrient.hidden;
-    if (seeds) {
-      $('adv-plants').value = item && item.targetPlantsM2 ? item.targetPlantsM2 : '';
-      $('adv-tsw').value = item && item.thousandSeedWeightG ? item.thousandSeedWeightG : '';
-      $('adv-germ').value = item && item.germinationPct ? item.germinationPct : '';
-      $('adv-purity').value = item && item.purityPct ? item.purityPct : '';
-      $('adv-source').value =
-        item && (item.targetPlantsM2 || item.thousandSeedWeightG)
-          ? 'Ficha de semilla: ' + (item.sourceName || item.name)
-          : '';
-    }
-    if (canNutrient) {
-      setOptions(
-        $('adv-nutrient-key'),
-        [
-          ['N', item.nitrogenPct],
-          ['P2O5', item.phosphorusP2o5Pct],
-          ['K2O', item.potassiumK2oPct],
-        ]
-          .filter((pair) => pair[1] > 0)
-          .map((pair) => ({ value: pair[0], label: pair[0] + ' (' + fmt(pair[1]) + ' %)' })),
-        null,
-      );
-    }
-  }
-
-  function advancedBase(errorBox) {
-    errorBox.textContent = '';
-    const ctx = baseContext();
-    const area = positive(ui.area.value);
-    if (!ctx.plot) {
-      errorBox.textContent = 'Selecciona un potrero registrado.';
-      return null;
-    }
-    if (area === null) {
-      errorBox.textContent = 'La superficie debe ser mayor que 0.';
-      return null;
-    }
-    if (area > ctx.plot.areaHa + 1e-9) {
-      errorBox.textContent =
-        'La superficie no puede superar las ' + fmt(ctx.plot.areaHa, 4) + ' ha registradas del potrero.';
-      return null;
-    }
-    return Object.assign(ctx, { area });
-  }
-
-  async function runAdvancedSeed() {
-    const errorBox = $('adv-seed-error');
-    const ctx = advancedBase(errorBox);
-    if (!ctx) return;
-    const fields = ['adv-plants', 'adv-tsw', 'adv-germ', 'adv-purity'].map((id) => $(id));
-    if (!fields.every((input) => Number(input.value) > 0)) {
-      errorBox.textContent =
-        'Completa plantas/m², peso de mil semillas, germinación y pureza con valores mayores que 0.';
-      return;
-    }
-    const source = $('adv-source').value.trim();
-    if (!source) {
-      errorBox.textContent = 'Indica la fuente de los parámetros avanzados.';
-      return;
-    }
-    try {
-      const data = await calculate({
-        operation: 'seed_population',
-        calculation_type: 'semillas',
-        plot_id: ctx.plot.id,
-        area: ui.area.value,
-        crop: ctx.crop ? ctx.crop.name : '',
-        plants_m2: fields[0].value,
-        thousand_seed_weight_g: fields[1].value,
-        germination_pct: fields[2].value,
-        purity_pct: fields[3].value,
-        source,
-      });
-      const item = ctx.sel.item;
-      const spec = {
-        saved: true,
-        kicker: 'Semilla necesaria (cálculo avanzado)',
-        amount: data.amount,
-        unit: data.unit,
-        badge: { ok: false, text: 'Parámetros con fuente declarada' },
-        typeLabel: 'Cálculo avanzado · parámetros con fuente declarada',
-        plotLabel: plotLabel(),
-        cropName: ctx.crop ? ctx.crop.name : '',
-        productName: item ? item.name : '',
-        formulaTitle: 'Dosis = plantas/m² × peso de mil semillas ÷ (100 × germinación × pureza)',
-        formulaHtml:
-          esc(fmt(data.rate, 2)) +
-          ' kg/ha × ' +
-          esc(fmt(ctx.area)) +
-          ' ha = <strong>' +
-          esc(fmt(data.amount)) +
-          ' ' +
-          esc(data.unit) +
-          '</strong>',
-        metrics: [
-          ['Superficie', fmt(ctx.area, 3) + ' ha'],
-          ['Dosis calculada', fmt(data.rate, 2) + ' kg/ha'],
-        ],
-        facts: [
-          ['Plantas objetivo', fmt(fields[0].value) + ' por m²'],
-          ['Peso de mil semillas', fmt(fields[1].value) + ' g'],
-          ['Germinación · pureza', fmt(fields[2].value) + ' % · ' + fmt(fields[3].value) + ' %'],
-          ['Fuente declarada', data.source],
-        ],
-        warnings: [],
-        notes: ['No considera pérdidas de establecimiento salvo que las incluyas en la población objetivo.'],
-        availability: {
-          plot: ctx.plot.id,
-          crop: ctx.crop ? ctx.crop.id : '',
-          product: item ? item.id : '',
-          area: ui.area.value,
-          dose: data.rate,
-          unit: 'kg/ha',
-        },
-        pdf: {
-          title: 'Cálculo avanzado de semillas',
-          file: 'calculo-avanzado-semillas.pdf',
-          area: ctx.area,
-          dose: data.rate,
-          doseUnit: 'kg/ha',
-          amount: data.amount,
-          unit: data.unit,
-          product: item ? item.name : 'Semilla',
-          source: data.source,
-        },
-      };
-      paint(spec);
-    } catch (err) {
-      errorBox.textContent = err.message;
-    }
-  }
-
-  async function runNutrient() {
-    const errorBox = $('adv-nutrient-error');
-    const ctx = advancedBase(errorBox);
-    if (!ctx) return;
-    const item = ctx.sel.item;
-    if (!item) {
-      errorBox.textContent = 'Selecciona un fertilizante del catálogo.';
-      return;
-    }
-    const need = $('adv-need');
-    const needSource = $('adv-need-source').value.trim();
-    if (!(Number(need.value) > 0) || !needSource) {
-      errorBox.textContent = 'Indica la necesidad del nutriente y su fuente.';
-      return;
-    }
-    try {
-      const data = await calculate({
-        operation: 'fertilizer_nutrition',
-        calculation_type: 'insumos',
-        plot_id: ctx.plot.id,
-        area: ui.area.value,
-        crop: ctx.crop ? ctx.crop.name : '',
-        product_id: item.id,
-        nutrient: $('adv-nutrient-key').value,
-        need_per_ha: need.value,
-        need_source: needSource,
-      });
-      const spec = {
-        saved: true,
-        kicker: 'Fertilizante necesario (por nutriente)',
-        amount: data.amount,
-        unit: data.unit,
-        badge: { ok: true, text: 'Composición verificada' },
-        typeLabel: 'Cálculo real · composición verificada',
-        plotLabel: plotLabel(),
-        cropName: ctx.crop ? ctx.crop.name : '',
-        productName: data.product || item.name,
-        formulaTitle: 'Producto = necesidad del nutriente ÷ riqueza del fertilizante',
-        formulaHtml:
-          esc(fmt(data.nutrientNeedPerHa)) +
-          ' kg/ha de ' +
-          esc(data.nutrient) +
-          ' ÷ ' +
-          esc(fmt(data.nutrientPct)) +
-          ' % = <strong>' +
-          esc(fmt(data.dose, 2)) +
-          ' kg de producto/ha</strong>',
-        metrics: [
-          ['Superficie', fmt(ctx.area, 3) + ' ha'],
-          ['Nutriente aportado', fmt(data.nutrientApplied, 2) + ' kg'],
-        ],
-        facts: [
-          ['Nutriente', data.nutrient + ' (' + fmt(data.nutrientPct) + ' %)'],
-          ['Fuente de la necesidad', data.nutrientSource],
-          ['Fuente del producto', data.productSource],
-        ],
-        warnings: [],
-        notes: ['La necesidad nutricional debe provenir de un análisis de suelo o una recomendación técnica.'],
-        availability: {
-          plot: ctx.plot.id,
-          crop: ctx.crop ? ctx.crop.id : '',
-          product: item.id,
-          area: ui.area.value,
-          dose: data.dose,
-          unit: 'kg/ha',
-        },
-        pdf: {
-          title: 'Cálculo por nutriente',
-          file: 'calculo-por-nutriente.pdf',
-          area: ctx.area,
-          dose: data.dose,
-          doseUnit: 'kg/ha',
-          amount: data.amount,
-          unit: data.unit,
-          product: data.product || item.name,
-          source: data.productSource || data.nutrientSource,
-        },
-      };
-      paint(spec);
-    } catch (err) {
-      errorBox.textContent = err.message;
-    }
-  }
-
-  // ---------- ejemplos rápidos (con datos reales del catálogo y de tus potreros) ----------
   function exampleList() {
     const out = [];
     const seenCrops = new Set();
@@ -1509,7 +1130,7 @@
           area: plot.areaHa,
           dose: crop.density,
           unit,
-          label: crop.name + ' ' + fmt(plot.areaHa, 2) + ' ha × ' + fmt(crop.density) + ' ' + unit,
+          label: crop.name + ' ' + fmt(plot.areaHa, 4) + ' ha × ' + fmt(crop.density) + ' ' + unit,
         });
       }
     });
@@ -1533,7 +1154,7 @@
             area: firstPlot.areaHa,
             dose: crop.density,
             unit,
-            label: crop.name + ' ' + fmt(firstPlot.areaHa, 2) + ' ha × ' + fmt(crop.density) + ' ' + unit,
+            label: crop.name + ' ' + fmt(firstPlot.areaHa, 4) + ' ha × ' + fmt(crop.density) + ' ' + unit,
           });
         });
     }
@@ -1553,7 +1174,7 @@
           area: plot.areaHa,
           dose: item.dose,
           unit: item.unit,
-          label: item.name + ' ' + fmt(plot.areaHa, 2) + ' ha × ' + fmt(item.dose) + ' ' + item.unit,
+          label: item.name + ' ' + fmt(plot.areaHa, 4) + ' ha × ' + fmt(item.dose) + ' ' + item.unit,
         });
         break;
       }
@@ -1661,15 +1282,6 @@
     runCalculation();
   });
   ui.pdf.addEventListener('click', downloadPdf);
-  ui.result.addEventListener('click', (event) => {
-    const button = event.target.closest('[data-action=availability]');
-    if (!button || !ui.result.__spec || !ui.result.__spec.availability) return;
-    const info = ui.result.__spec.availability;
-    if (window.AgroDecisiones) window.AgroDecisiones.goToAvailability(info);
-    else window.location.href = '/decisiones/?herramienta=alcanza&plot=' + encodeURIComponent(info.plot);
-  });
-  $('adv-seed-run').addEventListener('click', runAdvancedSeed);
-  $('adv-nutrient-run').addEventListener('click', runNutrient);
 
   // ---------- arranque ----------
   setOptions(

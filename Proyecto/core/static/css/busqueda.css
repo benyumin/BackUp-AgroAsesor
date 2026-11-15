@@ -113,7 +113,7 @@
     border-radius: 999px;
     background: rgba(255, 255, 255, .1);
     color: #fff;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
     text-decoration: none;
 }
 
@@ -140,7 +140,7 @@
     border-radius: 999px;
     background: #fff;
     color: var(--ink);
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
     text-decoration: none;
     transition: background .15s, border-color .15s, color .15s;
 }
@@ -184,7 +184,7 @@
 
 .search-tab.is-empty:not(.is-active) {
     color: var(--muted);
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
 }
 
 /* ---------- Filtros y resumen ---------- */
@@ -208,7 +208,7 @@
 .sf>span {
     color: var(--muted);
     font-size: .82rem;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
 }
 
 .sf select {
@@ -253,7 +253,7 @@
     min-height: 42px;
     padding: 0 6px;
     color: var(--green-dark);
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
     text-decoration: underline;
     text-underline-offset: 3px;
 }
@@ -284,7 +284,7 @@
 
 .search-summary .q {
     color: var(--ink);
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
 }
 
 .sf-sort {
@@ -337,7 +337,7 @@
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
 }
 
 .result-section-head .text-link svg {
@@ -458,7 +458,7 @@
     background: #eef2ec;
     color: var(--muted);
     font-size: .76rem;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
 }
 
 .result-sub {
@@ -489,7 +489,7 @@
 
 .result-chips .state-chip {
     font-size: .78rem;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
     letter-spacing: 0;
     text-transform: none;
     white-space: normal;
@@ -519,7 +519,7 @@
     border-radius: 12px;
     color: var(--muted);
     font-size: .88rem;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
     cursor: help;
 }
 
@@ -575,7 +575,7 @@
 }
 
 .search-didyoumean a {
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
     color: var(--green-dark, #1f5a36);
 }
 
@@ -711,7 +711,7 @@
     background: #f8fbf7;
     color: var(--green-dark);
     font-size: .9rem;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
     text-decoration: none;
 }
 
@@ -743,7 +743,7 @@
     gap: 6px;
     align-self: flex-start;
     margin-top: auto;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
     color: var(--green);
     text-decoration: none;
 }

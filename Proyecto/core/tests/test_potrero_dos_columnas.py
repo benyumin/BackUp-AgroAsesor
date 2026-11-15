@@ -21,12 +21,11 @@ JS = (CORE / 'static' / 'js' / 'predios-map.js').read_text(encoding='utf-8').rep
 BLOCK_START = 'Potrero: datos a la izquierda, mapa y superficie a la derecha'
 
 # Todo lo que existía en la pantalla y debe seguir existiendo, con el mismo id.
+# La variedad y las fechas de siembra y cosecha pasaron a la planificación de la temporada.
+MOVED_TO_PLANNING = ('id_variedad', 'id_fecha_siembra', 'id_fecha_cosecha')
 FIELD_IDS = (
     'id_nombre',
     'id_cultivo',
-    'id_variedad',
-    'id_fecha_siembra',
-    'id_fecha_cosecha',
     'id_superficie_ha',
     'id_latitud',
     'id_longitud',
@@ -92,14 +91,10 @@ class LayoutOrderTests(PotreroTwoColumnsBase):
                 order = [
                     html.index(marker)
                     for marker in (
-                        '1 · ¿Qué vas a plantar?',
+                        '<h2>Información del potrero</h2>',
                         'id="id_nombre"',
                         'id="id_cultivo"',
-                        'Agregar más detalles',
-                        'id="id_variedad"',
-                        'id="id_fecha_siembra"',
-                        'id="id_fecha_cosecha"',
-                        '2 · ¿Dónde queda?',
+                        '<h2>Ubicación y superficie</h2>',
                         'id="draw-perimeter"',
                         'id="farm-map"',
                         'id="id_superficie_ha"',
@@ -110,12 +105,14 @@ class LayoutOrderTests(PotreroTwoColumnsBase):
                     )
                 ]
                 self.assertEqual(order, sorted(order))
+                for gone in MOVED_TO_PLANNING + ('Agregar más detalles', '¿Qué vas a plantar?', '¿Dónde queda?'):
+                    self.assertNotIn(gone, html)
 
     def test_each_field_lives_in_its_own_column(self):
         html = self.page(self.edit_url)
         plant = section(html, 'potrero-plant-card', 'potrero-where-card')
         where = section(html, 'potrero-where-card', 'potrero-footer')
-        for field in ('id_nombre', 'id_cultivo', 'id_variedad', 'id_fecha_siembra', 'id_fecha_cosecha'):
+        for field in ('id_nombre', 'id_cultivo'):
             self.assertIn(f'id="{field}"', plant)
             self.assertNotIn(f'id="{field}"', where)
         for field in ('id_superficie_ha', 'farm-map', 'draw-perimeter', 'toggle-edit', 'clear-perimeter',
@@ -140,12 +137,12 @@ class LayoutOrderTests(PotreroTwoColumnsBase):
     def test_collapsible_sections_keep_their_default_state(self):
         html = self.page()
         details = re.findall(r'<details class="more-details[^"]*"([^>]*)>', html)
-        self.assertEqual(len(details), 2)  # «Agregar más detalles» y «Ubicación exacta (avanzado)»
+        self.assertEqual(len(details), 1)  # solo «Ubicación exacta (avanzado)», contraída
         self.assertFalse(any('open' in attrs for attrs in details))
-        # Con errores en sus campos se abren solos, como antes.
-        bad = self.client.post(self.new_url, self.data(fecha_siembra='no-es-fecha', latitud='999'))
+        # Con errores en sus campos se abre sola, como antes.
+        bad = self.client.post(self.new_url, self.data(latitud='999'))
         opened = re.findall(r'<details class="more-details[^"]*"[^>]*open[^>]*>', bad.content.decode())
-        self.assertEqual(len(opened), 2)
+        self.assertEqual(len(opened), 1)
 
 
 class NothingNewTests(PotreroTwoColumnsBase):
@@ -161,8 +158,10 @@ class NothingNewTests(PotreroTwoColumnsBase):
         form = section(html, 'id="terrain-form"', '</form>')
         self.assertEqual(form.count('<form'), 0)
         self.assertEqual(form.count('type="submit"'), 1)
-        self.assertEqual(html.count('2 · ¿Dónde queda?'), 1)
-        self.assertEqual(html.count('1 · ¿Qué vas a plantar?'), 1)
+        self.assertEqual(html.count('<h2>Ubicación y superficie</h2>'), 1)
+        self.assertEqual(html.count('<h2>Información del potrero</h2>'), 1)
+        for element_id in MOVED_TO_PLANNING:
+            self.assertNotIn(f'id="{element_id}"', html)
 
     def test_every_field_and_the_save_button_belong_to_the_same_form(self):
         html = self.page(self.edit_url)
@@ -202,9 +201,9 @@ class SavingStillWorksTests(PotreroTwoColumnsBase):
         saved = Potrero.objects.get(nombre='Lote B')
         self.assertEqual(saved.superficie_ha, Decimal('1.5'))
         self.assertEqual(saved.cultivo, self.crop)
-        self.assertEqual(saved.variedad, 'Nantes')
-        self.assertEqual(str(saved.fecha_siembra), '2026-11-10')
-        self.assertEqual(str(saved.fecha_cosecha), '2027-03-10')
+        # Aunque el envío traiga variedad y fechas, el potrero no las guarda: van en la planificación.
+        self.assertEqual((saved.variedad, saved.fecha_siembra, saved.fecha_cosecha), ('', None, None))
+        self.assertEqual(saved.temporadas.count(), 1)
         self.assertEqual((saved.latitud, saved.longitud), (-33.6, -71.2))
 
     def test_edit_updates_the_potrero(self):
@@ -276,7 +275,7 @@ class SurfaceBlockTests(PotreroTwoColumnsBase):
             'Opcional: dibuja tu potrero dentro del límite verde',
         ):
             self.assertNotIn(text, html)
-        self.assertIn('Dibuja tu potrero dentro del límite verde, o escribe las hectáreas abajo.', html)
+        self.assertIn('Dibuja tu potrero dentro del límite del predio, o escribe las hectáreas abajo.', html)
         self.assertEqual(html.count('Usar lo que queda'), 1)
 
     def test_measurement_readout_stays_in_the_page_for_the_map_script(self):
@@ -373,7 +372,7 @@ class StyleScopeTests(PotreroTwoColumnsBase):
         css = re.sub(r'\s+', ' ', self.block())
         self.assertIn('.potrero-form .potrero-area { display: grid;', css)
         self.assertIn('.potrero-form .potrero-area:has(input[readonly]) .link-btn { display: none; }', css)
-        self.assertIn('font-size: 1.5rem; font-weight: 800;', css)
+        self.assertIn('font-size: 1.5rem; font-weight: var(--fw-semibold);', css)
 
     def test_repeated_measurement_text_is_hidden_only_when_it_is_neither_an_error_nor_a_line_measurement(self):
         css = re.sub(r'\s+', ' ', self.block())

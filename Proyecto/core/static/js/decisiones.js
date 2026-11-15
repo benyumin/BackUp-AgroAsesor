@@ -16,6 +16,7 @@
   const catalog = readJson('agro-catalog', {});
   const farm = readJson('agro-farms', { predios: [], plots: [] });
   const calculateUrl = root.dataset.calculateUrl;
+  const pdfUrlTemplate = root.dataset.pdfUrl;
   const isStaff = root.dataset.staff === '1';
   const crops = (catalog.cultivos || []).filter((crop) => crop.active !== false);
   const products = (catalog.insumos || []).filter((item) => item.usable !== false && item.active !== false);
@@ -172,7 +173,7 @@
       plotSelect,
       (farm.plots || []).map((plot) => ({
         value: String(plot.id),
-        label: plot.farmName + ' · ' + plot.name + ' (' + fmt(plot.areaHa, 2) + ' ha)',
+        label: plot.farmName + ' · ' + plot.name + ' (' + fmt(plot.areaHa, 4) + ' ha)',
       })),
       (farm.plots || []).length ? 'Selecciona un potrero' : 'No tienes potreros registrados',
     );
@@ -210,7 +211,7 @@
         if (plotHelp)
           plotHelp.textContent =
             'Superficie registrada: ' +
-            fmt(plot.areaHa, 2) +
+            fmt(plot.areaHa, 4) +
             ' ha · cultivo actual: ' +
             (plot.crop || 'sin asignar') +
             '.';
@@ -353,34 +354,13 @@
     form.dispatchEvent(new CustomEvent('flow:result', { detail: { simulation: spec.badge ? !spec.badge.ok : false } }));
   }
 
-  // El PDF usa el generador compartido (agro-pdf.js): misma banda de marca que el resto de AgroAsesor.
-  function pdfRows(spec) {
-    const rows = [];
-    if (spec.pdfHeading) rows.push({ heading: spec.pdfHeading });
-    (spec.inputs || []).forEach(([label, text]) => rows.push({ label, value: text }));
-    (spec.figures || []).forEach(([label, text]) => rows.push({ label, value: text }));
-    const repeated = (spec.inputs || []).map((row) => row[0]);
-    spec.rows
-      .filter((row) => row[1] && row[0] !== 'Potrero' && repeated.indexOf(row[0]) < 0)
-      .forEach(([label, text]) => rows.push({ label, value: text }));
-    if (spec.message) rows.push({ label: 'Resultado', value: spec.message });
-    if (spec.secondary) rows.push({ label: spec.formulaTitle || 'Resumen', value: spec.secondary });
-    if (spec.badge) rows.push({ label: 'Estado del dato', value: spec.badge.text });
-    (spec.warnings || []).forEach((warning) => rows.push({ label: 'Advertencia', value: warning }));
-    return rows;
-  }
-
+  // El PDF lo genera el servidor (core/pdf) con el cálculo guardado, con el mismo diseño que los demás informes.
   function downloadPdf(spec) {
-    if (!window.AgroPdf) {
-      alert('No se pudo cargar el generador de PDF.');
+    if (!spec.calculationId || !pdfUrlTemplate) {
+      alert('Calcula y guarda el resultado antes de descargar el PDF.');
       return;
     }
-    const title = spec.pdfTitle || spec.kicker;
-    window.AgroPdf.download('agroasesor-' + window.AgroPdf.slug(title) + '.pdf', title, pdfRows(spec), {
-      badge: spec.badge && !spec.badge.ok ? 'Simulación' : '',
-      result: { label: spec.kicker, value: spec.value + ' ' + spec.unit },
-      note: 'Resultado orientativo. Verifica etiqueta, fuente técnica y condiciones del potrero antes de aplicar.',
-    });
+    window.location.assign(pdfUrlTemplate.replace('/0/', '/' + spec.calculationId + '/'));
   }
 
   function goToAvailability(info) {
@@ -523,17 +503,16 @@
         const shortfall = Math.max(0, data.needed - data.stock);
         const unitText = data.unit;
         renderResult(form, {
+          calculationId: data.calculation_id,
           kicker: enough ? 'Cantidad suficiente' : 'Cantidad insuficiente',
-          pdfTitle: 'Disponibilidad de insumo',
           formulaTitle: 'Cantidad necesaria = superficie × dosis',
           value: fmt(Math.min(100, Math.max(0, data.percent)), 0) + ' %',
           unit: 'de la superficie cubierta',
           bar: data.percent,
-          barLabel: ['Cobertura', fmt(data.coveredHa, 2) + ' de ' + fmt(data.area, 2) + ' ha'],
-          pdfHeading: plot.farmName + ' · ' + plot.name,
+          barLabel: ['Cobertura', fmt(data.coveredHa, 4) + ' de ' + fmt(data.area, 4) + ' ha'],
           inputs: [
-            ['Superficie del potrero', fmt(plot.areaHa, 2) + ' ha'],
-            ['Superficie a cubrir', fmt(data.area, 2) + ' ha'],
+            ['Superficie del potrero', fmt(plot.areaHa, 4) + ' ha'],
+            ['Superficie a cubrir', fmt(data.area, 4) + ' ha'],
             ['Dosis', fmt(data.dose, 3) + ' ' + data.dose_unit],
           ],
           figures: [
@@ -548,15 +527,15 @@
               ? 'Tu cantidad disponible supera lo necesario.'
               : 'Cantidad suficiente: te alcanza justo para toda la superficie.'
             : 'Con lo que tienes cubres ' +
-              fmt(data.coveredHa, 2) +
+              fmt(data.coveredHa, 4) +
               ' de ' +
-              fmt(data.area, 2) +
+              fmt(data.area, 4) +
               ' ha; te faltan ' +
               fmt(shortfall, 2) +
               ' ' +
               unitText +
               ' para cubrir ' +
-              fmt(data.missingHa, 2) +
+              fmt(data.missingHa, 4) +
               ' ha.',
           messageTone: enough ? 'ok' : 'warn',
           badge: {
@@ -573,8 +552,8 @@
             ['Potrero', plot.farmName + ' · ' + plot.name],
             ['Cultivo', crop.name],
             ['Producto', item ? item.name : 'Producto manual'],
-            ['Superficie que se puede cubrir', fmt(data.coveredHa, 2) + ' de ' + fmt(data.area, 2) + ' ha'],
-            ['Superficie sin cubrir', data.missingHa > 1e-9 ? fmt(data.missingHa, 2) + ' ha' : ''],
+            ['Superficie que se puede cubrir', fmt(data.coveredHa, 4) + ' de ' + fmt(data.area, 4) + ' ha'],
+            ['Superficie sin cubrir', data.missingHa > 1e-9 ? fmt(data.missingHa, 4) + ' ha' : ''],
             ['Dosis', fmt(data.dose, 3) + ' ' + data.dose_unit],
             ['Fuente técnica', data.source || ''],
           ],
