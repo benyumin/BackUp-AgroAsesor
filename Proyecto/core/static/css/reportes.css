@@ -3,7 +3,7 @@
     margin-bottom: 4px;
     color: var(--green);
     font-size: 0.8rem;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
     letter-spacing: 0.06em;
     text-transform: uppercase;
 }
@@ -119,7 +119,7 @@
     border-radius: 12px;
     background: var(--green-dark);
     color: #fff;
-    font-weight: 800;
+    font-weight: var(--fw-semibold);
     font-size: 1.2rem;
 }
 
@@ -168,7 +168,7 @@
 .report-kpis span {
     color: var(--muted);
     font-size: 0.84rem;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
 }
 
 .report-kpis strong {
@@ -421,7 +421,7 @@
 
 .report-doc a:not(.button) {
     color: var(--green);
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
 }
 
 @media (max-width: 640px) {

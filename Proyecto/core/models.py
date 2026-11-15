@@ -454,6 +454,20 @@ class AceptacionPoliticas(models.Model):
         return f'{self.usuario} · políticas {self.version}'
 
 
+class PrediosVigentes(models.Manager):
+    """Predios en uso: deja fuera los archivados (siguen en la base con todo su historial)."""
+
+    def get_queryset(self):
+        return super().get_queryset().filter(archivado_en__isnull=True)
+
+
+class PotrerosVigentes(models.Manager):
+    """Potreros en uso: deja fuera los archivados y los de un predio archivado."""
+
+    def get_queryset(self):
+        return super().get_queryset().filter(archivado_en__isnull=True, predio__archivado_en__isnull=True)
+
+
 class Predio(models.Model):
     propietario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='predios')
     nombre = models.CharField(max_length=150)
@@ -469,9 +483,15 @@ class Predio(models.Model):
     zona = models.ForeignKey(Zona, on_delete=models.PROTECT, null=True, blank=True)
     creado = models.DateTimeField(auto_now_add=True)
     actualizado = models.DateTimeField(auto_now=True)
+    # Archivado: deja de mostrarse en la plataforma sin borrar potreros, actividades, cálculos ni historial.
+    archivado_en = models.DateTimeField(null=True, blank=True)
+
+    objects = PrediosVigentes()  # lo que usa toda la plataforma
+    todos = models.Manager()  # incluye archivados (restaurar, administración)
 
     class Meta:
         ordering = ['nombre', 'pk']
+        base_manager_name = 'todos'
         constraints = [
             models.CheckConstraint(condition=models.Q(superficie_ha__gt=0), name='predio_superficie_positiva')
         ]
@@ -523,15 +543,23 @@ class PredioHistorial(models.Model):
         POTRERO_CREADO = 'plot_created', 'Potrero creado'
         POTRERO_ACTUALIZADO = 'plot_updated', 'Potrero modificado'
         CULTIVO_ASIGNADO = 'crop_assigned', 'Cultivo asignado por temporada'
+        ARCHIVADO = 'archived', 'Predio archivado'
+        RESTAURADO = 'restored', 'Predio restaurado'
+        ELIMINADO = 'deleted', 'Predio eliminado'
+        POTRERO_ARCHIVADO = 'plot_archived', 'Potrero archivado'
+        POTRERO_RESTAURADO = 'plot_restored', 'Potrero restaurado'
+        POTRERO_ELIMINADO = 'plot_deleted', 'Potrero eliminado'
 
+    # Si el predio o el potrero se eliminan, el historial se conserva (queda sin enlace, con su resumen).
     predio = models.ForeignKey(
         Predio,
-        on_delete=models.PROTECT,
+        on_delete=models.SET_NULL,
+        null=True,
         related_name='historial',
     )
     potrero = models.ForeignKey(
         'Potrero',
-        on_delete=models.PROTECT,
+        on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name='historial',
@@ -586,9 +614,14 @@ class Potrero(models.Model):
     longitud = models.FloatField(null=True, blank=True, validators=[MinValueValidator(-180), MaxValueValidator(180)])
     creado = models.DateTimeField(auto_now_add=True)
     actualizado = models.DateTimeField(auto_now=True)
+    archivado_en = models.DateTimeField(null=True, blank=True)
+
+    objects = PotrerosVigentes()
+    todos = models.Manager()
 
     class Meta:
         ordering = ['nombre', 'pk']
+        base_manager_name = 'todos'
         constraints = [
             models.CheckConstraint(condition=models.Q(superficie_ha__gt=0), name='potrero_superficie_positiva')
         ]
@@ -804,9 +837,10 @@ class ActividadAgricola(models.Model):
         on_delete=models.CASCADE,
         related_name='actividades_agricolas',
     )
+    # PROTECT: eliminar un potrero nunca borra sus actividades (core/registros.py lo revisa antes).
     potrero = models.ForeignKey(
         Potrero,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name='actividades',
     )
 
@@ -957,3 +991,17 @@ class CargaCatalogo(models.Model):
 
     def __str__(self):
         return f'{self.carpeta} · {self.huella[:12]} · {self.aplicada:%d/%m/%Y %H:%M}'
+
+
+class AyudaOculta(models.Model):
+    """Consejo de ayuda que la persona ya leyó y plegó (core/ayudas.py). Solo guarda la clave del consejo."""
+
+    usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='ayudas_ocultas')
+    clave = models.CharField(max_length=40)
+    creado = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['usuario', 'clave'], name='ayuda_oculta_unica')]
+
+    def __str__(self):
+        return f'{self.usuario} · {self.clave}'

@@ -137,7 +137,8 @@ def assign_crop(
     válidos. Nunca modifica temporadas anteriores salvo para cerrarlas cuando
     ``close_previous`` es verdadero y el usuario cambia de temporada.
     """
-    plot = Potrero.objects.select_for_update().select_related('predio', 'cultivo').get(pk=plot.pk)
+    # of=('self',): «cultivo» es opcional y PostgreSQL no admite FOR UPDATE sobre el lado opcional de la unión.
+    plot = Potrero.objects.select_for_update(of=('self',)).select_related('predio', 'cultivo').get(pk=plot.pk)
     if plot.predio.propietario_id != user.pk:
         raise ValidationError('El potrero no pertenece a tu cuenta.')
     if not isinstance(crop, Cultivo) or not crop.activo:
@@ -329,22 +330,6 @@ def season_form_initial(plot, season=None):
     return initial
 
 
-def plot_form_initial(plot):
-    """Variedad y fechas que el formulario del potrero muestra: las de la temporada vigente.
-
-    Así el formulario del potrero y el de la temporada no pueden enseñar dos versiones distintas de la misma
-    planificación. Un potrero sin temporada vigente (o con otro cultivo) muestra sus propios datos.
-    """
-    season = planning_state(plot)['season']
-    if season is None:
-        return {}
-    return {
-        'variedad': season.variedad,
-        'fecha_siembra': season.fecha_siembra,
-        'fecha_cosecha': season.fecha_cosecha,
-    }
-
-
 def _sync_plot_snapshot(plot, season):
     """Copia la temporada vigente a la instantánea del potrero. Devuelve los campos que cambiaron."""
     changed = []
@@ -375,7 +360,8 @@ def save_season_form(plot, user, season):
 
     Devuelve ``{'season', 'created', 'current', 'duplicate', 'synced'}``.
     """
-    plot = Potrero.objects.select_for_update().select_related('predio', 'cultivo').get(pk=plot.pk)
+    # of=('self',): «cultivo» es opcional y PostgreSQL no admite FOR UPDATE sobre el lado opcional de la unión.
+    plot = Potrero.objects.select_for_update(of=('self',)).select_related('predio', 'cultivo').get(pk=plot.pk)
     if plot.predio.propietario_id != user.pk or (season.potrero_id and season.potrero_id != plot.pk):
         raise ValidationError('La temporada no pertenece a tu cuenta.')
     season.potrero = plot
@@ -449,41 +435,3 @@ def save_season_form(plot, user, season):
     return {'season': season, 'created': creating, 'current': is_current, 'duplicate': False, 'synced': synced}
 
 
-def sync_season_with_plot_form(plot, previous):
-    """El formulario del potrero cambió variedad o fechas del *mismo* cultivo: llévalos a la temporada vigente.
-
-    Sin esto el formulario del potrero y la temporada quedaban con fechas distintas. Si la temporada vigente ya
-    terminó (cosechada o cerrada) no se reescribe su historia: los datos nuevos abren una temporada nueva. Un cambio
-    de cultivo lo resuelve ``record_form_crop_change``. Devuelve la temporada que quedó vigente, o ``None`` si no
-    hubo nada que sincronizar (por ejemplo, un potrero antiguo todavía sin temporadas).
-    """
-    previous = previous or {}
-    if not plot.cultivo_id or previous.get('cultivo_id') != plot.cultivo_id:
-        return None
-    latest = vigente_season(plot)
-    if latest is None or latest.cultivo_id != plot.cultivo_id:
-        return None
-    changed = [
-        field for field in ('variedad', 'fecha_siembra', 'fecha_cosecha') if getattr(latest, field) != getattr(plot, field)
-    ]
-    if not changed:
-        return None
-    if latest.estado in FINISHED_STATES:
-        return TemporadaCultivo.objects.create(
-            potrero=plot,
-            cultivo=plot.cultivo,
-            variedad=plot.variedad,
-            temporada_agricola=agricultural_season_for(plot.fecha_siembra),
-            fecha_siembra=plot.fecha_siembra,
-            fecha_cosecha=plot.fecha_cosecha,
-            estado=TemporadaCultivo.Estado.PLANIFICADA,
-            observaciones='Temporada creada desde el formulario del potrero: la anterior ya estaba terminada.',
-        )
-    for field in changed:
-        setattr(latest, field, getattr(plot, field))
-    if not latest.temporada_agricola and latest.fecha_siembra:
-        latest.temporada_agricola = agricultural_season_for(latest.fecha_siembra)
-    if latest.estado == TemporadaCultivo.Estado.SEMBRADA and not latest.fecha_siembra:
-        latest.estado = TemporadaCultivo.Estado.PLANIFICADA  # «sembrada» exige fecha de siembra
-    latest.save()
-    return latest

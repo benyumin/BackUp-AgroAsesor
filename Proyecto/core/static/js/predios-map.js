@@ -433,34 +433,6 @@
     return el('span', 'state-chip ' + tone, text);
   }
 
-  function nextAction(title, cta, target) {
-    const box = el('div', 'drawer-next');
-    box.append(el('span', 'next-hint-label', 'Próxima acción'), el('p', '', title));
-    let action;
-    if (target.assignId) {
-      action = el('button', 'btn-ghost-agro btn-compact', '→ ' + cta);
-      action.type = 'button';
-      action.dataset.assignCrop = target.assignId;
-    } else {
-      action = el('a', 'btn-ghost-agro btn-compact', '→ ' + cta);
-      action.href = target.href;
-    }
-    box.appendChild(action);
-    return box;
-  }
-
-  function plotNextAction(plot) {
-    if (!plot.crop) return nextAction('Asignar cultivo a ' + plot.name, 'Asignar cultivo', { assignId: plot.id });
-    if (Number(plot.planDone) < Number(plot.planTotal)) {
-      return nextAction('Definir la planificación de ' + plot.name, 'Definir planificación', {
-        href: plot.primaryUrl || plot.planFormUrl || plot.editUrl,
-      });
-    }
-    if (!plot.nextTask)
-      return nextAction('Programar una labor en ' + plot.name, 'Programar labor', { href: plot.taskUrl });
-    return nextAction('Revisar la planificación de ' + plot.name, 'Ver planificación', { href: plot.planUrl });
-  }
-
   function setSelectedTerrain(farm, plot) {
     const details = document.getElementById('selected-terrain-details');
     const emptyState = document.getElementById('selected-terrain-empty');
@@ -510,10 +482,14 @@
       } else {
         const notice = el('div', 'terrain-no-crop');
         notice.append(el('p', '', 'Este potrero todavía no tiene un cultivo asignado'));
+        // Única acción del aviso: abre el mismo diálogo «Asignar cultivo» del listado.
+        const assign = el('button', 'btn-primary-agro btn-sm', 'Asignar cultivo');
+        assign.type = 'button';
+        assign.dataset.assignCrop = plot.id;
+        notice.appendChild(assign);
         details.appendChild(notice);
       }
       if (plot.nextTask) add('Próxima labor', plot.nextTask.label + ' · ' + plot.nextTask.date);
-      details.appendChild(plotNextAction(plot));
       addLink('Planificar siembra', plotActionUrl('calendar', plot, farm));
       addLink('Calcular semillas', plotActionUrl('seeds', plot, farm));
       addLink('Calcular fertilizantes', plotActionUrl('inputs', plot, farm));
@@ -601,9 +577,6 @@
       const crops = [...new Set(farmPlots.map((item) => item.crop).filter(Boolean))];
       addFarm('Cultivos actuales', crops.length ? crops.join(', ') : 'Sin cultivos asignados');
     }
-    if (!plot && farm.nextStep) {
-      details.appendChild(nextAction(farm.nextStep.title, farm.nextStep.cta, { href: farm.nextStep.url }));
-    }
     const farmOpen = el('a', plot ? 'btn-ghost-agro btn-compact' : 'btn-secondary-agro btn-sm', 'Abrir predio');
     farmOpen.href = farm.detailUrl;
     details.appendChild(farmOpen);
@@ -666,7 +639,7 @@
     const squareMetres = polygonAreaSquareMetres(points);
     const hectares = squareMetres / 10000;
     if (isPlotForm && !polygonInsideParent(points)) {
-      areaOutput.textContent = 'Tu potrero debe quedar dentro del límite verde.';
+      areaOutput.textContent = 'Tu potrero debe quedar dentro del límite del predio.';
       areaOutput.classList.add('is-error');
       return;
     }
@@ -913,7 +886,7 @@
     boundaryMarkers = [];
     if (currentLayer) map.removeLayer(currentLayer);
     currentLayer = L.geoJSON(feature, {
-      style: { color: '#255b37', weight: 3, fillColor: '#74a567', fillOpacity: 0.24 },
+      style: { color: '#0f7a47', weight: 3, fillColor: '#34a36b', fillOpacity: isPlotForm ? 0.34 : 0.24 },
       // Con setOptIn(true) Geoman solo actúa sobre capas con pmIgnore:false; sin esto, «Volver a editar» y
       // «Corregir contorno» no hacían nada sobre un contorno recién dibujado (sí funcionaban al recargar uno guardado).
       pmIgnore: false,
@@ -978,6 +951,9 @@
     // Con Google Maps activo solo cuentan los toques que entrega Google (así un arrastre no marca una esquina).
     if (map.agroGoogleMaster && !event.fromGoogle) return;
     if (!drawing) {
+      // Formulario de potrero: un toque suelto no deja un marcador (se confundía con el perímetro). El punto exacto
+      // solo se marca con «Ubicación exacta (avanzado)» abierta; las coordenadas siguen disponibles ahí.
+      if (isPlotForm && !exactLocationOpen()) return;
       if (latitudeInput && longitudeInput && !currentLayer) {
         latitudeInput.value = event.latlng.lat.toFixed(6);
         longitudeInput.value = event.latlng.lng.toFixed(6);
@@ -1023,7 +999,7 @@
       return;
     }
     if (isPlotForm && !polygonInsideParent(drawPoints)) {
-      setStatus('Tu potrero debe quedar dentro del límite verde. Mueve las esquinas o toca «Ver el predio».');
+      setStatus('Tu potrero debe quedar dentro del límite del predio. Mueve las esquinas o toca «Ver el predio».');
       return;
     }
     const drawnAreaHa = polygonAreaSquareMetres(drawPoints) / 10000;
@@ -1108,6 +1084,11 @@
     setStatus('Contorno borrado. Escribe las hectáreas o dibuja de nuevo.');
   }
 
+  function exactLocationOpen() {
+    const details = document.querySelector('.more-details.is-advanced');
+    return !details || details.open;
+  }
+
   function cancelDrawing() {
     if (!drawing) return;
     stopDrawing();
@@ -1118,6 +1099,14 @@
       document.getElementById('live-perimeter').textContent = '';
     }
   }
+
+  // Formulario de potrero: tres trazos que no se confunden entre sí.
+  //  · Límite del predio: línea gris punteada, sin relleno (es solo la referencia).
+  //  · Otros potreros: gris claro con su nombre.
+  //  · El potrero que se crea o edita: verde sólido con relleno (el único que se guarda desde aquí).
+  const PARENT_FARM_STYLE = { color: '#475569', weight: 2.5, dashArray: '7 6', fill: false };
+  const OTHER_PLOT_STYLE = { color: '#94a3b8', weight: 1.5, fillColor: '#cbd5e1', fillOpacity: 0.35 };
+  const PLOT_HINT = 'Dibuja tu potrero dentro del límite del predio, o escribe las hectáreas abajo.';
 
   function addContextLayers() {
     // Formulario de predio (nuevo o edición): no se dibujan otros predios ni potreros.
@@ -1137,7 +1126,7 @@
         const layer = L.geoJSON(farm.geojson, {
           style:
             isPlotForm && String(farm.id) === activePredioId
-              ? { color: '#18713c', weight: 5, fillColor: '#64a76d', fillOpacity: 0.1, dashArray: '8 5' }
+              ? PARENT_FARM_STYLE
               : { color: '#496a8a', weight: 2, fillColor: '#8daac4', fillOpacity: 0.08 },
           interactive: !form,
         }).addTo(map);
@@ -1145,7 +1134,18 @@
         if (!form) layer.on('click', () => setSelectedTerrain(farm, null));
         viewBounds.extend(layer.getBounds());
       } else if (isPlotForm && String(farm.id) === activePredioId && farm.lat !== null && farm.lng !== null) {
-        parentFarmLayer = L.marker([farm.lat, farm.lng]).addTo(map);
+        // Predio sin contorno dibujado: un punto discreto con su nombre, no un marcador que parezca la ubicación
+        // del potrero.
+        parentFarmLayer = L.circleMarker([farm.lat, farm.lng], {
+          radius: 6,
+          color: '#475569',
+          weight: 2,
+          fillColor: '#fff',
+          fillOpacity: 1,
+          interactive: false,
+        })
+          .bindTooltip('Predio «' + farm.name + '»', { permanent: true, direction: 'top', className: 'map-ref-label' })
+          .addTo(map);
         viewBounds.extend(parentFarmLayer.getLatLng());
       }
     });
@@ -1154,8 +1154,14 @@
       if (activePredioId && String(plot.predio) !== activePredioId) return;
       if (plot.geojson) {
         const layer = L.geoJSON(plot.geojson, {
-          style: { color: '#7d8c78', weight: 2, fillColor: '#aebda5', fillOpacity: 0.08 },
+          style: isPlotForm
+            ? OTHER_PLOT_STYLE
+            : { color: '#7d8c78', weight: 2, fillColor: '#aebda5', fillOpacity: 0.08 },
+          interactive: false,
         }).addTo(map);
+        if (isPlotForm) {
+          layer.bindTooltip(plot.name, { permanent: true, direction: 'center', className: 'map-ref-label is-plot' });
+        }
         viewBounds.extend(layer.getBounds());
       }
     });
@@ -1517,6 +1523,28 @@
         } else if (viewBounds.isValid()) map.fitBounds(viewBounds, { padding: [24, 24], maxZoom: 17 });
         else map.setView(melipillaCenter, 12);
       });
+      if (isPlotForm) {
+        const exact = document.querySelector('.more-details.is-advanced');
+        if (exact) {
+          exact.addEventListener('toggle', () => {
+            if (drawing) return;
+            setStatus(
+              exact.open
+                ? currentLayer
+                  ? 'La ubicación se toma del contorno dibujado. Puedes corregir las coordenadas a mano.'
+                  : 'Toca el mapa para marcar la ubicación exacta, o escribe las coordenadas.'
+                : PLOT_HINT,
+            );
+          });
+        }
+        // Al volver con «Atrás», el navegador puede restaurar la página con el último aviso (por ejemplo «Dibujo
+        // cancelado»). Al entrar al formulario solo se muestra la indicación inicial.
+        window.addEventListener('pageshow', (event) => {
+          if (!event.persisted) return;
+          if (drawing) stopDrawing();
+          setStatus(PLOT_HINT);
+        });
+      }
       form.addEventListener('submit', (event) => {
         if (drawing) {
           event.preventDefault();
@@ -1527,9 +1555,9 @@
         L.PM.setOptIn(true);
       }
       if (isPlotForm && parentFarm?.geojson) {
-        setStatus('Opcional: dibuja tu potrero dentro del límite verde, o escribe las hectáreas.');
+        setStatus(PLOT_HINT);
       } else if (isPlotForm) {
-        setStatus('Opcional: dibuja tu potrero en el mapa, o escribe las hectáreas.');
+        setStatus('Dibuja tu potrero en el mapa, o escribe las hectáreas abajo.');
       } else {
         setStatus('Toca «Dibujar mi campo» y marca las esquinas de tu predio.');
       }

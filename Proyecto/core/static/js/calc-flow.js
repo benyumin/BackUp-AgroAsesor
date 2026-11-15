@@ -3,7 +3,7 @@
  * No calcula nada ni guarda nada: usa el motor de calc-panel.js (window.AgroCalculator) y los datos reales
  * del servidor (#agro-farms y #agro-catalog). Los <select> originales de potrero y cultivo siguen siendo la
  * fuente de verdad del formulario: aquí solo se presentan como tarjetas seleccionables, se marcan los pasos
- * completados, se bloquea lo que aún no se puede usar y se resume la selección en la columna derecha.
+ * completados y se bloquea lo que aún no se puede usar.
  * Si este archivo no carga, el formulario sigue funcionando con los selects normales.
  */
 (function () {
@@ -38,6 +38,8 @@
   }
   const fmt = (value, digits) =>
     Number(value).toLocaleString('es-CL', { maximumFractionDigits: digits === undefined ? 2 : digits });
+  // La superficie se muestra con la misma precisión con que se guarda (4 decimales): 0,1496 ha, no 0,15 ha.
+  const fmtHa = (value) => fmt(value, 4);
   const norm = (text) =>
     String(text || '')
       .normalize('NFD')
@@ -62,9 +64,6 @@
   const pdf = $('calc-pdf');
   const reportsLink = $('calc-go-reports');
   const coverLink = $('calc-go-cover');
-  const summary = $('calc-summary');
-  const notes = $('calc-notes');
-  const plotSummary = $('calc-plot-summary');
   const resultCard = root.querySelector('.calc-result-card');
   if (!plotSelect || !cropSelect || !plotHost || !cropHost) return;
 
@@ -72,7 +71,7 @@
   root.querySelectorAll('.calc-step[data-step]').forEach((node) => {
     steps[node.dataset.step] = node;
   });
-  const STEP_ORDER = ['plot', 'crop', 'area', 'dose', 'unit', 'go'];
+  const STEP_ORDER = ['plot', 'crop', 'area', 'dose', 'go'];
 
   const view = { plotChoosing: false, cropChoosing: false, plotQuery: '', cropQuery: '', cropFilter: 'all' };
   const signatures = { plot: '', crop: '' };
@@ -100,7 +99,7 @@
 
   // ---------- Potrero ----------
   function plotMeta(plot) {
-    return plot.farmName + ' · ' + fmt(plot.areaHa, 2) + ' ha';
+    return plot.farmName + ' · ' + fmtHa(plot.areaHa) + ' ha';
   }
   function plotIcon(plot) {
     const crop = plot.cropId ? cropById(plot.cropId) : null;
@@ -164,6 +163,19 @@
             : null,
         ),
       );
+      // Siguiente paso del potrero, una sola línea bajo la tarjeta (antes era una tarjeta aparte en la columna derecha).
+      if (!selected.crop && selected.editUrl) {
+        plotHost.append(
+          h(
+            'p',
+            { class: 'calc-mini-next' },
+            h('strong', null, 'Siguiente paso: '),
+            'este potrero no tiene cultivo. Puedes elegir uno abajo o ',
+            h('a', { href: selected.editUrl }, 'Asignar cultivo'),
+            '.',
+          ),
+        );
+      }
       return;
     }
 
@@ -429,8 +441,8 @@
       plot: ok.plot,
       crop: ok.crop,
       area: ok.area,
-      dose: ok.dose && ok.product !== false,
-      unit: ok.unit,
+      // La unidad se elige en el mismo paso que la dosis.
+      dose: ok.dose && ok.product !== false && ok.unit,
       go: state.saved,
     };
     const current = STEP_ORDER.find((key) => !done[key] && key !== 'go') || 'go';
@@ -468,7 +480,7 @@
   function statusFor(state) {
     if (!plots.length) return ['blocked', 'Necesitas un potrero'];
     if (!crops.length) return ['blocked', 'El catálogo no tiene cultivos'];
-    if (state.saved) return state.simulation ? ['sim', 'Simulación guardada'] : ['done', 'Cálculo guardado'];
+    if (state.saved) return ['done', 'Cálculo guardado'];
     if (state.ready) return ['ready', 'Listo para calcular'];
     const missing = state.missing;
     return [
@@ -504,7 +516,7 @@
         h(
           'button',
           { class: 'calc-chip', type: 'button', 'data-use-all': '1' },
-          'Usar todo el potrero (' + fmt(plot.areaHa, 2) + ' ha)',
+          'Usar todo el potrero (' + fmtHa(plot.areaHa) + ' ha)',
         ),
       );
     }
@@ -518,54 +530,6 @@
     input.dispatchEvent(new Event('input', { bubbles: true }));
   });
 
-  // ---------- Resumen de la selección ----------
-  function renderSummary() {
-    const plot = plotById(plotSelect.value);
-    plotSummary.replaceChildren();
-    if (plot) {
-      const rows = [
-        ['Predio', plot.farmName],
-        ['Superficie', fmt(plot.areaHa, 3) + ' ha'],
-        ['Cultivo actual', plot.crop ? plot.crop + (plot.variety ? ' · ' + plot.variety : '') : 'Sin cultivo'],
-        ['Estado', plot.status || ''],
-        ['Temporada', plot.season || ''],
-      ].filter((row) => row[1]);
-      let next = null;
-      if (!plot.crop) {
-        next = h(
-          'p',
-          { class: 'calc-mini-next' },
-          h('strong', null, 'Siguiente paso: '),
-          'este potrero no tiene cultivo. Asígnalo para planificar la siembra; mientras tanto puedes simular con otro cultivo. ',
-          plot.editUrl ? h('a', { href: plot.editUrl }, 'Asignar cultivo') : null,
-        );
-      } else if (!plot.sowing) {
-        next = h(
-          'p',
-          { class: 'calc-mini-next' },
-          h('strong', null, 'Siguiente paso: '),
-          'registra la fecha de siembra de este potrero. ',
-          plot.editUrl ? h('a', { href: plot.editUrl }, 'Definir siembra') : null,
-        );
-      }
-      plotSummary.append(
-        h(
-          'div',
-          { class: 'calc-mini' },
-          h('p', { class: 'calc-mini-kicker' }, 'Potrero'),
-          h('div', { class: 'calc-mini-head' }, h('h3', null, plot.name)),
-          h(
-            'dl',
-            null,
-            rows.map((row) => [h('dt', null, row[0]), h('dd', null, row[1])]),
-          ),
-          next,
-        ),
-      );
-    }
-    summary.hidden = !plot && notes.hidden;
-  }
-
   // ---------- Actualización general ----------
   function update(state) {
     latest = state;
@@ -576,7 +540,6 @@
     updateSteps(state);
     updateStatus(state);
     renderAreaTools();
-    renderSummary();
   }
 
   root.addEventListener('calc:update', (event) => {

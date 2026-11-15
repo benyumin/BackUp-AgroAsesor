@@ -30,7 +30,7 @@
     padding: 8px 12px;
     min-height: 40px;
     font: inherit;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
     cursor: pointer;
     transition: background 0.15s, border-color 0.15s;
 }
@@ -58,7 +58,7 @@
 .map-measure {
     margin: 6px 0;
     color: var(--green-dark);
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
 }
 
 .map-measure:empty {
@@ -210,7 +210,7 @@ dialog::backdrop {
     background: var(--green-soft);
     color: var(--green-dark);
     font-size: .78rem;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
 }
 
 .map-actions {
@@ -232,7 +232,7 @@ dialog::backdrop {
     background: #fff;
     color: var(--green-dark);
     font: inherit;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
     cursor: pointer;
 }
 
@@ -290,7 +290,7 @@ dialog::backdrop {
     color: var(--green-dark);
     font: inherit;
     font-size: .84rem;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
     cursor: pointer;
 }
 
@@ -321,7 +321,7 @@ dialog::backdrop {
     border-radius: 10px;
     background: #f2f8ef;
     color: var(--green-dark);
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
 }
 
 .map-measure:empty {
@@ -421,7 +421,7 @@ dialog::backdrop {
 .terrain-eyebrow {
     color: var(--green);
     font-size: .77rem;
-    font-weight: 800;
+    font-weight: var(--fw-semibold);
     letter-spacing: .09em;
     text-transform: uppercase;
 }
@@ -556,7 +556,7 @@ dialog::backdrop {
     background: transparent;
     color: var(--muted);
     font: inherit;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
     cursor: pointer;
 }
 
@@ -617,7 +617,7 @@ dialog::backdrop {
 .detail-facts dd {
     margin: 4px 0 0;
     color: var(--green-dark);
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
     overflow-wrap: anywhere;
 }
 
@@ -701,7 +701,7 @@ dialog::backdrop {
 .vertex-details summary,
 .history-geometry summary {
     color: var(--green-dark);
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
     cursor: pointer;
 }
 
@@ -713,16 +713,54 @@ dialog::backdrop {
     font-variant-numeric: tabular-nums;
 }
 
-.history-geometry pre {
-    max-height: 260px;
-    overflow: auto;
-    padding: 10px;
-    border-radius: 8px;
+/* Coordenadas del historial: tabla pequeña de vértices (sin la estructura GeoJSON) */
+.coords-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.coords-table {
+    width: 100%;
+    max-width: 360px;
+    box-sizing: border-box;
+    table-layout: fixed;
+    border-collapse: collapse;
+    border: 1px solid var(--line, #e6eaee);
+    font-size: .8rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.coords-table caption {
+    padding: 0 0 4px;
+    text-align: left;
+    color: var(--ink);
+    font-size: .82rem;
+    font-weight: var(--fw-semibold);
+}
+
+.coords-table th,
+.coords-table td {
+    padding: 5px 8px;
+    border-bottom: 1px solid var(--line, #e6eaee);
+    text-align: right;
+}
+
+.coords-table th:first-child,
+.coords-table td:first-child {
+    width: 56px;
+    text-align: center;
+}
+
+.coords-table thead th {
     background: #f4f6f2;
-    color: #34453a;
-    font-size: .75rem;
-    white-space: pre-wrap;
-    overflow-wrap: anywhere;
+    color: var(--muted);
+    font-weight: var(--fw-semibold);
+}
+
+.coords-table tbody tr:last-child td {
+    border-bottom: 0;
 }
 
 .history-list {
@@ -798,9 +836,6 @@ dialog::backdrop {
     font-size: .82rem;
 }
 
-.history-geometry pre {
-    max-height: 150px;
-}
 
 .terrain-layout .map-card,
 .terrain-layout .terrain-form-card {
@@ -817,7 +852,7 @@ dialog::backdrop {
     margin: 1px 0 4px;
     color: var(--green);
     font-size: .68rem;
-    font-weight: 800;
+    font-weight: var(--fw-semibold);
     letter-spacing: .09em;
 }
 
@@ -914,7 +949,7 @@ dialog::backdrop {
     border-color: #d2e3ca;
     background: #f1f7ed;
     color: var(--green-dark);
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
 }
 
 .map-form-summary {
@@ -1329,12 +1364,12 @@ dialog::backdrop {
 
 .terrain-facts dt {
     color: var(--muted);
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
 }
 
 .terrain-facts dd {
     margin: 0;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
     color: var(--ink);
     overflow-wrap: anywhere;
 }
@@ -1345,11 +1380,15 @@ dialog::backdrop {
     border-radius: 10px;
     background: var(--amber-soft);
     color: #6d5a10;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
 }
 
 .terrain-no-crop p {
     margin: 0;
+}
+
+.terrain-no-crop .btn-primary-agro {
+    margin-top: 10px;
 }
 
 .selected-terrain .detail-actions {
@@ -1373,7 +1412,7 @@ dialog::backdrop {
 
 .terrain-season-history summary {
     cursor: pointer;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
     color: var(--green-dark);
 }
 
@@ -1454,7 +1493,7 @@ dialog::backdrop {
     border-radius: 6px;
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
     color: var(--green-dark);
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
     font-size: 0.78rem;
     padding: 2px 6px;
     white-space: nowrap;
@@ -1528,12 +1567,12 @@ dialog::backdrop {
 .crop-dialog-context dt {
     color: var(--muted);
     font-size: 0.8rem;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
 }
 
 .crop-dialog-context dd {
     margin: 2px 0 0;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
     overflow-wrap: anywhere;
 }
 
@@ -1607,7 +1646,7 @@ dialog::backdrop {
 .overview-kpi span {
     color: var(--muted);
     font-size: 0.82rem;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
 }
 
 .overview-kpi strong {
@@ -1678,7 +1717,7 @@ dialog::backdrop {
 
 .overview-status {
     font-size: 0.78rem;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
     color: var(--green-dark);
     background: var(--green-soft);
     border-radius: 999px;
@@ -1716,7 +1755,7 @@ dialog::backdrop {
 .perimeter-confirmation #confirm-and-continue {
     min-height: 48px;
     font-size: 1rem;
-    font-weight: 800;
+    font-weight: var(--fw-semibold);
     box-shadow: 0 6px 16px rgba(37, 91, 55, .22);
 }
 
@@ -1733,7 +1772,7 @@ dialog::backdrop {
 
 .predio-fields .req {
     color: #b3402f;
-    font-weight: 800;
+    font-weight: var(--fw-semibold);
 }
 
 .predio-fields small {
@@ -1752,7 +1791,7 @@ dialog::backdrop {
     justify-content: center;
     min-height: 50px;
     font-size: 1rem;
-    font-weight: 800;
+    font-weight: var(--fw-semibold);
 }
 
 .form-submit-row.is-stacked>span {
@@ -1818,7 +1857,7 @@ dialog::backdrop {
     border-radius: 10px;
     color: var(--muted);
     font-size: .88rem;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
     text-decoration: underline;
     text-underline-offset: 3px;
 }
@@ -2002,7 +2041,7 @@ dialog::backdrop {
     border-color: transparent;
     background: transparent;
     color: var(--green-dark);
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
 }
 
 .map-toolbar .tool-group-aux button:hover:not(:disabled) {
@@ -2048,7 +2087,7 @@ dialog::backdrop {
     margin: 8px 0 0;
     color: var(--green-dark);
     font-size: .86rem;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
 }
 
 .map-confirmed-line[hidden] {
@@ -2146,7 +2185,7 @@ dialog::backdrop {
     padding: 5px 12px;
     border-radius: 10px;
     font-size: .84rem;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
     background: #fff;
     border: 1px solid #b9cdb4;
     color: var(--green-dark);
@@ -2182,7 +2221,7 @@ dialog::backdrop {
 .terrain-tool-label {
     color: var(--muted);
     font-size: .8rem;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
     margin-right: 2px;
 }
 
@@ -2303,7 +2342,7 @@ dialog::backdrop {
     margin: 2px 0 0;
     color: var(--green-dark);
     font-size: 1.7rem;
-    font-weight: 800;
+    font-weight: var(--fw-semibold);
     line-height: 1.1;
 }
 
@@ -2337,7 +2376,7 @@ dialog::backdrop {
 .drawer-stat span {
     color: var(--muted);
     font-size: .72rem;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
 }
 
 .drawer-stat.is-alert {
@@ -2347,28 +2386,6 @@ dialog::backdrop {
 
 .drawer-stat.is-alert strong {
     color: #9b3a2e;
-}
-
-.drawer-next {
-    display: grid;
-    gap: 2px;
-    margin: 10px 0;
-    padding: 10px 12px;
-    border: 1px solid #cfe3c7;
-    border-radius: 12px;
-    background: #f4faf1;
-}
-
-.drawer-next p {
-    margin: 0;
-    font-weight: 600;
-    color: var(--ink);
-    font-size: .92rem;
-}
-
-.drawer-next .btn-ghost-agro {
-    justify-self: start;
-    margin-left: -8px;
 }
 
 .empty-state .btn-primary-agro {
@@ -2425,7 +2442,7 @@ dialog::backdrop {
 
 .next-step-link {
     color: var(--green-dark);
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
     text-decoration: none;
 }
 
@@ -2678,7 +2695,7 @@ dialog::backdrop {
 
 .crumbs .is-current {
     color: var(--green-dark);
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
 }
 
 .plot-actions {
@@ -2732,7 +2749,7 @@ dialog::backdrop {
     background: var(--green-soft);
     color: var(--green-dark);
     font-size: 1rem;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
 }
 
 /* Todo el ancho disponible: al dibujar, el mapa ocupa toda la pantalla; después, mapa a la izquierda y datos a la derecha */
@@ -2809,7 +2826,7 @@ dialog::backdrop {
     padding: 0 22px;
     border-radius: 12px;
     font-size: 1.05rem;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
 }
 
 .is-simple-layout .tool-group-main button {
@@ -2865,7 +2882,7 @@ dialog::backdrop {
     min-height: 44px;
     color: var(--green-dark);
     font-size: .98rem;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
     cursor: pointer;
 }
 
@@ -2909,14 +2926,14 @@ dialog::backdrop {
     margin: 0;
     color: var(--green-dark);
     font-size: 1.05rem;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
 }
 
 .confirm-big {
     margin: 2px 0 16px;
     color: var(--green-dark);
     font-size: 2.3rem;
-    font-weight: 800;
+    font-weight: var(--fw-semibold);
     line-height: 1.1;
 }
 
@@ -2950,7 +2967,7 @@ dialog::backdrop {
     margin: 0;
     color: var(--green-dark);
     font-size: 1.15rem;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
 }
 
 .map-form-summary .summary-line strong {
@@ -2971,7 +2988,7 @@ dialog::backdrop {
     align-items: center;
     cursor: pointer;
     color: var(--muted);
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
 }
 
 .tech-details dl {
@@ -2995,7 +3012,7 @@ dialog::backdrop {
 .tech-details dd {
     margin: 0;
     color: var(--ink);
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
     text-align: right;
 }
 
@@ -3006,7 +3023,7 @@ dialog::backdrop {
 /* Formulario: primero lo esencial */
 .is-simple-layout .predio-fields .field>span {
     font-size: 1rem;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
 }
 
 .is-simple-layout .predio-fields input,
@@ -3034,7 +3051,7 @@ dialog::backdrop {
     min-height: 44px;
     color: var(--green-dark);
     font-size: 1rem;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
     cursor: pointer;
 }
 
@@ -3107,7 +3124,7 @@ dialog::backdrop {
 .map-card-heading.is-simple small {
     color: var(--muted);
     font-size: .85rem;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
 }
 
 .terrain-page-heading.is-simple .terrain-parent {
@@ -3127,7 +3144,7 @@ dialog::backdrop {
 
 .potrero-fields .field>span {
     font-size: 1rem;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
 }
 
 .potrero-fields input:not([type="checkbox"]),
@@ -3167,7 +3184,7 @@ dialog::backdrop {
 
 .more-details.is-advanced>summary {
     color: var(--muted);
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
 }
 
 /* Barra del potrero: con contorno dibujado solo se ofrece corregirlo o borrarlo; sin contorno, solo dibujar */
@@ -3220,7 +3237,7 @@ dialog::backdrop {
     background: none;
     color: var(--green-dark);
     font: inherit;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
     text-decoration: underline;
     cursor: pointer;
 }
@@ -3448,7 +3465,7 @@ dialog::backdrop {
 .potrero-form .map-card-heading.is-simple h2 small {
     color: var(--muted);
     font-size: .85rem;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
 }
 
 .potrero-form .potrero-fields {
@@ -3478,7 +3495,7 @@ dialog::backdrop {
 
 #terrain-form.potrero-form .potrero-fields>.field>span {
     font-size: 1rem;
-    font-weight: 800;
+    font-weight: var(--fw-semibold);
 }
 
 #terrain-form.potrero-form #id_nombre,
@@ -3488,7 +3505,7 @@ dialog::backdrop {
 }
 
 #terrain-form.potrero-form #id_nombre {
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
 }
 
 /* «Agregar más detalles» y «Ubicación exacta»: filas plegables, no campos sueltos */
@@ -3599,7 +3616,7 @@ dialog::backdrop {
     background: #fff;
     color: var(--green-dark);
     font-size: .95rem;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
 }
 
 .potrero-form .map-toolbar button:hover:not(:disabled) {
@@ -3760,7 +3777,7 @@ dialog::backdrop {
 .potrero-form .potrero-area-label {
     color: var(--green-dark);
     font-size: .95rem;
-    font-weight: 800;
+    font-weight: var(--fw-semibold);
 }
 
 .potrero-form .area-input {
@@ -3778,7 +3795,7 @@ dialog::backdrop {
     background: #fff;
     color: var(--green-dark);
     font-size: 1.5rem;
-    font-weight: 800;
+    font-weight: var(--fw-semibold);
     font-variant-numeric: tabular-nums;
 }
 
@@ -3795,7 +3812,7 @@ dialog::backdrop {
     transform: translateY(-50%);
     color: var(--muted);
     font-style: normal;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
     pointer-events: none;
 }
 
@@ -3825,7 +3842,7 @@ dialog::backdrop {
     grid-row: 1;
     color: var(--muted);
     font-size: .9rem;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
 }
 
 .potrero-form .potrero-area>.errorlist {
@@ -4141,7 +4158,7 @@ dialog::backdrop {
     box-shadow: none;
     color: var(--green-dark);
     font-size: .92rem;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
 }
 
 .is-predio-layout .perimeter-confirmation #return-to-edit:hover {

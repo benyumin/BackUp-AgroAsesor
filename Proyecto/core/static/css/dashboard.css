@@ -73,7 +73,7 @@
 }
 
 .dash-stat .muted {
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
     font-size: 0.82rem;
 }
 
@@ -85,7 +85,7 @@
 .dash-stat small {
     display: inline-block;
     margin-left: 6px;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
     font-size: 0.78rem;
     color: #2f8a45;
 }
@@ -141,7 +141,7 @@
     padding: 0 4px 8px;
     color: var(--muted);
     font-size: 0.75rem;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
     letter-spacing: 0.04em;
     text-transform: uppercase;
     border-bottom: 1px solid var(--line);
@@ -160,12 +160,12 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
 }
 
 .plot-actions a {
     color: var(--green);
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
     text-decoration: none;
     white-space: nowrap;
 }
@@ -175,7 +175,7 @@
 }
 
 .plot-area {
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
     color: var(--green-dark);
     white-space: nowrap;
 }
@@ -283,7 +283,7 @@
     display: block;
     color: #47754e;
     font-size: .7rem;
-    font-weight: 800;
+    font-weight: var(--fw-semibold);
     letter-spacing: .1em;
 }
 
@@ -543,7 +543,7 @@
 .plot-actions a {
     color: var(--green-dark);
     font-size: .76rem;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
     text-decoration: none;
     white-space: nowrap;
 }
@@ -626,7 +626,7 @@
 
 .distribution-empty a {
     color: var(--green-dark);
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
 }
 
 .dash-today .section-heading {
@@ -702,7 +702,7 @@
 .activity-state {
     color: #7a641d;
     font-size: .72rem;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
 }
 
 .activities-link {
@@ -1144,7 +1144,7 @@
     border-radius: 50%;
     background: var(--green-soft);
     color: var(--green-dark);
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
     transform: translateY(-50%);
 }
 
@@ -1170,7 +1170,7 @@
 
 .dash-hero p {
     color: var(--ink);
-    font-weight: 500;
+    font-weight: var(--fw-medium);
 }
 
 .dash-footnote {

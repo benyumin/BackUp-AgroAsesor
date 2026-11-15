@@ -1,0 +1,19 @@
+{% comment %}Consejo de la sección. Abierto la primera vez; plegado (una línea con ícono) después de «Entendido».
+ayudas.js guarda que se plegó sin recargar; sin JavaScript, el formulario hace lo mismo.{% endcomment %}
+{% if ayuda %}
+    <details class="ayuda no-print" data-ayuda="{{ clave }}"{% if abierta %} open{% endif %}>
+        <summary>
+            <span class="ayuda-ico" aria-hidden="true"><i data-lucide="lightbulb"></i></span>
+            <span class="ayuda-resumen">{{ ayuda.resumen }}</span>
+            <span class="ayuda-chevron" aria-hidden="true"><i data-lucide="chevron-down"></i></span>
+        </summary>
+        <div class="ayuda-body">
+            <p class="ayuda-titulo">{{ ayuda.titulo }}</p>
+            <ol class="ayuda-pasos">{% for paso in ayuda.pasos %}<li>{{ paso }}</li>{% endfor %}</ol>
+            <form method="post" action="{% url 'ayuda_ocultar' clave %}" class="ayuda-form">
+                {% csrf_token %}
+                <button class="btn-ghost-agro btn-sm" type="submit">Entendido</button>
+            </form>
+        </div>
+    </details>
+{% endif %}

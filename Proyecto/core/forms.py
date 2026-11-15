@@ -6,7 +6,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import UserCreationForm
 from django.core.exceptions import ValidationError
 from django.utils import timezone
-from .models import ActividadAgricola, Agricultor, Predio, Potrero, Cultivo, Zona, TemporadaCultivo, Insumo
+from .models import ActividadAgricola, Agricultor, Predio, Potrero, Cultivo, Zona, TemporadaCultivo
 from .validators import (
     formatear_rut,
     formatear_telefono,
@@ -17,7 +17,8 @@ from .validators import (
     partir_nombre,
 )
 from django.db import models
-from .catalog import default_zone, grouped_crop_choices
+from .calculos import productos_vigentes
+from .catalog import crop_group_name, default_zone, grouped_crop_choices
 from .geometry import polygon_area, coordinates_from_geojson
 
 
@@ -366,9 +367,8 @@ class PotreroForm(forms.ModelForm):
         fields = [
             'nombre',
             'cultivo',
-            'variedad',
-            'fecha_siembra',
-            'fecha_cosecha',
+            # La variedad y las fechas de siembra y cosecha se registran en la planificación (TemporadaCultivoForm).
+            # Los campos del modelo se conservan: este formulario simplemente ya no los edita ni los borra.
             'superficie_ha',
             'latitud',
             'longitud',
@@ -382,8 +382,6 @@ class PotreroForm(forms.ModelForm):
         }
         widgets = {
             'perimetro': forms.HiddenInput(),
-            'fecha_siembra': forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date'}),
-            'fecha_cosecha': forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date'}),
             'superficie_ha': forms.NumberInput(attrs={'min': '0.0001', 'step': '0.0001'}),
             'latitud': forms.NumberInput(attrs={'min': -85, 'max': 85, 'step': 'any'}),
             'longitud': forms.NumberInput(attrs={'min': -180, 'max': 180, 'step': 'any'}),
@@ -395,7 +393,7 @@ class PotreroForm(forms.ModelForm):
         self.fields['cultivo'].queryset = crops
         self.fields['cultivo'].choices = grouped_crop_choices(crops, 'Sin cultivo por ahora')
         self.fields['cultivo'].label = 'Cultivo'
-        self.fields['cultivo'].help_text = 'Qué se siembra en este potrero. Puedes dejarlo vacío y asignarlo después.'
+        self.fields['cultivo'].help_text = 'Opcional. Puedes dejarlo vacío y asignarlo después.'
         self.fields['superficie_ha'].required = False
 
     def clean(self):
@@ -410,6 +408,16 @@ class PotreroForm(forms.ModelForm):
         elif data.get('superficie_ha') is None:
             self.add_error('superficie_ha', 'Ingresa la superficie o dibuja el perímetro.')
         return data
+
+
+def sowing_date_label(crop_name):
+    """«Fecha de plantación» para frutales, «siembra o trasplante» para hortalizas y «siembra» para el resto."""
+    group = crop_group_name(crop_name) if crop_name else ''
+    if group == 'Frutales':
+        return 'Fecha de plantación'
+    if group == 'Hortalizas':
+        return 'Fecha de siembra o trasplante'
+    return 'Fecha de siembra'
 
 
 class TemporadaCultivoForm(forms.ModelForm):
@@ -449,6 +457,15 @@ class TemporadaCultivoForm(forms.ModelForm):
         )
         self.fields['fecha_siembra'].required = False
         self.fields['fecha_cosecha'].required = False
+        # El nombre de la primera fecha depende del cultivo: un frutal se planta, una hortaliza se siembra o trasplanta.
+        self.fields['fecha_siembra'].label = sowing_date_label(self._crop_name())
+
+    def _crop_name(self):
+        crop_id = self.data.get('cultivo') if self.is_bound else (self.initial.get('cultivo') or self.instance.cultivo_id)
+        crop_id = getattr(crop_id, 'pk', crop_id)
+        if not str(crop_id or '').isdigit():
+            return ''
+        return Cultivo.objects.filter(pk=crop_id).values_list('nombre', flat=True).first() or ''
 
 
 UNIDADES_DOSIS = [
@@ -482,16 +499,9 @@ class ActividadAgricolaForm(forms.ModelForm):
             f'{season.temporada_agricola + " · " if season.temporada_agricola else ""}'
             f'{season.cultivo.nombre}{" · " + season.variedad if season.variedad else ""} · {season.get_estado_display()}'
         )
-        today = timezone.localdate()
         self.fields['insumo'].queryset = (
-            Insumo.objects.filter(vigente=True)
-            .exclude(
-                estado_verificacion__in=['restricted', 'cancelled'],
-            )
-            .filter(
-                models.Q(vigencia_desde__isnull=True) | models.Q(vigencia_desde__lte=today),
-                models.Q(vigencia_hasta__isnull=True) | models.Q(vigencia_hasta__gte=today),
-            )
+            productos_vigentes()
+            .exclude(estado_verificacion__in=['restricted', 'cancelled'])
             .select_related('tipo', 'cultivo')
             .order_by('tipo__nombre', 'nombre')
         )

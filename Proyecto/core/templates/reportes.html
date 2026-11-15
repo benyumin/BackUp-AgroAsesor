@@ -1,25 +1,26 @@
 {% extends "body.html" %}
-{% load static %}
+{% load static ayudas %}
 {% block title %}{{ report_title }} · Reportes · AgroAsesor{% endblock %}
 {% block extra_css %}
-    <link rel="stylesheet" href="{% static 'css/reportes.css' %}?v=5">
+    <link rel="stylesheet" href="{% static 'css/reportes.css' %}?v=6">
 {% endblock %}
 {% block content %}
     <div class="page-hero no-print">
         <div>
             <h1 class="page-title">Reportes del campo</h1>
-            <p class="page-sub">Informes listos para imprimir, guardar como PDF o exportar a Excel (CSV), construidos con los registros guardados en tu cuenta.</p>
+            <p class="page-sub">Informes en PDF o para Excel (CSV), construidos con los registros guardados en tu cuenta.</p>
         </div>
         <div class="toolbar">
             {% if report_farms %}
             <a class="button secondary" href="?{{ csv_query }}">Descargar CSV</a>
-            <button class="button" type="button" onclick="window.print()">Imprimir / guardar PDF</button>
+            <a class="button" href="?{{ pdf_query }}">Descargar PDF</a>
             {% else %}
             <button class="button secondary" type="button" disabled aria-describedby="report-empty-help">Descargar CSV</button>
-            <button class="button" type="button" disabled aria-describedby="report-empty-help">Imprimir / guardar PDF</button>
+            <button class="button" type="button" disabled aria-describedby="report-empty-help">Descargar PDF</button>
             {% endif %}
         </div>
     </div>
+    {% ayuda 'reportes' %}
     {% if not report_farms %}
     <section class="card report-start no-print">
         <div class="empty-state">

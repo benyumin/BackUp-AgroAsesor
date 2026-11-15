@@ -1,0 +1,34 @@
+{% extends "body.html" %}
+{% block title %}Eliminar {{ revision.tipo }} · AgroAsesor{% endblock %}
+{% block content %}
+    {# Misma confirmación que la ventana del menú «⋯», para cuando no hay JavaScript. #}
+    <section class="card registro-confirm" aria-labelledby="registro-title">
+        {% if revision.puede_eliminar %}
+            <h1 class="page-title" id="registro-title">¿Eliminar el {{ revision.tipo }} «{{ revision.nombre }}»?</h1>
+        {% else %}
+            <h1 class="page-title" id="registro-title">No se puede eliminar «{{ revision.nombre }}»</h1>
+        {% endif %}
+        <p class="agro-dialog-record">
+            <span class="agro-dialog-kicker">{% if revision.tipo == 'predio' %}Predio{% else %}Potrero{% endif %}</span>
+            <strong>{{ revision.detalle }}</strong>
+        </p>
+        {% if revision.puede_eliminar %}
+            <p>Se eliminará de forma definitiva y no se puede deshacer. El historial del predio se conserva. Si prefieres guardarlo, archívalo: deja de aparecer y puedes restaurarlo cuando quieras.</p>
+        {% else %}
+            <p>Tiene información asociada que AgroAsesor protege:</p>
+            <ul class="agro-dialog-list">{% for bloqueo in revision.bloqueos %}<li>{{ bloqueo }}</li>{% endfor %}</ul>
+            <p>Puedes archivarlo: dejará de aparecer en tus listas, mapas, calculadoras y agenda, y toda su información se conserva para restaurarlo desde Mis predios › Archivados.</p>
+        {% endif %}
+        <div class="agro-dialog-actions">
+            <a class="btn-ghost-agro" href="{{ volver_url }}">Cancelar</a>
+            {% if revision.archivado %}
+                <form method="post" action="{{ accion_url }}">{% csrf_token %}<button class="btn-primary-agro" type="submit" name="accion" value="restaurar">Restaurar</button></form>
+            {% else %}
+                <form method="post" action="{{ accion_url }}">{% csrf_token %}<button class="{% if revision.puede_eliminar %}btn-secondary-agro{% else %}btn-primary-agro{% endif %}" type="submit" name="accion" value="archivar">{% if revision.puede_eliminar %}Archivar en su lugar{% else %}Archivar {{ revision.tipo }}{% endif %}</button></form>
+            {% endif %}
+            {% if revision.puede_eliminar %}
+                <form method="post" action="{{ accion_url }}">{% csrf_token %}<button class="btn-danger-agro" type="submit" name="accion" value="eliminar">Eliminar definitivamente</button></form>
+            {% endif %}
+        </div>
+    </section>
+{% endblock %}
