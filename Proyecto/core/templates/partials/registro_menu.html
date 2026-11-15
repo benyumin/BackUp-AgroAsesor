@@ -1,0 +1,8 @@
+{% comment %}Opción «Eliminar» del menú «⋯» de un predio o potrero. Sin JavaScript abre la página de confirmación;
+con JavaScript (registro-acciones.js) muestra la confirmación en una ventana. Uso:
+{% include "partials/registro_menu.html" with tipo="potrero" pk=potrero.pk nombre=potrero.nombre %}{% endcomment %}
+<span class="row-menu-sep" role="separator"></span>
+<a class="row-menu-item is-danger"
+   role="menuitem"
+   href="{% url 'registro_confirmar' tipo pk %}"
+   data-registro-eliminar><i data-lucide="trash-2"></i> Eliminar {{ tipo }}…</a>

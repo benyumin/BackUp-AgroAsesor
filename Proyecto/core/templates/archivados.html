@@ -1,0 +1,51 @@
+{% extends "body.html" %}
+{% load static agro_assets %}
+{% block title %}Archivados · AgroAsesor{% endblock %}
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/predios.css' %}?v=38">
+{% endblock %}
+{% block content %}
+    <nav class="crumbs" aria-label="Dónde estás"><a href="{% url 'predios' %}">Mis predios</a><span aria-hidden="true">›</span><span class="is-current" aria-current="page">Archivados</span></nav>
+    <div class="page-hero">
+        <div>
+            <h1 class="page-title">Archivados</h1>
+            <p class="page-sub">Predios y potreros que ocultaste. Conservan sus actividades, cálculos, temporadas e historial; al restaurarlos vuelven a aparecer tal como estaban.</p>
+        </div>
+    </div>
+    {% with predios=archivados.predios potreros=archivados.potreros %}
+        {% if not predios and not potreros %}
+            <section class="card registro-empty">
+                <p>No tienes predios ni potreros archivados.</p>
+                <a class="btn-secondary-agro" href="{% url 'predios' %}">Volver a Mis predios</a>
+            </section>
+        {% endif %}
+        {% if predios %}
+            <section class="card registro-list" aria-labelledby="archivados-predios">
+                <h2 id="archivados-predios">Predios</h2>
+                {% for predio in predios %}
+                    <article class="registro-row">
+                        <div><strong>{{ predio.nombre }}</strong><small>{{ predio.superficie_ha|cifra }} ha · archivado el {{ predio.archivado_en|date:"d/m/Y" }}</small></div>
+                        <div class="registro-row-actions">
+                            <form method="post" action="{% url 'registro_accion' 'predio' predio.pk %}">{% csrf_token %}<button class="btn-secondary-agro btn-sm" type="submit" name="accion" value="restaurar"><i data-lucide="undo-2"></i> Restaurar</button></form>
+                            <a class="btn-ghost-agro btn-sm" href="{% url 'registro_confirmar' 'predio' predio.pk %}">Eliminar…</a>
+                        </div>
+                    </article>
+                {% endfor %}
+            </section>
+        {% endif %}
+        {% if potreros %}
+            <section class="card registro-list" aria-labelledby="archivados-potreros">
+                <h2 id="archivados-potreros">Potreros</h2>
+                {% for potrero in potreros %}
+                    <article class="registro-row">
+                        <div><strong>{{ potrero.nombre }}</strong><small>{{ potrero.predio.nombre }} · {{ potrero.superficie_ha|cifra }} ha · archivado el {{ potrero.archivado_en|date:"d/m/Y" }}</small></div>
+                        <div class="registro-row-actions">
+                            <form method="post" action="{% url 'registro_accion' 'potrero' potrero.pk %}">{% csrf_token %}<button class="btn-secondary-agro btn-sm" type="submit" name="accion" value="restaurar"><i data-lucide="undo-2"></i> Restaurar</button></form>
+                            <a class="btn-ghost-agro btn-sm" href="{% url 'registro_confirmar' 'potrero' potrero.pk %}">Eliminar…</a>
+                        </div>
+                    </article>
+                {% endfor %}
+            </section>
+        {% endif %}
+    {% endwith %}
+{% endblock %}

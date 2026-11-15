@@ -1,0 +1,351 @@
+/* Calculadora de semillas e insumos («Cuánto llevar»): tarjeta de resultado y ajustes del formulario.
+   Se carga después de decisiones.css. La estructura de la tarjeta la arma calc-resultado.js. */
+
+/* ---------- Formulario ---------- */
+#tool-llevar .optional-tag {
+    margin-left: 4px;
+    color: var(--muted);
+    font-size: 0.82em;
+    font-weight: var(--fw-medium);
+}
+
+/* Los pasos se agrupan en «Paso 1/2/3»: el círculo de cada campo marca solo pendiente, actual o listo. */
+#tool-llevar .calc-step-num:empty {
+    font-size: 0;
+}
+
+#tool-llevar .calc-unit-field {
+    max-width: 220px;
+}
+
+#tool-llevar .calc-product-info {
+    margin: -4px 0 12px;
+    font-size: 0.9rem;
+}
+
+#tool-llevar .calc-product-info > summary {
+    color: var(--green-dark);
+    font-weight: var(--fw-semibold);
+    cursor: pointer;
+}
+
+#tool-llevar .calc-product-info[open] > summary {
+    margin-bottom: 8px;
+}
+
+/* Sin avisos amarillos en esta calculadora: las ayudas van en texto gris y solo los errores se destacan (en rojo). */
+#tool-llevar .calc-step.is-enhanced .calc-native .help:not(:empty) {
+    padding: 0;
+    background: none;
+    color: var(--muted);
+}
+
+#tool-llevar .calc-dose-origin.is-adjusted,
+#tool-llevar .calc-dose-origin.is-manual {
+    color: var(--muted);
+}
+
+#tool-llevar .calc-mini-next,
+#tool-llevar .flow-stale {
+    background: #f1f5f9;
+    color: var(--ink);
+}
+
+/* ---------- Resumen visual del cálculo ---------- */
+#tool-llevar .calc-result-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+/* Una sola etiqueta de estado, discreta. */
+#tool-llevar .calc-tag {
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: var(--fw-semibold);
+    white-space: nowrap;
+}
+
+#tool-llevar .calc-tag.is-preview {
+    border: 1px dashed var(--line);
+    color: var(--muted);
+}
+
+#tool-llevar .calc-tag.is-error {
+    background: #fef3f2;
+    color: #b42318;
+}
+
+#tool-llevar .calc-tag.is-ok {
+    background: var(--green-soft);
+    color: var(--green);
+}
+
+/* Dibujo del terreno: predio, potrero y superficie aplicada. */
+#tool-llevar .calc-terreno {
+    margin: 12px 0;
+    padding: 10px 10px 6px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: linear-gradient(180deg, #f6faf7, #ffffff);
+}
+
+#tool-llevar .terreno-mini {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-height: 190px;
+}
+
+#tool-llevar .terreno-mini .tm-farm {
+    fill: #ffffff;
+    stroke: #64748b;
+    stroke-width: 1.5;
+    stroke-dasharray: 5 4;
+}
+
+#tool-llevar .terreno-mini .tm-other {
+    fill: #e2e8f0;
+    stroke: #94a3b8;
+    stroke-width: 1;
+}
+
+#tool-llevar .terreno-mini .tm-plot {
+    fill: rgba(52, 178, 123, 0.28);
+    stroke: var(--green);
+    stroke-width: 2.2;
+    stroke-linejoin: round;
+}
+
+.terreno-mini-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 14px;
+    margin: 6px 0 0;
+    padding: 0;
+    list-style: none;
+    color: var(--muted);
+    font-size: 0.74rem;
+}
+
+.terreno-mini-legend li {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.terreno-mini-legend .tm-note {
+    flex-basis: 100%;
+    font-style: italic;
+}
+
+.terreno-mini-legend .tm-key {
+    display: inline-block;
+    width: 16px;
+    height: 10px;
+    border-radius: 3px;
+    box-sizing: border-box;
+}
+
+.terreno-mini-legend .tm-key.is-farm {
+    border: 1.5px dashed #64748b;
+}
+
+.terreno-mini-legend .tm-key.is-plot {
+    border: 2px solid #0b6b4b;
+    background: rgba(52, 178, 123, 0.28);
+}
+
+.terreno-mini-legend .tm-key.is-applied {
+    background: repeating-linear-gradient(45deg, #0b6b4b 0 3px, rgba(11, 107, 75, 0.55) 3px 6px);
+}
+
+/* Valor fuera de límite: el resumen no muestra cantidad y marca en rojo lo que falla. */
+#tool-llevar .calc-exceso {
+    display: grid;
+    gap: 2px;
+    margin: 10px 0 0;
+    padding: 12px 14px;
+    border: 1px solid #fda29b;
+    border-radius: 14px;
+    background: #fef3f2;
+    color: #7a271a;
+    font-size: 0.86rem;
+}
+
+#tool-llevar .calc-exceso strong {
+    color: #b42318;
+    font-size: 1.05rem;
+}
+
+#tool-llevar .calc-terreno.is-error {
+    border-color: #fda29b;
+    background: linear-gradient(180deg, #fffafa, #ffffff);
+}
+
+#tool-llevar .terreno-mini .tm-plot.is-error {
+    fill: rgba(240, 68, 56, 0.16);
+    stroke: #d92d20;
+}
+
+#tool-llevar .terreno-mini .tm-exceso {
+    fill: none;
+    stroke: #d92d20;
+    stroke-width: 1.6;
+    stroke-dasharray: 4 3;
+}
+
+.terreno-mini-legend .tm-key.is-plot.is-error {
+    border-color: #d92d20;
+    background: rgba(240, 68, 56, 0.16);
+}
+
+.terreno-mini-legend .tm-key.is-exceso {
+    border: 1.5px dashed #d92d20;
+}
+
+#tool-llevar .calc-ctx-grid .is-error dt,
+#tool-llevar .calc-ctx-grid .is-error dd {
+    color: #b42318;
+}
+
+/* Datos de contexto en un bloque compacto. */
+#tool-llevar .calc-ctx-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px 14px;
+    margin: 0 0 12px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: #f8fafc;
+}
+
+#tool-llevar .calc-ctx-grid > div {
+    min-width: 0;
+}
+
+#tool-llevar .calc-ctx-grid dt {
+    color: var(--muted);
+    font-size: 0.72rem;
+}
+
+#tool-llevar .calc-ctx-grid dd {
+    margin: 0;
+    color: var(--ink);
+    font-size: 0.92rem;
+    font-weight: var(--fw-semibold);
+    overflow-wrap: anywhere;
+}
+
+/* Fórmula breve: superficie × dosis = resultado. */
+#tool-llevar .calc-formula-chip {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin: 0 0 10px;
+    font-size: 0.9rem;
+}
+
+#tool-llevar .calc-formula-chip span {
+    padding: 3px 8px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+#tool-llevar .calc-formula-chip b {
+    color: var(--muted);
+    font-weight: var(--fw-medium);
+}
+
+#tool-llevar .calc-formula-chip strong {
+    padding: 3px 8px;
+    border-radius: 8px;
+    background: var(--green-soft);
+    color: var(--green);
+}
+
+#tool-llevar .calc-details {
+    margin: 2px 0 6px;
+    font-size: 0.88rem;
+}
+
+#tool-llevar .calc-details > summary {
+    color: var(--green-dark);
+    font-weight: var(--fw-semibold);
+    cursor: pointer;
+}
+
+#tool-llevar .calc-details[open] > summary {
+    margin-bottom: 8px;
+}
+
+#tool-llevar .calc-details .calc-facts {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
+    margin: 0 0 8px;
+    padding: 0;
+    border: 0;
+    background: none;
+}
+
+#tool-llevar .calc-details .calc-facts > div {
+    display: grid;
+    grid-template-columns: minmax(110px, 40%) minmax(0, 1fr);
+    gap: 8px;
+}
+
+#tool-llevar .calc-details .calc-facts dt {
+    color: var(--muted);
+}
+
+#tool-llevar .calc-details .calc-facts dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+/* ---------- Acciones ---------- */
+#tool-llevar .calc-result-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+#tool-llevar .calc-result-actions [hidden] {
+    display: none;
+}
+
+#tool-llevar .calc-result-links {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px 18px;
+    margin: 10px 0 0;
+    font-size: 0.88rem;
+}
+
+#tool-llevar .calc-result-links [hidden] {
+    display: none;
+}
+
+#tool-llevar .calc-result-actions .btn-primary-agro {
+    flex: 1 1 auto;
+    justify-content: center;
+}
+
+#tool-llevar .calc-result-links [aria-disabled="true"] {
+    color: var(--muted);
+    pointer-events: none;
+    text-decoration: none;
+}
+
+@media (max-width: 520px) {
+    #tool-llevar .calc-details .calc-facts > div {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 0;
+    }
+}
