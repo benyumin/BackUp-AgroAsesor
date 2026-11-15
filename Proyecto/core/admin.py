@@ -5,7 +5,6 @@ from .models import (
     AceptacionPoliticas,
     ActividadAgricola,
     CalculoAgricola,
-    ConfiguracionAgronomica,
     Cultivo,
     Insumo,
     TipoInsumo,
@@ -17,7 +16,6 @@ from .models import (
     ReferenciaAgronomica,
     TemporadaCultivo,
     ProblemaAgricola,
-    UsoInsumoCultivo,
 )
 
 
@@ -140,17 +138,6 @@ class ReferenciaAgronomicaAdmin(admin.ModelAdmin):
         ('Trazabilidad', {'fields': ('creado', 'actualizado')}),
     )
     readonly_fields = ('creado', 'actualizado')
-
-
-@admin.register(ConfiguracionAgronomica)
-class ConfiguracionAgronomicaAdmin(admin.ModelAdmin):
-    list_display = ('margen_ventana_dias',)
-
-    def has_add_permission(self, request):
-        return not ConfiguracionAgronomica.objects.exists()
-
-    def has_delete_permission(self, request, obj=None):
-        return False
 
 
 @admin.register(TipoInsumo)
@@ -363,19 +350,6 @@ class ActividadAgricolaAdmin(admin.ModelAdmin):
     list_display = ('nombre', 'tipo', 'potrero', 'usuario', 'fecha_programada', 'estado')
     list_filter = ('tipo', 'estado', 'fecha_programada')
     search_fields = ('nombre', 'potrero__nombre', 'potrero__predio__nombre', 'usuario__email')
-
-
-@admin.register(UsoInsumoCultivo)
-class UsoInsumoCultivoAdmin(admin.ModelAdmin):
-    list_display = ('cultivo', 'problema', 'insumo', 'activo', 'fuente_nombre', 'fecha_verificacion')
-    list_filter = ('activo', 'cultivo', 'problema')
-    search_fields = ('cultivo__nombre', 'problema__nombre', 'insumo__nombre', 'fuente_nombre')
-    list_select_related = ('cultivo', 'problema', 'insumo')
-    actions = ['marcar_no_vigente']
-
-    @admin.action(description='Marcar como no vigente (conserva el historial)')
-    def marcar_no_vigente(self, request, queryset):
-        queryset.update(activo=False)
 
 
 @admin.register(CargaCatalogo)

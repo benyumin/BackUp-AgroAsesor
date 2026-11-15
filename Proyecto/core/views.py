@@ -46,7 +46,7 @@ from .seasons import (
     record_form_crop_change,
     vigente_season,
 )
-from .agronomy import evaluate_harvest_date, evaluate_sowing_date, find_reference
+from .agronomy import MARGEN_VENTANA_DIAS, evaluate_harvest_date, evaluate_sowing_date, find_reference
 from .geometry import coordinates_from_geojson
 from .google_auth import google_configurado, google_login_url
 from .forms import (
@@ -63,7 +63,6 @@ from .models import (
     ActividadAgricola,
     Agricultor,
     CalculoAgricola,
-    ConfiguracionAgronomica,
     Predio,
     PredioHistorial,
     Potrero,
@@ -2660,19 +2659,18 @@ def evaluate_calendar_date(request):
         variety,
         year=(sowing_date or proposal).year,
     )
-    configuration = ConfiguracionAgronomica.objects.get_or_create(pk=1)[0]
     if evaluation == 'sowing':
         result = evaluate_sowing_date(
             proposal,
             reference,
-            configuration.margen_ventana_dias,
+            MARGEN_VENTANA_DIAS,
         )
     else:
         result = evaluate_harvest_date(
             sowing_date,
             proposal,
             reference,
-            configuration.margen_ventana_dias,
+            MARGEN_VENTANA_DIAS,
         )
     result.update(
         {
@@ -2688,7 +2686,7 @@ def evaluate_calendar_date(request):
                 if reference and reference.tiene_fuente_verificada
                 else None
             ),
-            'margin_days': configuration.margen_ventana_dias,
+            'margin_days': MARGEN_VENTANA_DIAS,
             'source': (
                 {
                     'institution': reference.institucion_fuente,

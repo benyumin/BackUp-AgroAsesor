@@ -9,6 +9,9 @@ from django.db import models
 
 from .models import ReferenciaAgronomica
 
+# Días de tolerancia alrededor de una ventana de siembra o cosecha para calificar una fecha como «cercana».
+MARGEN_VENTANA_DIAS = 15
+
 ESTADOS_EVALUACION = {
     'within': 'Dentro de ventana referencial',
     'near': 'Cercana al límite de la ventana',
