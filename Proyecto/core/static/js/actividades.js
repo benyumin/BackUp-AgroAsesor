@@ -127,7 +127,7 @@
     const add = (label, value) => list.append(el('dt', '', label), el('dd', '', value));
     add('Predio', plot.farm);
     add('Potrero', plot.name);
-    add('Superficie', fmt(plot.areaHa, 2) + ' ha');
+    add('Superficie', fmt(plot.areaHa, 4) + ' ha');
     add(
       'Cultivo',
       season ? season.crop + (season.variety ? ' · ' + season.variety : '') : plot.crop || 'Sin cultivo asignado',
@@ -280,7 +280,7 @@
       doseSummary.append(
         el('span', '', 'Cantidad total estimada'),
         el('strong', '', fmt(total, 2) + ' ' + unit.replace('/ha', '')),
-        el('small', '', fmt(dose, 3) + ' ' + unit + ' × ' + fmt(area, 2) + ' ha'),
+        el('small', '', fmt(dose, 3) + ' ' + unit + ' × ' + fmt(area, 4) + ' ha'),
       );
     }
   }

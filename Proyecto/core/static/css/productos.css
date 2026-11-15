@@ -3,7 +3,7 @@
     margin-bottom: 4px;
     color: var(--green);
     font-size: 0.8rem;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
     letter-spacing: 0.06em;
     text-transform: uppercase;
 }
@@ -22,7 +22,7 @@
     width: fit-content;
     margin-bottom: 6px;
     color: var(--green-dark);
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
     text-decoration: none;
     font-size: 0.9rem;
 }
@@ -59,7 +59,7 @@
 
 .category-chip span {
     font-size: 0.86rem;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
     color: var(--muted);
 }
 
@@ -149,7 +149,7 @@
 
 .product-category {
     font-size: 0.78rem;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
     text-transform: uppercase;
     letter-spacing: 0.05em;
     color: var(--cat, var(--green));
@@ -197,7 +197,7 @@
 
 .product-card dd {
     margin: 0;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
     text-align: right;
 }
 
@@ -221,7 +221,7 @@
     align-items: center;
     gap: 4px;
     font-size: 0.82rem;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
 }
 
 .calc-ok {
@@ -358,12 +358,12 @@
 .sheet-grid dt {
     color: var(--muted);
     font-size: 0.84rem;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
 }
 
 .sheet-grid dd {
     margin: 3px 0 0;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
     overflow-wrap: anywhere;
 }
 
@@ -458,7 +458,7 @@
 
 .related-list a {
     color: var(--green-dark);
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
 }
 
 .related-list small {
@@ -517,4 +517,4 @@
     .sheet-head {
         flex-direction: column;
     }
-}
+}

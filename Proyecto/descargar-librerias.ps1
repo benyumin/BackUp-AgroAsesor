@@ -1,4 +1,4 @@
-﻿# Descarga a tu proyecto las librerías que la página usa (íconos, mapa, PDF y fuentes), para que NUNCA dependa de internet
+﻿# Descarga a tu proyecto las librerías que la página usa (íconos, mapa y fuentes; los PDF se generan en el servidor), para que NUNCA dependa de internet
 # ni de CDNs al dibujar botones, menús y mapas. Se ejecuta UNA vez (y de nuevo solo si cambian las versiones).
 # Uso (PowerShell, dentro de la carpeta Agroasesor_Hugo):   .\descargar-librerias.ps1
 $ErrorActionPreference = 'Stop'
@@ -34,8 +34,6 @@ foreach ($img in 'marker-icon.png', 'marker-icon-2x.png', 'marker-shadow.png', '
 }
 Bajar 'https://unpkg.com/@geoman-io/leaflet-geoman-free@2.18.0/dist/leaflet-geoman.css' 'leaflet\leaflet-geoman.css'
 Bajar 'https://unpkg.com/@geoman-io/leaflet-geoman-free@2.18.0/dist/leaflet-geoman.min.js' 'leaflet\leaflet-geoman.min.js'
-Write-Host 'PDF (jsPDF 2.5.2)'
-Bajar 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js' 'jspdf.umd.min.js'
 
 Write-Host 'Fuentes (Source Sans 3 e Inter)'
 $fuentes = @{

@@ -67,7 +67,7 @@
     const crop = plot.cropId ? cropById(plot.cropId) : null;
     return crop ? emoji(crop) : '🟩';
   }
-  const plotMeta = (plot) => plot.farmName + ' · ' + fmt(plot.areaHa, 2) + ' ha';
+  const plotMeta = (plot) => plot.farmName + ' · ' + fmt(plot.areaHa, 4) + ' ha';
 
   function fireChange(select, value) {
     select.value = String(value);
@@ -313,7 +313,7 @@
   function plotCard(plot) {
     const rows = [
       ['Predio', plot.farmName],
-      ['Superficie', fmt(plot.areaHa, 3) + ' ha'],
+      ['Superficie', fmt(plot.areaHa, 4) + ' ha'],
       ['Cultivo actual', plot.crop ? plot.crop + (plot.variety ? ' · ' + plot.variety : '') : 'Sin cultivo'],
       ['Estado', plot.status || ''],
       ['Temporada', plot.season || ''],
@@ -601,7 +601,7 @@
             ? 'Primero elige un potrero'
             : !(area > 0)
               ? 'Ingresa una superficie mayor que 0'
-              : 'No puede superar ' + fmt(plot.areaHa, 3) + ' ha',
+              : 'No puede superar ' + fmt(plot.areaHa, 4) + ' ha',
         },
       };
     }
@@ -679,7 +679,7 @@
             h(
               'button',
               { class: 'calc-chip', type: 'button', 'data-use-all': '1' },
-              'Usar todo el potrero (' + fmt(plot.areaHa, 2) + ' ha)',
+              'Usar todo el potrero (' + fmt(plot.areaHa, 4) + ' ha)',
             ),
           );
         }

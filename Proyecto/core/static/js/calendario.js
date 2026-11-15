@@ -426,6 +426,7 @@
     render(true);
   });
 
+  // El PDF lo genera el servidor (core/pdf) con la referencia elegida y el año que se está mirando.
   detail.addEventListener('click', function (event) {
     if (!event.target.closest('#cal-pdf')) return;
     const data = rows();
@@ -433,30 +434,9 @@
       data.find(function (item) {
         return String(item.id) === String(selectedId);
       }) || data[0];
-    if (!row) return;
-    const verified = isVerified(row.ref);
-    const lines = [
-      { heading: row.zone + ' · ' + yearSelect.value },
-      { label: 'Variedad', value: row.variety || 'Referencia general' },
-      { label: 'Siembra', value: monthRange(row.sowStart, row.sowEnd) },
-      { label: 'Cosecha', value: monthRange(row.harvestStart, row.harvestEnd) },
-      { label: 'Observaciones', value: row.notes || '—' },
-      {
-        label: 'Estado de la referencia',
-        value: verified ? 'Verificada con fuente' : 'Demostración / sin fuente verificada',
-      },
-    ];
-    if (verified) {
-      lines.push({
-        label: 'Fuente',
-        value: [row.ref.sourceInstitution, row.ref.sourceDocument].filter(Boolean).join(' · '),
-      });
-    }
-    window.AgroPdf.download(
-      'calendario-' + window.AgroPdf.slug(row.crop) + '.pdf',
-      'Calendario de siembra · ' + row.crop,
-      lines,
-      { badge: verified ? '' : 'Datos de demostración' },
+    if (!row || !detail.dataset.pdfUrl) return;
+    window.location.assign(
+      detail.dataset.pdfUrl.replace('/0/', '/' + row.id + '/') + '?anio=' + encodeURIComponent(yearSelect.value),
     );
   });
 

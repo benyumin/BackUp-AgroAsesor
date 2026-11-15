@@ -2,7 +2,7 @@
 {% load static %}
 {% block title %}Mi perfil · AgroAsesor{% endblock %}
 {% block extra_css %}
-    <link rel="stylesheet" href="{% static 'css/activities.css' %}?v=11">
+    <link rel="stylesheet" href="{% static 'css/activities.css' %}?v=12">
 {% endblock %}
 {% block content %}
     {% with a=form.initial.nombre_completo|yesno:"1,0" b=form.initial.telefono|yesno:"1,0" c=form.initial.comuna|yesno:"1,0" %}
@@ -146,6 +146,15 @@
                             <dd>{{ request.user.date_joined|date:"j \d\e F \d\e Y" }}</dd>
                         </div>
                         {% with antiguedad=request.user.date_joined|timesince %}{% if "minuto" not in antiguedad and "hora" not in antiguedad %}<span class="perfil-pill is-quiet">{{ antiguedad|truncatewords:2|cut:"…"|cut:"," }}</span>{% endif %}{% endwith %}
+                    </div>
+                    <div class="perfil-row">
+                        <span class="perfil-ico"><i data-lucide="lightbulb" aria-hidden="true"></i></span>
+                        <div>
+                            <dt>Consejos de ayuda</dt>
+                            <dd>{% if ayudas_ocultas %}Plegaste {{ ayudas_ocultas|length }} consejo{{ ayudas_ocultas|length|pluralize }}{% else %}Se muestran en cada sección{% endif %}</dd>
+                            <small>Explican cómo usar cada sección. Puedes abrirlos cuando quieras desde la línea «¿Cómo…?».</small>
+                        </div>
+                        {% if ayudas_ocultas %}<form method="post" action="{% url 'ayudas_mostrar' %}">{% csrf_token %}<button class="btn-ghost-agro btn-sm" type="submit">Mostrar de nuevo</button></form>{% endif %}
                     </div>
                 </dl>
             </aside>

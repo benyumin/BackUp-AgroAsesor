@@ -1,9 +1,9 @@
 {% extends "body.html" %}
-{% load static %}
+{% load static ayudas %}
 {% block title %}Hoy · AgroAsesor{% endblock %}
 {% block extra_css %}
-    <link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v=11">
-    <link rel="stylesheet" href="{% static 'css/activities.css' %}?v=11">
+    <link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v=12">
+    <link rel="stylesheet" href="{% static 'css/activities.css' %}?v=12">
 {% endblock %}
 {% block content %}
     <div class="dash">
@@ -19,6 +19,7 @@
                 Abrir el mapa
             </a>{% endif %}
         </section>
+        {% ayuda 'bienvenida' %}
         {% if not farm_data.stats.predios %}
         <section class="card dash-start" aria-labelledby="dash-start-title">
             <div class="dash-start-copy">
@@ -215,6 +216,5 @@
             </aside>
         </div>
         {% endif %}
-        <p class="dash-footnote">Cultivando mejores decisiones</p>
     </div>
 {% endblock %}

@@ -1,10 +1,16 @@
 {% extends "body.html" %}
-{% load static agro_assets %}
+{% load static agro_assets ayudas %}
 {% block title %}{{ predio.nombre }} · AgroAsesor{% endblock %}
 {% block extra_css %}
+<<<<<<< Updated upstream
     <link rel="stylesheet" href="{% static 'css/predios.css' %}?v=35">
     <link rel="stylesheet" href="{% static 'css/mapa-google.css' %}?v=2">
     <link rel="stylesheet" href="{% static 'css/predio-ficha.css' %}?v=3">
+=======
+    <link rel="stylesheet" href="{% static 'css/predios.css' %}?v=38">
+    <link rel="stylesheet" href="{% static 'css/mapa-google.css' %}?v=3">
+    <link rel="stylesheet" href="{% static 'css/predio-ficha.css' %}?v=7">
+>>>>>>> Stashed changes
 {% endblock %}
 {% block content %}
     <nav class="crumbs" aria-label="Dónde estás"><a href="{% url 'predios' %}">Mis predios</a><span aria-hidden="true">›</span>{% if selected_potrero %}<a href="{% url 'predio_detail' predio.pk %}">{{ predio.nombre }}</a><span aria-hidden="true">›</span><span class="is-current" aria-current="page">{{ selected_potrero.nombre }}</span>{% else %}<span class="is-current" aria-current="page">{{ predio.nombre }}</span>{% endif %}</nav>
@@ -48,6 +54,7 @@
             <a class="row-menu-item"
                role="menuitem"
                href="{% url 'reportes' %}?predio={{ predio.pk }}"><i data-lucide="file-text"></i> Generar reporte</a>
+            {% include "partials/registro_menu.html" with tipo="predio" pk=predio.pk %}
         </div>
     </div>
 </div>
@@ -80,6 +87,7 @@
             </div>
         </div>
     </header>
+    {% if not needs_setup %}{% ayuda 'potreros' %}{% endif %}{# predio nuevo: la tarjeta «¿Cómo deseas organizar…?» ya guía #}
 {% if needs_setup %}
     <section class="card use-card" aria-labelledby="use-title">
         <div class="use-copy">
@@ -127,7 +135,6 @@
         <div>
             <span class="pf-kicker">Vista geográfica</span>
             <h2>Ubicación y límites</h2>
-            <p>Representación cartográfica del terreno registrado.</p>
         </div>
         {% if predio.geojson %}
             <div class="detail-map-tools">
@@ -155,14 +162,6 @@
                      aria-label="Mapa del perímetro del predio"></div>
                 <span class="pf-zoom" id="predio-map-zoom" hidden></span>
             </div>
-            <div class="pf-geo-bar">
-                <p class="pf-geo-status"><i class="pf-dot is-ok" aria-hidden="true"></i><strong>Estado GeoJSON:</strong> <span>GeoJSON guardado</span></p>
-                <details class="vertex-details">
-                    <summary>Coordenadas de los vértices <i data-lucide="chevron-down"></i></summary>
-                    <ol id="predio-vertices" class="vertex-list">
-                    </ol>
-                </details>
-            </div>
         {% else %}
             <div class="pf-map-frame is-empty">
                 <div class="detail-empty-state pf-map-empty">
@@ -171,9 +170,6 @@
                     <p>Este predio se registró antes de habilitar los perímetros. Edita el predio para delimitarlo y guardar su geometría.</p>
                     <a class="btn-secondary-agro" href="{% url 'predio_edit' predio.pk %}">Agregar perímetro</a>
                 </div>
-            </div>
-            <div class="pf-geo-bar">
-                <p class="pf-geo-status"><i class="pf-dot" aria-hidden="true"></i><strong>Estado GeoJSON:</strong> <span>Sin geometría guardada</span></p>
             </div>
         {% endif %}
     </section>
@@ -212,13 +208,6 @@
             </dl>
             {% if predio.descripcion %}<h3>Descripción</h3><p class="pf-note">{{ predio.descripcion }}</p>{% endif %}
             {% if predio.observaciones %}<h3>Observaciones</h3><p class="pf-note">{{ predio.observaciones }}</p>{% endif %}
-            {% if next_step %}
-                <aside class="next-step-line" aria-labelledby="next-step-title">
-                    <span class="next-hint-label" id="next-step-title">Siguiente paso</span>
-                    <a class="next-step-link" href="{{ next_step.url }}">→ {{ next_step.title }}</a>
-                    <small>{{ next_step.text }}</small>
-                </aside>
-            {% endif %}
             <h3>Potreros asociados</h3>
             {% for item in farm_card.plots %}
                 {% with potrero=item.plot ui=item.ui %}
@@ -252,6 +241,7 @@
                                     <a class="row-menu-item"
                                        role="menuitem"
                                        href="{% url 'potrero_edit' predio.pk potrero.pk %}"><i data-lucide="pencil"></i> Editar potrero</a>
+                                    {% include "partials/registro_menu.html" with tipo="potrero" pk=potrero.pk %}
                                 </div>
                             </div>
                         </div>
@@ -261,28 +251,36 @@
                         {% if ui.overdue %}<span class="state-chip is-red">Labores vencidas · {{ ui.overdue }}</span>
             {% elif ui.pending %}<span class="state-chip is-amber">Labores pendientes · {{ ui.pending }}</span>{% endif %}
                 </div>
+                {# Un solo botón por potrero: asignar cultivo, completar la planificación o editarla. Las calculadoras y el resto están en el menú ⋯. #}
                 <div class="plot-actions">
-                    <a class="btn-primary-agro btn-sm" href="{{ ui.primary.url }}">{{ ui.primary.label }}</a>
-                    {% for action in ui.extra_actions %}<a class="btn-secondary-agro btn-sm" href="{{ action.url }}">{{ action.label }}</a>{% endfor %}
+                    {% if ui.plan_action %}
+                        <a class="{% if ui.plan_complete %}btn-secondary-agro{% else %}btn-primary-agro{% endif %} btn-sm"
+                           href="{{ ui.plan_action.url }}">{{ ui.plan_action.label }}</a>
+                    {% else %}
+                        <a class="btn-primary-agro btn-sm" href="{{ ui.primary.url }}">{{ ui.primary.label }}</a>
+                    {% endif %}
                 </div>
                 {% if ui.has_crop %}<span class="plan-meter"><span class="plan-meter-bar" aria-hidden="true">{% for done in ui.plan_steps %}<i{% if done %} class="on"{% endif %}></i>{% endfor %}</span><span class="plan-meter-label">Planificación <strong>{{ ui.plan_done }} de {{ ui.plan_total }}</strong> pasos</span></span>{% endif %}
                 {% if ui.next %}<span class="next-task{% if ui.next.overdue %} is-overdue{% endif %}"><i data-lucide="{{ ui.next.icon }}"></i>Próxima labor · <strong>{{ ui.next.label }}</strong> · {{ ui.next.date }}</span>{% endif %}
-                <h4>Temporadas de cultivo</h4>
-                <ul class="plot-season-list">
-                    {% for season in potrero.temporadas.all %}
-                        <li>
-                            <strong>{{ season.cultivo.nombre }}{% if season.variedad %} · {{ season.variedad }}{% endif %}{% if season.temporada_agricola %} · {{ season.temporada_agricola }}{% endif %}</strong>
-                            {% if season.pk == ui.season_id %}<span class="state-chip is-green">Vigente</span>{% endif %}
-                            <span>{{ season.get_estado_display }}</span>
-                            <span>Siembra: {{ season.fecha_siembra|date:"d/m/Y"|default:"Sin fecha" }}</span>
-                            <span>Cosecha: {{ season.fecha_cosecha|date:"d/m/Y"|default:"Sin fecha" }}</span>
-                            <a class="btn-ghost-agro btn-compact"
-                               href="{% url 'temporada_edit' predio.pk potrero.pk season.pk %}">Editar temporada</a>
-                        </li>
-                    {% empty %}
-                        <li class="muted">No hay temporadas registradas. El cultivo legado del potrero se conserva por separado.</li>
-                    {% endfor %}
-                </ul>
+                {% if potrero.temporadas.all %}
+                    <h4>Temporadas de cultivo</h4>
+                    <ul class="plot-season-list">
+                        {% for season in potrero.temporadas.all %}
+                            <li>
+                                <strong>{{ season.cultivo.nombre }}{% if season.variedad %} · {{ season.variedad }}{% endif %}{% if season.temporada_agricola %} · {{ season.temporada_agricola }}{% endif %}</strong>
+                                {% if season.pk == ui.season_id %}<span class="state-chip is-green">Vigente</span>{% endif %}
+                                <span>{{ season.get_estado_display }}</span>
+                                <span>Siembra: {{ season.fecha_siembra|date:"d/m/Y"|default:"Sin fecha" }}</span>
+                                <span>Cosecha: {{ season.fecha_cosecha|date:"d/m/Y"|default:"Sin fecha" }}</span>
+                                {# La temporada vigente se edita con el botón del potrero; aquí solo se corrigen las anteriores. #}
+                                {% if season.pk != ui.season_id %}
+                                    <a class="btn-ghost-agro btn-compact"
+                                       href="{% url 'temporada_edit' predio.pk potrero.pk season.pk %}">Corregir</a>
+                                {% endif %}
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
                 </article>
             {% endwith %}
         {% endfor %}
@@ -310,13 +308,23 @@
                         <p>{{ item.resumen }}</p>
                         {% if item.potrero %}<small>Potrero relacionado: {{ item.potrero.nombre }}</small><br>{% endif %}
                         <small>Responsable: {{ item.usuario.get_full_name|default:item.usuario.username|default:'Usuario eliminado' }}</small>
-                        {% if item.geometria_anterior or item.geometria_nueva %}
-                            <details class="history-geometry">
-                                <summary>Ver geometría versionada</summary>
-                                {% if item.geometria_anterior %}<h4>Geometría anterior</h4><pre>{{ item.geometria_anterior|pprint }}</pre>{% endif %}
-                                {% if item.geometria_nueva %}<h4>Geometría nueva</h4><pre>{{ item.geometria_nueva|pprint }}</pre>{% endif %}
-                            </details>
-                        {% endif %}
+                        {% with anteriores=item.geometria_anterior|vertices_geograficos nuevas=item.geometria_nueva|vertices_geograficos %}
+                            {% if anteriores or nuevas %}
+                                <details class="history-geometry">
+                                    <summary>Ver coordenadas registradas</summary>
+                                    <div class="coords-grid">
+                                        {% if anteriores and nuevas %}
+                                            {% include "partials/coordenadas.html" with partes=anteriores titulo="Coordenadas anteriores" %}
+                                            {% include "partials/coordenadas.html" with partes=nuevas titulo="Coordenadas nuevas" %}
+                                        {% elif nuevas %}
+                                            {% include "partials/coordenadas.html" with partes=nuevas titulo="Coordenadas registradas" %}
+                                        {% else %}
+                                            {% include "partials/coordenadas.html" with partes=anteriores titulo="Coordenadas anteriores" %}
+                                        {% endif %}
+                                    </div>
+                                </details>
+                            {% endif %}
+                        {% endwith %}
                         {% if item.superficie_anterior_ha != None or item.superficie_nueva_ha != None %}<small>Superficie: {{ item.superficie_anterior_ha|default:'—' }} ha → {{ item.superficie_nueva_ha|default:'—' }} ha</small>{% endif %}
                     </div>
                 </li>

@@ -1,12 +1,14 @@
 {% extends "body.html" %}
-{% load static agro_assets %}
+{% load static agro_assets ayudas %}
 {% block title %}Centro de decisiones · AgroAsesor{% endblock %}
 {% block extra_css %}
-    <link rel="stylesheet" href="{% static 'css/decisiones.css' %}?v=16">
+    <link rel="stylesheet" href="{% static 'css/decisiones.css' %}?v=19">
+    <link rel="stylesheet" href="{% static 'css/calculadora.css' %}?v=7">
 {% endblock %}
 {% block content %}
     <section class="decision-center"
              data-calculate-url="{% url 'calculate' %}"
+             data-pdf-url="{% url 'calculo_pdf' 0 %}"
              data-staff="{% if request.user.is_staff %}1{% endif %}"
              data-tool="{{ initial_tool }}">
         {% if not catalog.cultivos or not catalog.insumos %}
@@ -55,6 +57,7 @@
         </div>
     </div>
     <!-- CUÁNTO LLEVAR: herramienta guiada paso a paso (el motor de cálculo vive en calc-panel.js) -->
+    {% ayuda 'calculadora' %}
     <section class="tool-panel{% if not farm_data.plots %} is-no-plots{% endif %}"
              id="tool-llevar"
              role="tabpanel"
@@ -65,7 +68,7 @@
                     <div class="calc-form-head">
                         <div class="calc-form-title">
                             <h1 id="calc-title">Calcular semillas</h1>
-                            <p class="calc-hint" id="calc-hint">La densidad sale del cultivo en la base de datos. Ajústala si no vas a sembrar todo el potrero.</p>
+                            <p class="calc-hint" id="calc-hint">Elige el potrero, revisa la superficie y escribe la dosis por hectárea.</p>
                         </div>
                         <p class="calc-status"
                            id="calc-status"
@@ -78,13 +81,13 @@
                         <div class="example-row" id="calc-example-row"></div>
                     </div>
                     <ol class="calc-steps">
-                        <li class="calc-group"><span class="calc-group-title">Dónde vas a trabajar</span><span class="calc-group-sub">Potrero y cultivo</span></li>
+                        <li class="calc-group"><span class="calc-group-title">Paso 1 · Dónde vas a trabajar</span><span class="calc-group-sub">Predio, potrero y cultivo</span></li>
                         <li class="calc-step" data-step="plot">
-                            <span class="calc-step-num" aria-hidden="true">1</span>
+                            <span class="calc-step-num" aria-hidden="true"></span>
                             <div class="calc-step-body">
                                 <div class="calc-step-head">
                                     <h3>Selecciona un potrero</h3>
-                                    <p>Donde vas a sembrar o aplicar.</p>
+                                    <p>El predio aparece junto a cada potrero.</p>
                                 </div>
                                 <div class="calc-picker"
                                      id="calc-plot-picker"
@@ -99,7 +102,7 @@
                             </div>
                         </li>
                         <li class="calc-step" data-step="crop">
-                            <span class="calc-step-num" aria-hidden="true">2</span>
+                            <span class="calc-step-num" aria-hidden="true"></span>
                             <div class="calc-step-body">
                                 <div class="calc-step-head">
                                     <h3>Selecciona un cultivo</h3>
@@ -116,9 +119,9 @@
                                 </label>
                             </div>
                         </li>
-                        <li class="calc-group"><span class="calc-group-title">Cuánto vas a usar</span><span class="calc-group-sub">Superficie, dosis y unidad</span></li>
+                        <li class="calc-group"><span class="calc-group-title">Paso 2 · Superficie y dosis</span><span class="calc-group-sub">Cuánto vas a sembrar o aplicar</span></li>
                         <li class="calc-step" data-step="area">
-                            <span class="calc-step-num" aria-hidden="true">3</span>
+                            <span class="calc-step-num" aria-hidden="true"></span>
                             <div class="calc-step-body">
                                 <div class="calc-step-head">
                                     <h3>Revisa la superficie</h3>
@@ -133,17 +136,21 @@
                             </div>
                         </li>
                         <li class="calc-step" data-step="dose">
-                            <span class="calc-step-num" aria-hidden="true">4</span>
+                            <span class="calc-step-num" aria-hidden="true"></span>
                             <div class="calc-step-body">
                                 <div class="calc-step-head">
                                     <h3 id="calc-dose-title">Revisa la dosis por hectárea</h3>
-                                    <p id="calc-dose-intro">Se copia del catálogo; ajústala si hace falta.</p>
+                                    <p id="calc-dose-intro">Si el catálogo tiene una densidad documentada, se completa sola.</p>
                                 </div>
                                 <label class="field" id="calc-product-field" hidden>
                                     <span id="calc-product-label">Semilla o variedad del catálogo</span>
                                     <select id="calc-product"></select>
                                     <small class="help" id="calc-product-help"></small>
                                 </label>
+                                <details class="calc-product-info" id="calc-product-info" hidden>
+                                    <summary>Ver ficha del producto</summary>
+                                    <div id="calc-notes"></div>
+                                </details>
                                 <label class="field" id="calc-target-field" hidden>
                                     <span>Objetivo de control autorizado</span>
                                     <select id="calc-target"></select>
@@ -154,26 +161,25 @@
                                     <small class="help" id="calc-dose-help">Kilos de semilla por cada hectárea.</small>
                                     <span class="calc-dose-origin" id="calc-dose-origin" aria-live="polite"></span>
                                 </label>
-                            </div>
-                        </li>
-                        <li class="calc-step" data-step="unit">
-                            <span class="calc-step-num" aria-hidden="true">5</span>
-                            <div class="calc-step-body">
-                                <div class="calc-step-head">
-                                    <h3>Elige la unidad</h3>
-                                    <p>El resultado se entrega en esa misma unidad (sin «/ha»).</p>
-                                </div>
                                 <label class="field calc-unit-field">
                                     <span>Unidad de la dosis</span>
                                     <select id="calc-unit"></select>
                                 </label>
+                                <label class="field" id="calc-dose-source-field" hidden>
+                                    <span>¿De dónde sale esta dosis? <small class="optional-tag">(opcional)</small></span>
+                                    <input id="calc-dose-source"
+                                           maxlength="255"
+                                           autocomplete="off"
+                                           placeholder="Ej.: recomendación de mi asesor, ficha del proveedor">
+                                </label>
                             </div>
                         </li>
+                        <li class="calc-group"><span class="calc-group-title">Paso 3 · Calcular</span><span class="calc-group-sub">El resultado aparece al lado</span></li>
                         <li class="calc-step" data-step="go">
-                            <span class="calc-step-num" aria-hidden="true">6</span>
+                            <span class="calc-step-num" aria-hidden="true"></span>
                             <div class="calc-step-body">
                                 <div class="calc-step-head">
-                                    <h3>Calcula</h3>
+                                    <h3>Calcular</h3>
                                     <p id="calc-submit-hint"
                                        aria-live="polite">Completa los pasos anteriores para calcular.</p>
                                 </div>
@@ -187,102 +193,22 @@
                         </li>
                     </ol>
                 </form>
-                <section class="card calc-advanced" id="calc-advanced" hidden>
-                    <div class="calc-advanced-head">
-                        <span class="calc-advanced-ico"
-                              aria-hidden="true"><i data-lucide="sliders-horizontal"></i></span>
-                        <div>
-                            <h2>Opciones avanzadas</h2>
-                            <p>Úsalas solo si tienes los parámetros de una ficha técnica o de un análisis. Se guardan con la fuente que indiques.</p>
-                        </div>
-                    </div>
-                    <details id="adv-seed" hidden>
-                        <summary><span class="adv-title">Cálculo avanzado de semillas</span><span class="adv-sub">Población, peso de mil semillas, germinación y pureza</span></summary>
-                        <p class="help">Fórmula del servidor: kg/ha = plantas/m² × peso de mil semillas (g) ÷ (100 × germinación × pureza). Requiere indicar la fuente de los parámetros.</p>
-                        <div class="adv-fields">
-                            <label class="field">
-                                <span>Plantas objetivo por m²</span><input id="adv-plants"
-       type="number"
-       min="0.001"
-       step="any">
-                            </label>
-                            <label class="field">
-                                <span>Peso de mil semillas (g)</span><input id="adv-tsw"
-       type="number"
-       min="0.001"
-       step="any">
-                            </label>
-                            <label class="field">
-                                <span>Germinación (%)</span><input id="adv-germ"
-       type="number"
-       min="0.01"
-       max="100"
-       step="any">
-                            </label>
-                            <label class="field">
-                                <span>Pureza (%)</span><input id="adv-purity"
-       type="number"
-       min="0.01"
-       max="100"
-       step="any">
-                            </label>
-                            <label class="field adv-wide">
-                                <span>Fuente de los parámetros</span><input id="adv-source"
-       maxlength="255"
-       placeholder="Ficha técnica de la semilla, análisis de laboratorio…">
-                            </label>
-                        </div>
-                        <p class="error" id="adv-seed-error" role="alert"></p>
-                        <button class="btn-secondary-agro"
-                                type="button"
-                                id="adv-seed-run">Calcular con parámetros avanzados</button>
-                    </details>
-                    <details id="adv-nutrient" hidden>
-                        <summary><span class="adv-title">Cálculo por requerimiento de nutriente</span><span class="adv-sub">Kg de producto según la necesidad del nutriente</span></summary>
-                        <p class="help">Calcula los kg de producto a partir de la necesidad del nutriente y la composición verificada del fertilizante. Indica de dónde sale la necesidad (análisis de suelo, recomendación técnica).</p>
-                        <div class="adv-fields">
-                            <label class="field">
-                                <span>Nutriente</span><select id="adv-nutrient-key"></select>
-                            </label>
-                            <label class="field">
-                                <span>Necesidad del nutriente (kg/ha)</span><input id="adv-need"
-       type="number"
-       min="0.001"
-       step="any">
-                            </label>
-                            <label class="field adv-wide">
-                                <span>Fuente de la necesidad</span><input id="adv-need-source" maxlength="255">
-                            </label>
-                        </div>
-                        <p class="error" id="adv-nutrient-error" role="alert"></p>
-                        <button class="btn-secondary-agro"
-                                type="button"
-                                id="adv-nutrient-run">Calcular por nutriente</button>
-                    </details>
-                </section>
             </div>
             <div class="calc-side">
-                <section class="card calc-summary"
-                         id="calc-summary"
-                         aria-label="Resumen de tu selección"
-                         hidden>
-                    <h2>Tu selección</h2>
-                    <div id="calc-plot-summary"></div>
-                    <div id="calc-notes" hidden></div>
-                </section>
                 <section class="card result-panel calc-result-card" aria-label="Resultado">
                     <div id="calc-result" aria-live="polite"></div>
                     <div class="calc-result-actions" id="calc-result-actions">
-                        <button class="btn-secondary-agro btn-sm"
+                        <button class="btn-primary-agro btn-sm"
                                 type="button"
                                 id="calc-pdf"><i data-lucide="file-down" aria-hidden="true"></i> Descargar PDF</button>
-                        <a class="btn-secondary-agro btn-sm"
-                           id="calc-go-reports"
-                           href="{% url 'reportes' %}?tipo=calculos"><i data-lucide="file-text" aria-hidden="true"></i> Ver en Reportes</a>
-                        <a class="btn-ghost-agro btn-sm"
-                           href="{% url 'decisiones' %}?herramienta=alcanza"
-                           id="calc-go-cover"><i data-lucide="warehouse" aria-hidden="true"></i> Ir a «¿Me alcanza?»</a>
                     </div>
+                    <p class="calc-result-links">
+                        <a class="text-link" id="calc-go-reports" href="{% url 'reportes' %}?tipo=calculos">Ver en Reportes</a>
+                        <a class="text-link"
+                           href="{% url 'decisiones' %}?herramienta=alcanza"
+                           id="calc-go-cover">¿Me alcanza?</a>
+                        <a class="text-link" id="calc-plan" href="{% url 'actividad_create' %}" hidden>Planificar actividad</a>
+                    </p>
                 </section>
             </div>
         </div>
@@ -450,11 +376,11 @@
     </section>
 {% endblock %}
 {% block extra_js %}
-    <script src="{% vendor 'jspdf.umd.min.js' 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js' %}"
-            defer></script>
-    <script src="{% static 'js/agro-pdf.js' %}?v=2" defer></script>
-    <script src="{% static 'js/calc-panel.js' %}?v=11" defer></script>
-    <script src="{% static 'js/calc-flow.js' %}?v=5" defer></script>
-    <script src="{% static 'js/tool-flow.js' %}?v=5" defer></script>
-    <script src="{% static 'js/decisiones.js' %}?v=11" defer></script>
+    <script src="{% static 'js/terreno-mini.js' %}?v=3" defer></script>
+    <script src="{% static 'js/calc-limites.js' %}?v=1" defer></script>
+    <script src="{% static 'js/calc-resultado.js' %}?v=3" defer></script>
+    <script src="{% static 'js/calc-panel.js' %}?v=17" defer></script>
+    <script src="{% static 'js/calc-flow.js' %}?v=8" defer></script>
+    <script src="{% static 'js/tool-flow.js' %}?v=6" defer></script>
+    <script src="{% static 'js/decisiones.js' %}?v=13" defer></script>
 {% endblock %}
