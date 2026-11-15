@@ -1,0 +1,22 @@
+{% comment %}Tabla de vértices de una geometría guardada (solo latitud y longitud, sin la estructura GeoJSON).{% endcomment %}
+{% for vertices in partes %}
+    <table class="coords-table">
+        <caption>{{ titulo }}{% if partes|length > 1 %} · parte {{ forloop.counter }}{% endif %}</caption>
+        <thead>
+            <tr>
+                <th scope="col">Vértice</th>
+                <th scope="col">Latitud</th>
+                <th scope="col">Longitud</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for vertice in vertices %}
+                <tr>
+                    <td>{{ vertice.numero }}</td>
+                    <td>{{ vertice.latitud }}</td>
+                    <td>{{ vertice.longitud }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endfor %}

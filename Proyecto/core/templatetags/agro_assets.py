@@ -39,3 +39,49 @@ def cifra(valor, decimales=2):
     signo = '-' if entero.startswith('-') else ''
     entero = f'{int(entero.lstrip("-") or 0):,}'.replace(',', '.')
     return f'{signo}{entero},{fraccion}' if fraccion else f'{signo}{entero}'
+
+
+def _anillos_exteriores(geometria):
+    """Anillos exteriores de un GeoJSON (Feature, Polygon o MultiPolygon) o de una lista simple de puntos."""
+    if isinstance(geometria, dict):
+        if geometria.get('type') == 'Feature':
+            return _anillos_exteriores(geometria.get('geometry'))
+        if geometria.get('type') == 'FeatureCollection':
+            return [anillo for feature in geometria.get('features') or [] for anillo in _anillos_exteriores(feature)]
+        coordenadas = geometria.get('coordinates') or []
+        if geometria.get('type') == 'Polygon':
+            return [coordenadas[0]] if coordenadas else []
+        if geometria.get('type') == 'MultiPolygon':
+            return [poligono[0] for poligono in coordenadas if poligono]
+        return []
+    if isinstance(geometria, (list, tuple)) and geometria and isinstance(geometria[0], (list, tuple)):
+        return [geometria] if not isinstance(geometria[0][0], (list, tuple)) else [geometria[0]]
+    return []
+
+
+@register.filter
+def vertices_geograficos(geometria):
+    """Vértices de una geometría guardada, listos para mostrar: [[{numero, latitud, longitud}, …], …].
+
+    GeoJSON guarda cada punto como [longitud, latitud]; aquí se entregan ya identificados. El punto de cierre
+    (igual al primero) no se repite. No modifica la geometría: solo la presenta.
+    """
+    partes = []
+    for anillo in _anillos_exteriores(geometria):
+        puntos = []
+        for punto in anillo:
+            try:
+                longitud, latitud = float(punto[0]), float(punto[1])
+            except (TypeError, ValueError, IndexError):
+                continue
+            puntos.append((latitud, longitud))
+        if len(puntos) > 1 and puntos[0] == puntos[-1]:
+            puntos = puntos[:-1]
+        if puntos:
+            partes.append(
+                [
+                    {'numero': numero, 'latitud': f'{latitud:.6f}', 'longitud': f'{longitud:.6f}'}
+                    for numero, (latitud, longitud) in enumerate(puntos, start=1)
+                ]
+            )
+    return partes

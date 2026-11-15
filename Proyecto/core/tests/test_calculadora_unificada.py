@@ -80,8 +80,7 @@ class SelectorDeTresHerramientasTests(Base):
             'id="tool-llevar"', 'id="tool-alcanza"', 'id="calc-form"', 'id="cover-form"', 'data-flow="cover"',
             'id="calc-plot"', 'id="calc-crop"', 'id="calc-area"', 'id="calc-product"', 'id="calc-target"',
             'id="calc-dose"', 'id="calc-unit"', 'id="calc-submit"', 'id="calc-result"', 'id="calc-pdf"',
-            'id="calc-go-reports"', 'id="calc-summary"', 'id="adv-plants"', 'id="adv-tsw"', 'id="adv-germ"',
-            'id="adv-purity"', 'id="adv-source"', 'id="adv-nutrient-key"', 'id="adv-need"', 'id="adv-need-source"',
+            'id="calc-go-reports"', 'id="calc-product-info"', 'id="calc-plan"', 'id="calc-dose-source"',
             'data-result-for="cover-form"', 'data-flow-submit', 'data-flow-summary', 'data-calculate-url="/calculos/ejecutar/"',
         ):
             self.assertIn(marca, html)

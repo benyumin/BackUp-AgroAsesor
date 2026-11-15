@@ -268,8 +268,13 @@ class AceptacionPoliticasAdmin(admin.ModelAdmin):
 
 @admin.register(Predio)
 class PredioAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'propietario', 'superficie_ha', 'zona')
+    list_display = ('nombre', 'propietario', 'superficie_ha', 'zona', 'archivado_en')
+    list_filter = (('archivado_en', admin.EmptyFieldListFilter),)
     search_fields = ('nombre', 'ubicacion')
+
+    def get_queryset(self, request):
+        # El administrador también ve los predios archivados (la plataforma los oculta).
+        return Predio.todos.select_related('propietario', 'zona')
 
 
 @admin.register(PredioHistorial)
@@ -299,9 +304,12 @@ class PredioHistorialAdmin(admin.ModelAdmin):
 
 @admin.register(Potrero)
 class PotreroAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'predio', 'cultivo', 'superficie_ha')
-    list_filter = ('cultivo',)
+    list_display = ('nombre', 'predio', 'cultivo', 'superficie_ha', 'archivado_en')
+    list_filter = ('cultivo', ('archivado_en', admin.EmptyFieldListFilter))
     search_fields = ('nombre', 'predio__nombre')
+
+    def get_queryset(self, request):
+        return Potrero.todos.select_related('predio', 'cultivo')
 
 
 @admin.register(TemporadaCultivo)

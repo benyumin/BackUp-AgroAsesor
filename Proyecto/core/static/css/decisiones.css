@@ -3,7 +3,7 @@
     margin: 0;
     color: var(--muted);
     font-size: 0.78rem;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
     letter-spacing: 0.04em;
     text-transform: uppercase;
 }
@@ -16,72 +16,10 @@
 
 /* ---- Centro de decisiones integrado ---- */
 
-.tool-layout {
-    display: grid;
-    grid-template-columns: minmax(0, 1.25fr) minmax(300px, 1fr);
-    gap: 16px;
-    align-items: start;
-}
-
-.tool-layout[hidden] {
-    display: none;
-}
-
-.tool-form h2 {
-    margin-top: 0;
-}
-
-.tool-fields {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0 14px;
-}
-
-.tool-wide {
-    grid-column: 1 / -1;
-}
-
-.tool-form .help {
-    color: var(--muted);
-    font-size: 0.84rem;
-    font-weight: 400;
-}
-
-.tool-form input[readonly] {
-    background: #f3f6f2;
-}
-
-.tool-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 10px;
-}
-
-.tool-advanced {
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    padding: 10px 14px;
-    margin: 6px 0 10px;
-}
-
-.tool-advanced summary {
-    cursor: pointer;
-    font-weight: 700;
-    color: var(--green-dark);
-}
-
-.tool-result {
-    position: sticky;
-    top: 16px;
-    min-height: 220px;
-    border-top: 4px solid var(--green);
-}
-
 .result-kicker {
     margin: 0;
     color: var(--muted);
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
     text-transform: uppercase;
     letter-spacing: 0.04em;
     font-size: 0.82rem;
@@ -90,7 +28,7 @@
 .result-value {
     margin: 6px 0 2px;
     font-size: 2.3rem;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
     color: var(--green-dark);
     line-height: 1.1;
 }
@@ -100,21 +38,7 @@
     color: var(--muted);
 }
 
-@media (max-width: 1080px) {
-    .tool-layout {
-        grid-template-columns: 1fr;
-    }
-
-    .tool-result {
-        position: static;
-    }
-
-}
-
 @media (max-width: 620px) {
-    .tool-fields {
-        grid-template-columns: 1fr;
-    }
 
     .result-value {
         font-size: 1.9rem;
@@ -181,11 +105,6 @@
 .tool-ico.tone-amber {
     background: var(--amber-soft);
     color: #8a6d10;
-}
-
-.tool-ico.tone-slate {
-    background: #eceff1;
-    color: #52606a;
 }
 
 /* ---------- Selector de herramienta: un solo control segmentado con estado activo claro ---------- */
@@ -285,7 +204,7 @@
 .cover-figure span {
     color: var(--muted, #5f6f66);
     font-size: .8rem;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
 }
 
 .cover-figure strong {
@@ -302,7 +221,7 @@
 
 .cover-message {
     margin: 0 0 12px;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
 }
 
 .cover-message.is-ok {
@@ -344,7 +263,7 @@
     background: #fff;
     color: var(--muted);
     font-size: 0.88rem;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
 }
 
 .calc-status-dot {
@@ -458,7 +377,7 @@
 #tool-llevar .result-kicker {
     margin: 0;
     color: var(--muted);
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
     letter-spacing: 0.045em;
     text-transform: uppercase;
     font-size: 0.75rem;
@@ -476,7 +395,7 @@
 #tool-llevar .result-value strong {
     color: var(--green-dark);
     font-size: 3rem;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
     letter-spacing: -0.02em;
     overflow-wrap: anywhere;
 }
@@ -484,7 +403,7 @@
 #tool-llevar .result-value span {
     color: var(--muted);
     font-size: 1.25rem;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
 }
 
 #tool-llevar .result-value.is-empty strong {
@@ -514,12 +433,12 @@
 
 #tool-llevar .calc-ctx dt {
     color: var(--muted);
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
 }
 
 #tool-llevar .calc-ctx dd {
     margin: 0;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
     color: var(--green-dark);
     overflow-wrap: anywhere;
 }
@@ -534,7 +453,7 @@
 }
 
 #tool-llevar .formula-line {
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
     color: var(--green-dark);
     margin: 0 0 6px;
     font-size: 0.85rem;
@@ -565,13 +484,6 @@
     font-size: 0.8rem;
 }
 
-#tool-llevar .next-links {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 12px;
-}
-
 .calc-result-actions {
     display: flex;
     flex-wrap: wrap;
@@ -592,7 +504,7 @@
 
 #tool-llevar .calc-facts dt {
     color: var(--muted);
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
 }
 
 #tool-llevar .calc-facts dd {
@@ -640,139 +552,9 @@
     color: var(--muted);
 }
 
-/* ---------- Opciones avanzadas: una opción real, no un bloque olvidado ---------- */
-#tool-llevar .calc-advanced {
-    margin: 0;
-}
-
-.calc-advanced-head {
-    display: flex;
-    gap: 12px;
-    align-items: flex-start;
-    margin-bottom: 14px;
-}
-
-.calc-advanced-ico {
-    display: grid;
-    place-items: center;
-    width: 40px;
-    height: 40px;
-    flex: 0 0 40px;
-    border-radius: 12px;
-    background: #eceff1;
-    color: #52606a;
-}
-
-.calc-advanced-ico svg {
-    width: 20px;
-    height: 20px;
-}
-
-.calc-advanced-head h2 {
-    margin: 0 0 2px;
-}
-
-.calc-advanced-head p {
-    margin: 0;
-    color: var(--muted);
-    font-size: 0.9rem;
-    line-height: 1.4;
-}
-
-#tool-llevar .calc-advanced details {
-    margin: 0 0 10px;
-    padding: 0;
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    background: #fff;
-}
-
-#tool-llevar .calc-advanced details[open] {
-    border-color: var(--green-light);
-}
-
-#tool-llevar .calc-advanced summary {
-    position: relative;
-    display: grid;
-    gap: 2px;
-    padding: 12px 44px 12px 14px;
-    cursor: pointer;
-    list-style: none;
-}
-
-#tool-llevar .calc-advanced summary::-webkit-details-marker {
-    display: none;
-}
-
-#tool-llevar .calc-advanced summary::after {
-    content: "+";
-    position: absolute;
-    right: 16px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--green);
-    font-size: 1.4rem;
-    line-height: 1;
-}
-
-#tool-llevar .calc-advanced details[open] summary::after {
-    content: "–";
-}
-
-#tool-llevar .calc-advanced details[open] summary {
-    margin-bottom: 12px;
-    border-bottom: 1px solid var(--line);
-}
-
-#tool-llevar .calc-advanced summary:focus-visible {
-    outline: 3px solid #79a97e;
-    outline-offset: -3px;
-    border-radius: 12px;
-}
-
-.adv-title {
-    color: var(--green-dark);
-    font-weight: 700;
-}
-
-.adv-sub {
-    color: var(--muted);
-    font-size: 0.84rem;
-}
-
-#tool-llevar .calc-advanced details> :not(summary) {
-    margin-left: 14px;
-    margin-right: 14px;
-}
-
-#tool-llevar .calc-advanced details> :last-child {
-    margin-bottom: 14px;
-}
-
-#tool-llevar .calc-advanced .help {
-    margin-top: 0;
-    margin-bottom: 12px;
-    color: var(--muted);
-    font-size: 0.88rem;
-}
-
-#tool-llevar .calc-advanced .adv-fields {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0 14px;
-}
-
-#tool-llevar .calc-advanced .adv-wide {
-    grid-column: 1 / -1;
-}
-
-#tool-llevar .calc-advanced .error:empty {
-    display: none;
-}
-
 @media (max-width: 1080px) {
 
-    /* Una sola columna: modo → pasos → resultado → resumen → opciones avanzadas. */
+    /* Una sola columna: modo → pasos → resultado → resumen. */
     .calc-layout {
         display: flex;
         flex-direction: column;
@@ -798,10 +580,6 @@
     .calc-summary {
         order: 4;
     }
-
-    #tool-llevar .calc-advanced {
-        order: 5;
-    }
 }
 
 @media (max-width: 768px) {
@@ -809,20 +587,6 @@
     #tool-llevar .result-value strong {
         font-size: 2.5rem;
     }
-
-    #tool-llevar .calc-advanced .adv-fields {
-        grid-template-columns: 1fr;
-    }
-}
-
-.calc-headline {
-    margin: 4px 0 10px;
-    font-size: 1.05rem;
-    color: var(--ink, #1f2a24);
-}
-
-.calc-headline strong {
-    color: var(--green-dark);
 }
 
 /* «Cuánto llevar»: flujo paso a paso, selectores visuales de potrero y cultivo, resumen y avisos.
@@ -934,7 +698,7 @@
     border-radius: 50%;
     background: #fff;
     color: var(--muted);
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
 }
 
 .calc-step.is-current .calc-step-num {
@@ -1135,7 +899,7 @@
     color: var(--green-dark);
     font: inherit;
     font-size: 0.84rem;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
     cursor: pointer;
     white-space: nowrap;
 }
@@ -1155,7 +919,7 @@
     margin: 0 0 6px;
     color: var(--muted);
     font-size: 0.76rem;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
     letter-spacing: 0.05em;
     text-transform: uppercase;
 }
@@ -1241,10 +1005,6 @@
 .calc-search:focus-visible {
     outline: 3px solid #79a97e;
     outline-offset: 2px;
-}
-
-#tool-llevar.is-blocked .calc-advanced {
-    display: none;
 }
 
 /* ---------- Estados vacíos accionables ---------- */
@@ -1360,7 +1120,7 @@
     margin: 0 0 2px;
     color: var(--muted);
     font-size: 0.72rem;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
     letter-spacing: 0.05em;
     text-transform: uppercase;
 }
@@ -1375,7 +1135,7 @@
 
 .calc-mini dt {
     color: var(--muted);
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
 }
 
 .calc-mini dd {
@@ -1467,7 +1227,7 @@
 .calc-checklist li::before {
     content: "○";
     color: #9fad9c;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
 }
 
 .calc-checklist li.is-ok::before {
@@ -1485,7 +1245,7 @@
 }
 
 .calc-checklist li span {
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
 }
 
 .calc-checklist li small {
@@ -1567,7 +1327,7 @@
     display: block;
     margin-top: 4px;
     font-size: 0.82rem;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
 }
 
 .calc-dose-origin:empty {
@@ -1588,7 +1348,7 @@
     margin-top: 4px;
     color: #b3261e;
     font-size: 0.82rem;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
 }
 
 input[aria-invalid="true"] {
@@ -1665,7 +1425,7 @@ input[aria-invalid="true"] {
 .tool-flow .result-kicker {
     margin: 0;
     color: var(--muted);
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
     letter-spacing: 0.045em;
     text-transform: uppercase;
     font-size: 0.75rem;
@@ -1683,7 +1443,7 @@ input[aria-invalid="true"] {
 .tool-flow .result-value strong {
     color: var(--green-dark);
     font-size: 3rem;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
     letter-spacing: -0.02em;
     overflow-wrap: anywhere;
 }
@@ -1691,7 +1451,7 @@ input[aria-invalid="true"] {
 .tool-flow .result-value span {
     color: var(--muted);
     font-size: 1.25rem;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
 }
 
 .tool-flow .result-value.is-empty strong {
@@ -1721,12 +1481,12 @@ input[aria-invalid="true"] {
 
 .tool-flow .calc-ctx dt {
     color: var(--muted);
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
 }
 
 .tool-flow .calc-ctx dd {
     margin: 0;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
     color: var(--green-dark);
     overflow-wrap: anywhere;
 }
@@ -1743,7 +1503,7 @@ input[aria-invalid="true"] {
 .tool-flow .formula-line {
     margin: 0 0 6px;
     color: var(--green-dark);
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
     font-size: 0.85rem;
 }
 
@@ -1782,7 +1542,7 @@ input[aria-invalid="true"] {
     background: var(--amber-soft);
     color: #5f4f12;
     font-size: 0.86rem;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
 }
 
 .tool-flow .calc-result-card.is-stale> :not(.flow-stale) {
@@ -1842,14 +1602,13 @@ input[aria-invalid="true"] {
 
 .calc-mini-next a {
     color: var(--green-dark);
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
     white-space: nowrap;
 }
 
 /* ---------- Sin potreros: una sola guía en lugar de seis pasos, resultado y avisos repetidos ---------- */
 .tool-panel.is-no-plots .calc-status,
 .tool-panel.is-no-plots .calc-side,
-.tool-panel.is-no-plots .calc-advanced,
 .tool-panel.is-no-plots .calc-step:not([data-step="plot"]),
 .tool-panel.is-no-plots .calc-native {
     display: none !important;
@@ -1948,7 +1707,7 @@ input[aria-invalid="true"] {
 .tool-tabs-kicker {
     margin: 0;
     font-size: 1.3rem;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
     line-height: 1.2;
     letter-spacing: -0.01em;
 }
@@ -2022,7 +1781,7 @@ input[aria-invalid="true"] {
 .tool-text small {
     color: rgba(255, 255, 255, 0.8);
     font-size: 0.82rem;
-    font-weight: 500;
+    font-weight: var(--fw-medium);
     line-height: 1.3;
 }
 
@@ -2340,11 +2099,6 @@ input[aria-invalid="true"] {
     background: var(--amber-soft);
 }
 
-/* ---------- Opciones avanzadas ---------- */
-#tool-llevar .calc-advanced {
-    padding: 18px 22px;
-}
-
 /* ---------- Sin potreros: se conserva la guía única ---------- */
 .tool-panel.is-no-plots .calc-form {
     padding: 0 0 6px;
@@ -2529,7 +2283,7 @@ input[aria-invalid="true"] {
 .tool-tabs-kicker {
     color: var(--ink);
     font-size: 1.12rem;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
 }
 
 .tool-tabs-lead {
@@ -2561,12 +2315,12 @@ input[aria-invalid="true"] {
 }
 
 .tool-text strong {
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
 }
 
 .tool-text small {
     color: var(--muted);
-    font-weight: 400;
+    font-weight: var(--fw-regular);
 }
 
 .tool-tabs button.is-active {
@@ -2618,7 +2372,7 @@ input[aria-invalid="true"] {
 .calc-group-title {
     color: var(--green);
     font-size: 0.74rem;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
     letter-spacing: 0.12em;
     text-transform: uppercase;
 }
@@ -2635,7 +2389,7 @@ input[aria-invalid="true"] {
 .field .unit-input {
     position: relative;
     display: block;
-    font-weight: 400;
+    font-weight: var(--fw-regular);
     font-size: 1rem;
 }
 
@@ -2654,7 +2408,7 @@ input[aria-invalid="true"] {
     color: var(--muted);
     font-size: 0.78rem;
     font-style: normal;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
     line-height: 1.3;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -2688,7 +2442,7 @@ input[aria-invalid="true"] {
     background: var(--red);
     color: #fff;
     font-size: 0.7rem;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
 }
 
 .calc-form input[aria-invalid="true"] {
@@ -2713,7 +2467,7 @@ input[aria-invalid="true"] {
 .tool-flow .result-value:not(.is-empty) strong {
     color: var(--ink);
     font-size: 2.6rem;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
     letter-spacing: -0.02em;
     line-height: 1;
 }
@@ -2722,7 +2476,7 @@ input[aria-invalid="true"] {
 .tool-flow .result-value:not(.is-empty) span {
     color: var(--green);
     font-size: 1.1rem;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
 }
 
 #tool-llevar .calc-ctx,
@@ -2756,7 +2510,7 @@ input[aria-invalid="true"] {
     padding: 0;
     color: var(--muted);
     font-size: 0.76rem;
-    font-weight: 400;
+    font-weight: var(--fw-regular);
 }
 
 #tool-llevar .calc-ctx-item dd,
@@ -2765,7 +2519,7 @@ input[aria-invalid="true"] {
     padding: 0;
     color: var(--ink);
     font-size: 0.98rem;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
     overflow-wrap: anywhere;
 }
 
@@ -2789,7 +2543,7 @@ input[aria-invalid="true"] {
     background: #c9952a;
     color: #fff;
     font-size: 0.75rem;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
 }
 
 /* Descarga del PDF: acción principal cuando ya hay un resultado guardado. */
@@ -2822,7 +2576,7 @@ input[aria-invalid="true"] {
 
 .cover-bar-caption strong {
     color: var(--ink);
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
 }
 
 .tool-flow .cover-bar {
@@ -2870,7 +2624,7 @@ input[aria-invalid="true"] {
 .cover-input strong {
     color: var(--ink);
     font-size: 0.98rem;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
 }
 
 .tool-flow .cover-figure {
@@ -2888,7 +2642,7 @@ input[aria-invalid="true"] {
 }
 
 .tool-flow .cover-message {
-    font-weight: 500;
+    font-weight: var(--fw-medium);
 }
 
 .tool-flow .cover-message.is-ok {

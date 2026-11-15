@@ -1,8 +1,15 @@
 /* ══════════ Tema AgroAsesor según el prototipo de Figma (todas las pantallas) ══════════
-   Se carga después de body.css. Cambia la paleta (variables), la tipografía, el menú lateral,
-   la cabecera, tarjetas y botones; no toca estructura ni comportamiento.
-   Para volver al aspecto anterior basta quitar este archivo de body.html. */
+   Se carga en todas las páginas (plataforma y acceso), después de body.css. Define la paleta y la
+   tipografía (variables globales), el menú lateral, la cabecera, tarjetas y botones; no toca estructura
+   ni comportamiento. */
 :root {
+    /* Tipografía única, tomada de la ficha del predio: Outfit con pesos de 300 a 600.
+       Las hojas de estilo usan estas variables en lugar de escribir la fuente o el peso a mano. */
+    --font-sans: Outfit, "Segoe UI", sans-serif;
+    --fw-light: 300;
+    --fw-regular: 400;
+    --fw-medium: 500;
+    --fw-semibold: 600; /* el peso más fuerte de la plataforma: títulos, cifras, botones y etiquetas */
     --bg: #f6f8f7;
     --paper: #ffffff;
     --ink: #0f1b2d;
@@ -24,8 +31,16 @@
 .app-body button,
 .app-body input,
 .app-body select,
-.app-body textarea {
-    font-family: Outfit, "Source Sans 3", "Segoe UI", sans-serif;
+.app-body textarea,
+.app-body code,
+.app-body .leaflet-container,
+.app-body .leaflet-bar a {
+    /* La librería del mapa trae su propia fuente (y otra para los botones + y −); aquí se iguala. */
+    font-family: var(--font-sans);
+}
+
+.app-body .leaflet-bar a {
+    font-weight: var(--fw-semibold); /* Leaflet usa «bold» (700) en los botones + y − */
 }
 
 .app-body {
@@ -36,27 +51,29 @@
 .app-body h1,
 .app-body h2,
 .app-body h3,
-.app-body h4 {
-    font-weight: 600;
+.app-body h4,
+.app-body h5,
+.app-body h6 {
+    font-weight: var(--fw-semibold);
     letter-spacing: -.01em;
 }
 
 .app-body .page-title {
     color: var(--ink);
     font-size: clamp(1.5rem, 1.2rem + 1vw, 1.95rem);
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
     letter-spacing: -.02em;
 }
 
 .app-body .page-sub {
     color: var(--muted);
-    font-weight: 300;
+    font-weight: var(--fw-light);
 }
 
 .app-body strong,
 .app-body b,
 .app-body th {
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
 }
 
 /* Tarjetas y botones */
@@ -72,7 +89,7 @@
 .app-body .btn-danger-agro,
 .app-body .btn-disabled {
     border-radius: 14px;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
 }
 
 .app-body .btn-primary-agro {
@@ -97,7 +114,7 @@
 }
 
 .app-body .state-chip {
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
 }
 
 .app-body .state-chip.is-green {
@@ -126,7 +143,7 @@
 .app-body .brand strong {
     color: #0b6b4b;
     font-size: 1.28rem;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
     letter-spacing: -.01em;
 }
 
@@ -135,7 +152,7 @@
     margin-top: 2px;
     color: #94a3b8;
     font-size: .62rem;
-    font-weight: 500;
+    font-weight: var(--fw-medium);
     letter-spacing: .14em;
     text-transform: uppercase;
 }
@@ -158,6 +175,21 @@
     gap: 4px;
 }
 
+/* Títulos de grupo del menú: mi campo, trabajo del campo, herramientas e informes. */
+.app-body .sidebar .nav-section {
+    margin: 14px 0 2px;
+    padding: 0 14px;
+    color: #94a3b8;
+    font-size: .68rem;
+    font-weight: var(--fw-semibold);
+    letter-spacing: .1em;
+    text-transform: uppercase;
+}
+
+.app-body .sidebar .nav-section:first-child {
+    margin-top: 0;
+}
+
 .app-body .sidebar .nav-link,
 .app-body .sidebar .nav-sublink {
     gap: 14px;
@@ -167,7 +199,7 @@
     border-radius: 14px;
     color: #475569;
     font-size: .98rem;
-    font-weight: 400;
+    font-weight: var(--fw-regular);
 }
 
 .app-body .sidebar .nav-link svg,
@@ -196,7 +228,7 @@
 .app-body .sidebar .nav-sublink.is-active {
     background: #e6f7ef;
     color: #0b6b4b;
-    font-weight: 500;
+    font-weight: var(--fw-medium);
 }
 
 /* Punto verde del ítem activo (los grupos desplegables ya llevan su flecha). */

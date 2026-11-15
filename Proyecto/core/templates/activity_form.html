@@ -2,7 +2,7 @@
 {% load static %}
 {% block title %}{{ heading }} · AgroAsesor{% endblock %}
 {% block extra_css %}
-    <link rel="stylesheet" href="{% static 'css/activities.css' %}?v=11">
+    <link rel="stylesheet" href="{% static 'css/activities.css' %}?v=12">
 {% endblock %}
 {% block content %}
     <div class="page-hero">
@@ -161,5 +161,5 @@
     {{ activity_guidance|json_script:"activity-guidance" }}
 {% endblock %}
 {% block extra_js %}
-    <script src="{% static 'js/actividades.js' %}?v=3"></script>
+    <script src="{% static 'js/actividades.js' %}?v=4"></script>
 {% endblock %}

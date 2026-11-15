@@ -2,8 +2,9 @@
 {% load static agro_assets %}
 {% block title %}{{ heading }} · AgroAsesor{% endblock %}
 {% block extra_css %}
-    <link rel="stylesheet" href="{% static 'css/predios.css' %}?v=35">
-    <link rel="stylesheet" href="{% static 'css/mapa-google.css' %}?v=2">
+    <link rel="stylesheet" href="{% static 'css/predios.css' %}?v=38">
+    <link rel="stylesheet" href="{% static 'css/mapa-google.css' %}?v=3">
+    {% if is_potrero %}<link rel="stylesheet" href="{% static 'css/potrero-simple.css' %}?v=2">{% endif %}
 {% endblock %}
 {% block content %}
     <nav class="crumbs" aria-label="Dónde estás"><a href="{% url 'predios' %}">Mis predios</a>{% if predio %}<span aria-hidden="true">›</span><a href="{% url 'predio_detail' predio.pk %}">{{ predio.nombre }}</a>{% endif %}{% if is_potrero %}<span aria-hidden="true">›</span><span class="is-current" aria-current="page">{{ heading }}</span>{% elif not predio %}<span aria-hidden="true">›</span><span class="is-current" aria-current="page">{{ heading }}</span>{% endif %}</nav>
@@ -37,31 +38,20 @@
                     </div>
                 </div>
                 <div class="potrero-body">
-                    <div class="form-card-heading is-simple"><h2>1 · ¿Qué vas a plantar?</h2></div>
+                    <div class="form-card-heading is-simple"><h2>Información del potrero</h2></div>
                     {{ form.non_field_errors }}
                     <div class="potrero-fields">
                         <label class="field" for="{{ form.nombre.id_for_label }}"><span>Nombre del potrero <b class="req" aria-hidden="true">*</b></span>{{ form.nombre }}{{ form.nombre.errors }}</label>
-                        <label class="field" for="{{ form.cultivo.id_for_label }}"><span>Cultivo</span>{{ form.cultivo }}{{ form.cultivo.errors }}</label>
+                        <label class="field" for="{{ form.cultivo.id_for_label }}"><span>Cultivo <small class="optional-tag">(opcional)</small></span>{{ form.cultivo }}{{ form.cultivo.errors }}</label>
                         {% if not form.fields.cultivo.queryset.exists %}<div class="alert" role="status"><strong>Aún no hay cultivos para elegir.</strong><p>Puedes guardar el potrero sin cultivo y asignarlo después. {% if request.user.is_staff %}Para cargar la lista base, ve a <a href="{% url 'admin_panel' %}">Administración</a> y usa «Cargar cultivos base».{% else %}Pide al administrador que cargue los cultivos del catálogo.{% endif %}</p></div>{% endif %}
-                        <details class="more-details"
-                                 {% if form.variedad.errors or form.fecha_siembra.errors or form.fecha_cosecha.errors %} open{% endif %}><summary>Agregar más detalles</summary>
-                            <label class="field"
-                                   for="{{ form.variedad.id_for_label }}"><span>Variedad</span>{{ form.variedad }}{{ form.variedad.errors }}</label>
-                            <div class="field-pair">
-                                <label class="field"
-                                       for="{{ form.fecha_siembra.id_for_label }}"><span>Fecha de siembra</span>{{ form.fecha_siembra }}{{ form.fecha_siembra.errors }}</label>
-                                <label class="field"
-                                       for="{{ form.fecha_cosecha.id_for_label }}"><span>Fecha de cosecha</span>{{ form.fecha_cosecha }}{{ form.fecha_cosecha.errors }}</label>
-                            </div>
-                        </details>
                     </div>
                 </div>
             </section>
             <section class="card map-card potrero-where-card">
-                <div class="map-card-heading is-simple"><h2>2 · ¿Dónde queda? <small>(opcional)</small></h2></div>
+                <div class="map-card-heading is-simple"><h2>Ubicación y superficie</h2></div>
                 <p id="map-status"
                    class="map-hint"
-                   role="status">Dibuja tu potrero dentro del límite verde, o escribe las hectáreas abajo.</p>
+                   role="status">Dibuja tu potrero dentro del límite del predio, o escribe las hectáreas abajo.</p>
                 <div class="map-actions map-toolbar is-potrero"
                      role="toolbar"
                      aria-label="Herramientas del mapa">
@@ -95,6 +85,11 @@
                      class="farm-map"
                      {% if form.errors %} data-focus-parent-only="false"{% endif %}
                      aria-label="Mapa interactivo de predios y potreros"></div>
+                <ul class="map-legend" aria-label="Qué muestra el mapa">
+                    <li><span class="legend-swatch is-farm" aria-hidden="true"></span>Límite del predio</li>
+                    <li><span class="legend-swatch is-new" aria-hidden="true"></span>Este potrero</li>
+                    <li><span class="legend-swatch is-other" aria-hidden="true"></span>Otros potreros</li>
+                </ul>
                 <div class="measurement-readout" aria-live="polite">
                     <p id="live-perimeter" class="map-measure"></p>
                     <p id="live-area" class="map-measure"></p>
@@ -263,4 +258,4 @@
 </div>
 {% endif %}
 {% endblock %}
-{% block extra_js %}{% if potrero_sin_espacio %}{% elif is_potrero or is_predio %}{{ maps_config|json_script:'maps-config' }}<script src="{% vendor 'leaflet/leaflet.js' 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js' %}"></script><script src="{% vendor 'leaflet/leaflet-geoman.min.js' 'https://unpkg.com/@geoman-io/leaflet-geoman-free@2.18.0/dist/leaflet-geoman.min.js' %}"></script><script src="{% static 'js/agro-basemap.js' %}?v=3"></script><script src="{% static 'js/predios-map.js' %}?v=31"></script>{% endif %}{% endblock %}
+{% block extra_js %}{% if potrero_sin_espacio %}{% elif is_potrero or is_predio %}{{ maps_config|json_script:'maps-config' }}<script src="{% vendor 'leaflet/leaflet.js' 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js' %}"></script><script src="{% vendor 'leaflet/leaflet-geoman.min.js' 'https://unpkg.com/@geoman-io/leaflet-geoman-free@2.18.0/dist/leaflet-geoman.min.js' %}"></script><script src="{% static 'js/agro-basemap.js' %}?v=3"></script><script src="{% static 'js/predios-map.js' %}?v=33"></script>{% endif %}{% endblock %}

@@ -170,8 +170,8 @@ def listar_predios(usuario):
     filas = (
         abrir_bd()
         .execute(
-            "SELECT p.*, (SELECT COUNT(*) FROM core_potrero q WHERE q.predio_id = p.id) AS n "
-            "FROM core_predio p WHERE p.propietario_id = %s ORDER BY p.nombre",
+            "SELECT p.*, (SELECT COUNT(*) FROM core_potrero q WHERE q.predio_id = p.id AND q.archivado_en IS NULL) AS n "
+            "FROM core_predio p WHERE p.propietario_id = %s AND p.archivado_en IS NULL ORDER BY p.nombre",
             (usuario.id,),
         )
         .fetchall()
@@ -182,7 +182,10 @@ def listar_predios(usuario):
 def _predio_propio(predio_id, usuario):
     fila = (
         abrir_bd()
-        .execute("SELECT * FROM core_predio WHERE id = %s AND propietario_id = %s", (predio_id, usuario.id))
+        .execute(
+            "SELECT * FROM core_predio WHERE id = %s AND propietario_id = %s AND archivado_en IS NULL",
+            (predio_id, usuario.id),
+        )
         .fetchone()
     )
     if fila is None:
@@ -192,7 +195,9 @@ def _predio_propio(predio_id, usuario):
 
 def obtener_predio(predio_id, usuario):
     fila = _predio_propio(predio_id, usuario)
-    n = abrir_bd().execute("SELECT COUNT(*) AS total FROM core_potrero WHERE predio_id = %s", (predio_id,)).fetchone()["total"]
+    n = abrir_bd().execute(
+        "SELECT COUNT(*) AS total FROM core_potrero WHERE predio_id = %s AND archivado_en IS NULL", (predio_id,)
+    ).fetchone()["total"]
     return _predio(fila, n)
 
 
@@ -219,19 +224,21 @@ def _potrero(f):
 _SQL_POTRERO = (
     "SELECT q.*, c.nombre AS cultivo_nombre FROM core_potrero q "
     "JOIN core_predio p ON p.id = q.predio_id LEFT JOIN core_cultivo c ON c.id = q.cultivo_id "
+    # Los predios y potreros archivados en la plataforma no se entregan (siguen en la base con su historial).
+    "WHERE q.archivado_en IS NULL AND p.archivado_en IS NULL "
 )
 
 
 def listar_potreros(predio_id, usuario):
     _predio_propio(predio_id, usuario)
-    filas = abrir_bd().execute(_SQL_POTRERO + "WHERE q.predio_id = %s ORDER BY q.nombre", (predio_id,))
+    filas = abrir_bd().execute(_SQL_POTRERO + "AND q.predio_id = %s ORDER BY q.nombre", (predio_id,))
     return [_potrero(f) for f in filas]
 
 
 def obtener_potrero(potrero_id, usuario):
     fila = (
         abrir_bd()
-        .execute(_SQL_POTRERO + "WHERE q.id = %s AND p.propietario_id = %s", (potrero_id, usuario.id))
+        .execute(_SQL_POTRERO + "AND q.id = %s AND p.propietario_id = %s", (potrero_id, usuario.id))
         .fetchone()
     )
     if fila is None:

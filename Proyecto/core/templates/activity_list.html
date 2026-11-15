@@ -1,8 +1,8 @@
 {% extends "body.html" %}
-{% load static %}
+{% load static ayudas %}
 {% block title %}Actividades agrícolas · AgroAsesor{% endblock %}
 {% block extra_css %}
-    <link rel="stylesheet" href="{% static 'css/activities.css' %}?v=11">
+    <link rel="stylesheet" href="{% static 'css/activities.css' %}?v=12">
 {% endblock %}
 {% block content %}
     <div class="page-hero">
@@ -17,6 +17,7 @@
    href="{% url 'actividad_create' %}"><i data-lucide="plus"></i> Programar labor</a>{% endif %}
         </div>
     </div>
+    {% ayuda 'actividades' %}
     {% if activities or request.GET %}
     <div class="kpi-row">
         <a class="kpi kpi-pending" href="?estado=pendiente"><i class="kpi-ico" data-lucide="clipboard-list"></i><span>Pendientes</span><strong>{{ activity_stats.pendientes }}</strong><small>por realizar</small></a>

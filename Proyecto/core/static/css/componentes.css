@@ -1,0 +1,284 @@
+/* Componentes compartidos por todas las pantallas de la plataforma (se carga después de tema-figma.css):
+   · consejos de ayuda plegables (partials/ayuda.html + ayudas.js);
+   · ventana de confirmación para eliminar o archivar (registro-acciones.js) y su página sin JavaScript;
+   · página «Archivados» y mensajes de error.
+   Usa los colores, bordes y tipografía del tema; no define fuentes propias. */
+
+/* ---------- Consejos de ayuda ---------- */
+.ayuda {
+    margin: 0 0 16px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: var(--paper);
+    color: var(--ink);
+}
+
+.ayuda[open] {
+    border-color: #a9e4c9;
+    background: #f1fbf6;
+}
+
+.ayuda > summary {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 14px;
+    color: var(--green);
+    font-size: .9rem;
+    font-weight: var(--fw-medium);
+    list-style: none;
+    cursor: pointer;
+}
+
+.ayuda > summary::-webkit-details-marker {
+    display: none;
+}
+
+.ayuda > summary:focus-visible {
+    border-radius: 14px;
+    outline: 3px solid #79a97e;
+    outline-offset: 1px;
+}
+
+.ayuda-ico {
+    display: grid;
+    flex: 0 0 26px;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 8px;
+    background: var(--green-soft);
+    color: var(--green);
+}
+
+.ayuda-ico svg,
+.ayuda-chevron svg {
+    width: 15px;
+    height: 15px;
+}
+
+.ayuda-resumen {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.ayuda-chevron {
+    display: grid;
+    color: var(--muted);
+    transition: transform .15s ease;
+}
+
+.ayuda[open] .ayuda-chevron {
+    transform: rotate(180deg);
+}
+
+.ayuda-body {
+    padding: 0 16px 12px 50px;
+}
+
+.ayuda-titulo {
+    margin: 0 0 6px;
+    color: var(--ink);
+    font-weight: var(--fw-semibold);
+}
+
+.ayuda-pasos {
+    display: grid;
+    gap: 4px;
+    margin: 0 0 8px;
+    padding-left: 18px;
+    color: var(--muted);
+    font-size: .9rem;
+    line-height: 1.45;
+}
+
+.ayuda-form {
+    display: flex;
+    justify-content: flex-end;
+    margin: 0;
+}
+
+@media (max-width: 640px) {
+    .ayuda-body {
+        padding-left: 16px;
+    }
+}
+
+/* ---------- Ventana de confirmación (eliminar / archivar) ---------- */
+.row-menu-sep {
+    display: block;
+    height: 1px;
+    margin: 6px 4px;
+    background: var(--line);
+}
+
+.agro-dialog {
+    width: min(480px, calc(100vw - 32px));
+    padding: 22px 24px 20px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--paper);
+    box-shadow: 0 24px 60px rgba(15, 27, 45, .22);
+    color: #334155;
+}
+
+.agro-dialog::backdrop {
+    background: rgba(15, 27, 45, .45);
+}
+
+.agro-dialog p {
+    margin: 0 0 12px;
+    line-height: 1.5;
+}
+
+.agro-dialog-title {
+    margin: 0 0 14px;
+    color: var(--ink);
+    font-size: 1.2rem;
+}
+
+.agro-dialog-record {
+    display: grid;
+    gap: 2px;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: #f8fafc;
+}
+
+.agro-dialog-record strong {
+    color: var(--ink);
+    overflow-wrap: anywhere;
+}
+
+.agro-dialog-kicker {
+    color: var(--muted);
+    font-size: .72rem;
+    font-weight: var(--fw-semibold);
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+.agro-dialog-list {
+    margin: 0 0 12px;
+    padding-left: 20px;
+    color: var(--ink);
+    font-weight: var(--fw-medium);
+}
+
+.agro-dialog-error {
+    padding: 8px 12px;
+    border-radius: 10px;
+    background: #fef3f2;
+    color: #b42318;
+}
+
+.agro-dialog-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 6px;
+}
+
+.agro-dialog-actions form {
+    margin: 0;
+}
+
+@media (max-width: 520px) {
+    .agro-dialog-actions {
+        flex-direction: column-reverse;
+    }
+
+    .agro-dialog-actions > *,
+    .agro-dialog-actions form button {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* Página de confirmación sin JavaScript. */
+.registro-confirm {
+    max-width: 620px;
+    margin: 0 auto;
+    padding: 24px;
+}
+
+/* ---------- Archivados ---------- */
+.registro-list {
+    margin-bottom: 16px;
+    padding: 18px 20px;
+}
+
+.registro-list h2 {
+    margin: 0 0 8px;
+    font-size: 1.05rem;
+}
+
+.registro-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px 16px;
+    padding: 12px 0;
+    border-top: 1px solid var(--line);
+}
+
+.registro-row:first-of-type {
+    border-top: 0;
+}
+
+.registro-row strong {
+    display: block;
+    color: var(--ink);
+}
+
+.registro-row small {
+    color: var(--muted);
+}
+
+.registro-row-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.registro-row-actions form {
+    margin: 0;
+}
+
+.registro-empty {
+    display: grid;
+    justify-items: start;
+    gap: 10px;
+    padding: 20px;
+}
+
+.registro-empty p {
+    margin: 0;
+}
+
+/* ---------- Mensajes ---------- */
+.callout.is-error {
+    background: #fef3f2;
+    color: #b42318;
+}
+
+/* Centrada en la pantalla (predios.css ubica arriba el diálogo de cultivo del mapa con «dialog:modal»). */
+.agro-dialog:modal {
+    top: 50%;
+    left: 50%;
+    width: min(480px, calc(100vw - 32px));
+    max-height: calc(100dvh - 32px);
+    margin: 0;
+    overflow: auto;
+    transform: translate(-50%, -50%);
+}
+
+/* Menú «⋯» dentro de una tarjeta: el leve «salto» de la tarjeta al pasar el mouse (transform) convertía el menú
+   (position: fixed) en relativo a la tarjeta y lo dejaba fuera de la vista, sobre todo en el celular. */
+.entity-card:has(.row-menu.is-open),
+.entity-card:has(.row-menu.is-open):hover {
+    transform: none;
+}

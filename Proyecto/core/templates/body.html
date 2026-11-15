@@ -7,12 +7,11 @@
         <title>{% block title %}AgroAsesor{% endblock %}</title>
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="{% vendor 'fonts/source-sans-3.css' 'https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600;700&display=swap' %}"
-              rel="stylesheet">
-        <link rel="stylesheet" href="{% static 'css/body.css' %}?v=10">
+        <link rel="stylesheet" href="{% static 'css/body.css' %}?v=12">
         <link href="{% vendor 'fonts/outfit.css' 'https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap' %}"
               rel="stylesheet">
-        <link rel="stylesheet" href="{% static 'css/tema-figma.css' %}?v=1">
+        <link rel="stylesheet" href="{% static 'css/tema-figma.css' %}?v=4">
+        <link rel="stylesheet" href="{% static 'css/componentes.css' %}?v=1">
         {% if current == "predios" %}
             <link rel="stylesheet"
                   href="{% vendor 'leaflet/leaflet.css' 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css' %}">
@@ -36,7 +35,9 @@
                 </a>
                 <nav class="sidebar-primary-nav" aria-label="Principal">
                     {% for item in menu %}
-                        {% if item.children %}
+                        {% if item.section %}
+                            <p class="nav-section">{{ item.section }}</p>
+                        {% elif item.children %}
                             <details class="nav-group"{% if item.open %} open{% endif %}>
                                 <summary class="nav-link{% if item.active %} is-active{% endif %}">
                                     <i data-lucide="{{ item.icon }}"></i><span>{{ item.label }}</span><i data-lucide="chevron-down"
@@ -124,7 +125,7 @@
                 </header>
                 <main>
                     <div class="page-container">
-                        {% for message in messages %}<p class="callout" role="status">{{ message }}</p>{% endfor %}
+                        {% for message in messages %}<p class="callout{% if message.level_tag == 'error' %} is-error{% endif %}" role="{% if message.level_tag == 'error' %}alert{% else %}status{% endif %}">{{ message }}</p>{% endfor %}
                         {% if perfil_incompleto %}<p class="callout" role="status">Completa tu perfil con tu teléfono y tu comuna para terminar tu registro. <a class="text-link" href="{% url 'perfil' %}">Completar ahora</a></p>{% endif %}
                         {% if not phase_a %}<p class="callout">Módulo pendiente de consolidación. Verifica las dosis con una fuente técnica antes de utilizarlas.</p>{% endif %}
                         {% comment %}Sin predios no hay ruta que seguir: cada pantalla ya ofrece su único «Registrar predio».{% endcomment %}
@@ -134,9 +135,6 @@
                         {% block content %}{% endblock %}
                     </div>
                 </main>
-                <footer class="app-footer">
-                    <div class="page-container">AgroAsesor · Apoyo a la gestión agrícola. La información es orientativa y no reemplaza la asesoría de un ingeniero agrónomo ni la etiqueta autorizada de cada producto.</div>
-                </footer>
             </div>
         </div>
         {% csrf_token %}
@@ -145,6 +143,8 @@
         {% if crop_picker %}{{ crop_picker|json_script:"agro-crop-picker" }}{% endif %}
         {{ request.user.pk|json_script:"agro-user-id" }}
         <script src="{% static 'js/row-menu.js' %}?v=2"></script>
+        <script src="{% static 'js/registro-acciones.js' %}?v=1" defer></script>
+        <script src="{% static 'js/ayudas.js' %}?v=1" defer></script>
         <script src="{% static 'js/layout.js' %}?v=3"></script>
         {# Los íconos se cargan sin bloquear la página: si internet va lento, los menús y botones funcionan igual y los íconos aparecen al llegar. #}
         <script async

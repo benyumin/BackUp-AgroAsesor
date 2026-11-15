@@ -56,9 +56,20 @@ class PlanningBase(TestCase):
         return response
 
     def make_plot(self, **values):
-        """Registra un potrero por el formulario real y lo devuelve."""
+        """Registra un potrero por el formulario real y lo devuelve.
+
+        La variedad y las fechas ya no se piden al registrar el potrero: si la prueba las entrega, se guardan como lo
+        hace la persona, en el formulario de planificación de la temporada.
+        """
+        planning = {key: values.pop(key) for key in ('variedad', 'fecha_siembra', 'fecha_cosecha') if key in values}
         self.register_plot(**values)
-        return Potrero.objects.get(predio=self.predio, nombre=values.get('nombre', 'Potrero principal'))
+        plot = Potrero.objects.get(predio=self.predio, nombre=values.get('nombre', 'Potrero principal'))
+        if planning and plot.cultivo_id:
+            season = self.vigente(plot)
+            response = self.client.post(self.season_edit_url(season), self.season_post(crop=season.cultivo, **planning))
+            self.assertRedirects(response, self.detail_url)
+            plot.refresh_from_db()
+        return plot
 
     def edit_plot_url(self, plot):
         return f'/predios/{self.predio.pk}/potreros/{plot.pk}/editar/'
@@ -106,7 +117,7 @@ class RegisterPlotTests(PlanningBase):
     def test_plot_without_crop_creates_no_season_and_asks_for_the_crop(self):
         response = self.register_plot(follow=True)
         self.assertRedirects(response, self.detail_url)
-        self.assertContains(response, 'Potrero, cultivo y ubicación guardados')
+        self.assertContains(response, 'Potrero creado.')
         plot = Potrero.objects.get()
         self.assertEqual(plot.temporadas.count(), 0)
         ui, _ = self.card(plot)
@@ -118,7 +129,7 @@ class RegisterPlotTests(PlanningBase):
     def test_plot_with_crop_saves_and_creates_its_season_automatically(self):
         response = self.register_plot(follow=True, cultivo=self.haba.pk)
         self.assertRedirects(response, self.detail_url)
-        self.assertContains(response, 'Potrero, cultivo y ubicación guardados')
+        self.assertContains(response, 'Potrero creado.')
         self.assertContains(response, 'Potrero principal')
         plot = Potrero.objects.get()
         season = plot.temporadas.get()  # exactamente una
@@ -131,15 +142,26 @@ class RegisterPlotTests(PlanningBase):
         self.assertContains(response, 'Haba prueba')
         self.assertEqual(response.context['next_step']['key'], 'planificacion')
 
-    def test_plot_with_crop_and_dates_keeps_them_in_the_season_and_in_the_plot(self):
-        self.register_plot(cultivo=self.haba.pk, fecha_siembra='2026-11-10', fecha_cosecha='2027-03-10')
+    def test_dates_sent_to_the_plot_form_are_ignored_and_belong_to_the_planning(self):
+        # El formulario del potrero ya no pide variedad ni fechas: aunque lleguen en el envío, no se guardan ahí.
+        self.register_plot(
+            cultivo=self.haba.pk, variedad='Luz de otoño', fecha_siembra='2026-11-10', fecha_cosecha='2027-03-10'
+        )
         plot = Potrero.objects.get()
+        season = plot.temporadas.get()
+        self.assertEqual((season.variedad, season.fecha_siembra, season.fecha_cosecha), ('', None, None))
+        self.assertEqual((plot.variedad, plot.fecha_siembra, plot.fecha_cosecha), ('', None, None))
+        ui, _ = self.card(plot)
+        self.assertEqual((ui['plan_done'], ui['plan_complete']), (1, False))
+        self.assertEqual(ui['plan_action']['label'], 'Completar planificación')
+        # Se completan en la planificación, una sola vez, y el potrero queda con la misma información.
+        self.complete_planning(plot)
+        plot.refresh_from_db()
         season = plot.temporadas.get()
         self.assertEqual((season.fecha_siembra, season.fecha_cosecha), (date(2026, 11, 10), date(2027, 3, 10)))
         self.assertEqual((plot.fecha_siembra, plot.fecha_cosecha), (date(2026, 11, 10), date(2027, 3, 10)))
         ui, _ = self.card(plot)
         self.assertEqual((ui['plan_done'], ui['plan_complete']), (3, True))
-        self.assertEqual(ui['primary']['label'], 'Calcular semillas')
 
 
 class IncompletePlanningTests(PlanningBase):
@@ -284,16 +306,19 @@ class ProgressAndPrimaryButtonTests(PlanningBase):
         self.assertEqual(labels, ['Asignar cultivo', 'Completar planificación', 'Calcular semillas'])
         self.assertEqual(ui['primary']['url'], f'/decisiones/?tipo=semillas&potrero={self.plot.pk}')
 
-    def test_complete_planning_also_offers_the_other_two_calculators(self):
+    def test_complete_planning_shows_a_single_edit_button_and_keeps_the_calculators_in_the_menu(self):
         self.complete_planning(self.plot)
         ui, response = self.card(self.plot)
         html = response.content.decode()
         actions = re.search(r'<div class="plot-actions">(.*?)</div>', html, re.S).group(1)
-        self.assertIn('Calcular semillas', actions)
-        self.assertIn(f'/decisiones/?tipo=insumos&amp;potrero={self.plot.pk}', actions)
-        self.assertIn('Calcular insumos', actions)
-        self.assertIn(f'/decisiones/?herramienta=alcanza&amp;potrero={self.plot.pk}', actions)
-        self.assertIn('Ver si alcanza', actions)
+        self.assertEqual(actions.count('<a '), 1)  # un solo botón por potrero
+        self.assertIn('Editar planificación', actions)
+        self.assertIn(f'/temporadas/{self.plot.temporadas.get().pk}/editar/', actions)
+        # Las tres calculadoras siguen a mano en el menú ⋯ del potrero.
+        menu = re.search(r'<div class="row-menu-list" role="menu">(.*?)</div>', html[html.index(f'id="potrero-{self.plot.pk}"') :], re.S).group(1)
+        for label in ('Calcular semillas', 'Calcular insumos', 'Ver si alcanza'):
+            self.assertIn(label, menu)
+        self.assertEqual(ui['plan_action']['label'], 'Editar planificación')
         self.assertEqual(response.context['next_step']['key'], 'decisiones')
 
     def test_incomplete_planning_does_not_show_the_extra_calculator_buttons(self):
@@ -378,9 +403,11 @@ class PreviousSeasonsTests(PlanningBase):
         self.assertEqual(self.snapshot(first), before)
         newest = self.vigente(plot)
         self.assertNotEqual(newest.pk, first.pk)
-        self.assertEqual((newest.cultivo, newest.fecha_siembra), (self.maiz, date(2026, 11, 10)))
+        # La temporada del cultivo nuevo nace sin variedad ni fechas (ni las del envío ni las del cultivo anterior):
+        # se completan en la planificación.
+        self.assertEqual((newest.cultivo, newest.variedad, newest.fecha_siembra), (self.maiz, '', None))
         plot.refresh_from_db()
-        self.assertEqual((plot.cultivo, plot.fecha_siembra), (self.maiz, date(2026, 11, 10)))
+        self.assertEqual((plot.cultivo, plot.variedad, plot.fecha_siembra, plot.fecha_cosecha), (self.maiz, '', None, None))
 
     def test_registering_a_new_season_keeps_every_earlier_one(self):
         plot = self.make_plot(cultivo=self.haba.pk, fecha_siembra='2025-11-10', fecha_cosecha='2026-03-10')
@@ -407,7 +434,10 @@ class PreviousSeasonsTests(PlanningBase):
         )
         _, response = self.card(plot)
         html = response.content.decode()
-        self.assertEqual(html.count('Editar temporada'), 2)
+        # La vigente se edita con el botón del potrero; solo la anterior tiene su propio enlace.
+        self.assertEqual(html.count('Editar temporada'), 0)
+        self.assertEqual(html.count('>Corregir</a>'), 1)
+        self.assertEqual(html.count('>Completar planificación</a>') + html.count('>Editar planificación</a>'), 1)
         self.assertEqual(html.count('Vigente'), 1)
 
     def test_editing_an_old_season_does_not_touch_the_current_data_of_the_plot(self):
@@ -483,7 +513,7 @@ class SyncTests(PlanningBase):
             self.season_post(variedad='A', fecha_siembra='2026-11-10', fecha_cosecha='2027-03-10'),
         )
         agree()
-        # 2) mismo cultivo editado desde el formulario del potrero
+        # 2) mismo cultivo guardado desde el formulario del potrero: la planificación no se toca desde ahí
         self.client.post(
             self.edit_plot_url(plot),
             self.plot_post(
@@ -492,7 +522,7 @@ class SyncTests(PlanningBase):
         )
         agree()
         self.assertEqual(plot.temporadas.count(), 1)
-        self.assertEqual(self.vigente(plot).variedad, 'B')
+        self.assertEqual(self.vigente(plot).variedad, 'A')
         # 3) nueva temporada registrada
         self.client.post(
             self.season_create_url(plot),
@@ -507,7 +537,7 @@ class SyncTests(PlanningBase):
         agree()
         self.assertEqual(plot.temporadas.count(), 3)
 
-    def test_changing_only_the_dates_in_the_plot_form_updates_the_open_season(self):
+    def test_the_plot_form_no_longer_changes_the_dates_of_the_open_season(self):
         plot = self.make_plot(cultivo=self.haba.pk)
         season = self.vigente(plot)
         self.client.post(
@@ -516,11 +546,11 @@ class SyncTests(PlanningBase):
         )
         self.assertEqual(plot.temporadas.count(), 1)
         season.refresh_from_db()
-        self.assertEqual((season.fecha_siembra, season.fecha_cosecha), (date(2026, 11, 10), date(2027, 3, 10)))
+        self.assertEqual((season.fecha_siembra, season.fecha_cosecha), (None, None))
         ui, _ = self.card(plot)
-        self.assertEqual((ui['plan_done'], ui['plan_complete']), (3, True))
+        self.assertEqual((ui['plan_done'], ui['plan_complete']), (1, False))
 
-    def test_a_finished_season_is_not_rewritten_by_the_plot_form(self):
+    def test_a_finished_season_is_not_rewritten_nor_duplicated_by_the_plot_form(self):
         plot = self.make_plot(cultivo=self.haba.pk, fecha_siembra='2025-11-10', fecha_cosecha='2026-03-10')
         season = self.vigente(plot)
         self.client.post(
@@ -529,13 +559,11 @@ class SyncTests(PlanningBase):
         )
         self.client.post(
             self.edit_plot_url(plot),
-            self.plot_post(cultivo=self.haba.pk, fecha_siembra='2026-11-10', fecha_cosecha='2027-03-10'),
+            self.plot_post(nombre='Otro nombre', cultivo=self.haba.pk, fecha_siembra='2026-11-10', fecha_cosecha='2027-03-10'),
         )
         season.refresh_from_db()
         self.assertEqual((season.fecha_siembra, season.estado), (date(2025, 11, 10), HARVESTED))
-        self.assertEqual(plot.temporadas.count(), 2)
-        newest = self.vigente(plot)
-        self.assertEqual((newest.fecha_siembra, newest.estado), (date(2026, 11, 10), PLANNED))
+        self.assertEqual(plot.temporadas.count(), 1)  # una temporada nueva se abre desde la planificación
 
     def test_removing_the_crop_from_the_plot_keeps_the_seasons_and_asks_for_a_crop_again(self):
         plot = self.make_plot(cultivo=self.haba.pk, fecha_siembra='2026-11-10', fecha_cosecha='2027-03-10')
@@ -672,7 +700,7 @@ class LegacyCompatibilityTests(PlanningBase):
 
 
 class PlotFormShowsTheSeasonTests(PlanningBase):
-    def test_the_plot_form_shows_the_dates_of_the_current_season_not_a_stale_copy(self):
+    def test_the_plot_form_does_not_show_nor_overwrite_the_planning(self):
         plot = Potrero.objects.create(
             predio=self.predio,
             nombre='Desfasado',
@@ -691,27 +719,20 @@ class PlotFormShowsTheSeasonTests(PlanningBase):
             fecha_cosecha=date(2027, 3, 10),
         )
         html = self.client.get(self.edit_plot_url(plot)).content.decode()
-        self.assertIn('value="2026-11-10"', html)
-        self.assertIn('value="2027-03-10"', html)
-        self.assertIn('value="Aguadulce"', html)
-        self.assertNotIn('value="2020-01-01"', html)
-        self.assertNotIn('Copia vieja', html)
+        # El formulario del potrero no muestra la planificación: ni la copia vieja ni la vigente.
+        for text in ('value="2026-11-10"', 'value="Aguadulce"', 'value="2020-01-01"', 'Copia vieja', 'id_variedad'):
+            self.assertNotIn(text, html)
+        # Y guardarlo no pisa la temporada con la copia vieja del potrero.
+        self.client.post(self.edit_plot_url(plot), self.plot_post(nombre='Desfasado', cultivo=self.haba.pk, superficie_ha='1'))
+        season = plot.temporadas.get()
+        self.assertEqual((season.variedad, season.fecha_siembra), ('Aguadulce', date(2026, 11, 10)))
 
     def test_saving_the_plot_form_untouched_leaves_the_season_exactly_as_it_was(self):
         plot = self.make_plot(cultivo=self.haba.pk)
         self.complete_planning(plot)
         season = self.vigente(plot)
         before = (season.fecha_siembra, season.fecha_cosecha, season.variedad, season.estado, season.pk)
-        form = self.client.get(self.edit_plot_url(plot)).context['form']
-        self.client.post(
-            self.edit_plot_url(plot),
-            self.plot_post(
-                cultivo=self.haba.pk,
-                variedad=form['variedad'].value() or '',
-                fecha_siembra=form['fecha_siembra'].value(),
-                fecha_cosecha=form['fecha_cosecha'].value(),
-            ),
-        )
+        self.client.post(self.edit_plot_url(plot), self.plot_post(cultivo=self.haba.pk))
         season.refresh_from_db()
         self.assertEqual((season.fecha_siembra, season.fecha_cosecha, season.variedad, season.estado, season.pk), before)
         self.assertEqual(plot.temporadas.count(), 1)
@@ -797,7 +818,7 @@ class FrontEndContractTests(TestCase):
         js = (Path(__file__).resolve().parent.parent / 'static' / 'js' / 'predios-map.js').read_text(encoding='utf-8')
         self.assertIn("el('a', 'btn-primary-agro btn-sm', plot.primaryLabel || 'Calcular semillas')", js)
         self.assertIn('plotNext.href = plot.primaryUrl || plot.seedsUrl;', js)
-        self.assertIn('href: plot.primaryUrl || plot.planFormUrl || plot.editUrl', js)
+        self.assertNotIn('plotNextAction', js)  # el recuadro «Próxima acción» se retiró del panel
         self.assertNotIn("!plot.sowing ? 'Continuar planificación'", js)
 
     def test_the_season_form_explains_that_the_current_season_updates_the_plot(self):

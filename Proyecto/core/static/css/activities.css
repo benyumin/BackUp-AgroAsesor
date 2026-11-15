@@ -51,7 +51,7 @@
     background: var(--amber-soft);
     color: #66520c;
     font-size: 0.84rem;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
 }
 
 .status-completada {
@@ -119,7 +119,7 @@
     margin-bottom: 4px;
     color: var(--green);
     font-size: 0.8rem;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
     letter-spacing: 0.06em;
     text-transform: uppercase;
 }
@@ -179,7 +179,7 @@
     border-radius: 50%;
     background: var(--green-dark);
     color: #fff;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
 }
 
 .form-grid {
@@ -223,7 +223,7 @@
 }
 
 .type-picker legend {
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
     font-size: 0.92rem;
     margin-bottom: 8px;
 }
@@ -254,7 +254,7 @@
     border: 1px solid var(--line);
     border-radius: 12px;
     background: #fff;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
     color: var(--green-dark);
     font-size: 0.92rem;
     transition: border-color .15s, background .15s;
@@ -285,7 +285,7 @@
     padding: 4px 12px;
     border-radius: 999px;
     font-size: 0.78rem;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
     white-space: nowrap;
     background: var(--green-soft);
     color: var(--green);
@@ -382,12 +382,12 @@
 
 .facts dt {
     color: var(--muted);
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
 }
 
 .facts dd {
     margin: 0;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
     overflow-wrap: anywhere;
 }
 
@@ -408,7 +408,7 @@
 
 .guidance-title {
     margin: 0 0 6px;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
     color: var(--green-dark);
 }
 
@@ -440,7 +440,7 @@
     display: grid;
     place-items: center;
     font-size: 0.72rem;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
 }
 
 .mini-agenda {
@@ -482,7 +482,7 @@
 
 .mini-agenda a {
     color: var(--green-dark);
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
     text-decoration: none;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -495,7 +495,7 @@
 
 .overdue {
     color: var(--red);
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
 }
 
 .empty-hero {
@@ -536,7 +536,7 @@
 
 .kpi span {
     color: var(--muted);
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
     font-size: 0.88rem;
 }
 
@@ -617,7 +617,7 @@
     padding: 6px 14px;
     border-radius: 8px;
     text-decoration: none;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
     color: var(--green-dark);
     font-size: 0.9rem;
 }
@@ -643,7 +643,7 @@
     padding: 0 8px 8px;
     color: var(--muted);
     font-size: 0.8rem;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
     text-transform: uppercase;
     letter-spacing: 0.04em;
     border-bottom: 1px solid var(--line);
@@ -690,7 +690,7 @@
 
 .cell-main a {
     color: var(--green-dark);
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
     text-decoration: none;
 }
 
@@ -843,7 +843,7 @@
     padding: 8px;
     background: #f3f6f2;
     font-size: 0.8rem;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
     color: var(--muted);
     text-align: center;
     text-transform: uppercase;
@@ -875,7 +875,7 @@
 
 .day-number {
     font-size: 0.82rem;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
 }
 
 .day-item {
@@ -883,7 +883,7 @@
     padding: 2px 6px;
     border-radius: 6px;
     font-size: 0.76rem;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
     text-decoration: none;
     color: #fff;
     background: var(--type, var(--green));
@@ -927,12 +927,12 @@
 .detail-grid dt {
     color: var(--muted);
     font-size: 0.86rem;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
 }
 
 .detail-grid dd {
     margin: 3px 0 0;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
 }
 
 .observations {
@@ -1168,7 +1168,7 @@
 
 .perfil-crumbs [aria-current] {
     color: var(--green-dark);
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
 }
 
 /* Cabecera: datos a la izquierda, foto del campo y avance a la derecha */
@@ -1208,7 +1208,7 @@
     background: var(--green-dark);
     color: #fff;
     font-size: 2rem;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
     letter-spacing: 0.02em;
     box-shadow: 0 0 0 1px var(--line);
 }
@@ -1263,7 +1263,7 @@
     background: var(--green-soft);
     color: var(--green-dark);
     font-size: 0.88rem;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
 }
 
 .perfil-role svg,
@@ -1528,14 +1528,14 @@
 .perfil-row dt {
     color: var(--muted);
     font-size: 0.78rem;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
     letter-spacing: 0.04em;
     text-transform: uppercase;
 }
 
 .perfil-row dd {
     margin: 2px 0 0;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
     overflow-wrap: anywhere;
 }
 
@@ -1556,7 +1556,7 @@
     background: var(--green-soft);
     color: var(--green-dark);
     font-size: 0.82rem;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
     white-space: nowrap;
 }
 

@@ -18,10 +18,9 @@
     --pf-shadow: 0 1px 2px rgba(15, 27, 45, .04), 0 8px 24px rgba(15, 27, 45, .04);
     --pf-radius: 22px;
     display: grid;
-    gap: 22px;
+    gap: 14px;
     min-width: 0;
     color: var(--pf-text);
-    font-family: Outfit, "Source Sans 3", "Segoe UI", sans-serif;
 }
 
 .pf>* {
@@ -38,7 +37,7 @@
     display: block;
     color: var(--pf-green-ink);
     font-size: .72rem;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
     letter-spacing: .16em;
     text-transform: uppercase;
 }
@@ -55,8 +54,8 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 16px 24px;
-    padding: 30px 36px 26px;
+    gap: 12px 20px;
+    padding: 18px 24px 14px;
 }
 
 .pf-head-id {
@@ -73,7 +72,7 @@
 .pf-head .state-chip {
     padding: 4px 11px;
     font-size: .68rem;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
     letter-spacing: .04em;
 }
 
@@ -96,8 +95,8 @@
 .pf .pf-title {
     margin: 0;
     color: var(--pf-ink);
-    font-size: clamp(1.7rem, 1.2rem + 1.6vw, 2.4rem);
-    font-weight: 600;
+    font-size: clamp(1.4rem, 1.1rem + 1vw, 1.8rem);
+    font-weight: var(--fw-semibold);
     letter-spacing: -.02em;
     line-height: 1.12;
     overflow-wrap: anywhere;
@@ -110,7 +109,7 @@
     margin: 0;
     color: var(--pf-muted);
     font-size: 1.02rem;
-    font-weight: 300;
+    font-weight: var(--fw-light);
 }
 
 .pf-location svg {
@@ -127,7 +126,7 @@
 .pf .btn-primary-agro,
 .pf .btn-secondary-agro {
     border-radius: 14px;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
 }
 
 .pf .btn-primary-agro {
@@ -169,9 +168,9 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 18px 0;
+    gap: 12px 0;
     margin: 0;
-    padding: 22px 36px 24px;
+    padding: 12px 24px 14px;
     border-top: 1px solid var(--pf-line-soft);
     border-radius: 0 0 var(--pf-radius) var(--pf-radius);
     background: #fbfcfc;
@@ -215,13 +214,13 @@
 .pf-stat-text small {
     color: var(--pf-muted);
     font-size: .86rem;
-    font-weight: 300;
+    font-weight: var(--fw-light);
 }
 
 .pf-stat-text strong {
     color: var(--pf-ink);
     font-size: 1.12rem;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
     line-height: 1.1;
 }
 
@@ -243,7 +242,7 @@
 
 .pf-usage-top strong {
     color: var(--pf-green-ink);
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
 }
 
 .pf-usage-bar {
@@ -265,7 +264,7 @@
     justify-self: end;
     color: var(--pf-faint);
     font-size: .78rem;
-    font-weight: 300;
+    font-weight: var(--fw-light);
 }
 
 /* ── ¿Cómo deseas organizar tu predio? ── */
@@ -290,7 +289,7 @@
     margin: 0;
     color: var(--pf-ink);
     font-size: clamp(1.3rem, 1.1rem + .7vw, 1.7rem);
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
     letter-spacing: -.015em;
     line-height: 1.2;
 }
@@ -300,7 +299,7 @@
     margin: 0;
     color: var(--pf-muted);
     font-size: 1.02rem;
-    font-weight: 300;
+    font-weight: var(--fw-light);
 }
 
 .pf .use-options {
@@ -317,7 +316,7 @@
 .pf .use-option {
     display: flex;
     flex-direction: column;
-    gap: 22px;
+    gap: 14px;
     padding: 24px 26px;
     border: 1px solid var(--pf-line);
     border-radius: 18px;
@@ -365,7 +364,7 @@
     margin: 2px 0 6px;
     color: var(--pf-ink);
     font-size: 1.16rem;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
 }
 
 .use-tag {
@@ -374,7 +373,7 @@
     background: var(--pf-mint);
     color: var(--pf-green-ink);
     font-size: .66rem;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
     letter-spacing: .05em;
     text-transform: uppercase;
 }
@@ -383,7 +382,7 @@
     margin: 0;
     color: var(--pf-muted);
     font-size: .94rem;
-    font-weight: 300;
+    font-weight: var(--fw-light);
     line-height: 1.45;
 }
 
@@ -404,7 +403,7 @@
 .pf .use-field span {
     color: var(--pf-ink);
     font-size: .88rem;
-    font-weight: 500;
+    font-weight: var(--fw-medium);
 }
 
 .pf .use-field input {
@@ -420,7 +419,7 @@
 
 .pf .use-field input::placeholder {
     color: var(--pf-faint);
-    font-weight: 300;
+    font-weight: var(--fw-light);
 }
 
 .pf .use-field input:focus {
@@ -452,7 +451,7 @@
     background: none;
     color: var(--pf-muted);
     font-size: .95rem;
-    font-weight: 500;
+    font-weight: var(--fw-medium);
     text-decoration: none;
 }
 
@@ -467,9 +466,9 @@
     display: grid;
     grid-template-columns: minmax(0, 1.9fr) minmax(340px, 1fr);
     grid-template-rows: auto 1fr;
-    gap: 18px 30px;
+    gap: 10px 18px;
     align-items: start;
-    margin-top: 8px;
+    margin-top: 0;
 }
 
 .pf-geo-head {
@@ -481,10 +480,10 @@
 }
 
 .pf-geo-head h2 {
-    margin: 8px 0 8px;
+    margin: 2px 0 0;
     color: var(--pf-ink);
-    font-size: clamp(1.3rem, 1.1rem + .7vw, 1.7rem);
-    font-weight: 600;
+    font-size: 1.2rem;
+    font-weight: var(--fw-semibold);
     letter-spacing: -.015em;
     line-height: 1.2;
 }
@@ -493,7 +492,7 @@
     margin: 0;
     color: var(--pf-muted);
     font-size: 1.02rem;
-    font-weight: 300;
+    font-weight: var(--fw-light);
 }
 
 .pf .detail-map-tools {
@@ -515,7 +514,7 @@
     border-radius: 10px;
     color: var(--pf-muted);
     font-size: .9rem;
-    font-weight: 500;
+    font-weight: var(--fw-medium);
 }
 
 .pf .map-view-switch button:hover {
@@ -553,8 +552,8 @@
 
 .pf .pf-map-frame .farm-map {
     width: 100%;
-    height: min(64vh, 620px);
-    min-height: 380px;
+    height: min(56vh, 500px);
+    min-height: 340px;
     margin: 0;
     border: 0;
     border-radius: 0;
@@ -574,7 +573,7 @@
     border-color: var(--pf-line-soft);
     color: var(--pf-ink);
     font-size: 18px;
-    font-weight: 400;
+    font-weight: var(--fw-regular);
     line-height: 44px;
 }
 
@@ -588,7 +587,7 @@
     background: rgba(15, 27, 45, .86);
     color: #fff;
     font-size: .76rem;
-    font-weight: 500;
+    font-weight: var(--fw-medium);
     pointer-events: none;
 }
 
@@ -645,7 +644,7 @@
 .pf .detail-empty-state strong {
     color: var(--pf-ink);
     font-size: 1rem;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
 }
 
 .pf .detail-empty-state p {
@@ -653,7 +652,7 @@
     margin: 0;
     color: var(--pf-muted);
     font-size: .88rem;
-    font-weight: 300;
+    font-weight: var(--fw-light);
     line-height: 1.5;
 }
 
@@ -673,12 +672,12 @@
     margin: 0;
     padding: 0 18px;
     color: var(--pf-muted);
-    font-weight: 300;
+    font-weight: var(--fw-light);
 }
 
 .pf-geo-status strong {
     color: var(--pf-ink);
-    font-weight: 500;
+    font-weight: var(--fw-medium);
 }
 
 .pf-geo-bar .vertex-details~.pf-geo-status,
@@ -716,7 +715,7 @@
     min-height: 46px;
     padding: 0 18px;
     color: var(--pf-green-ink);
-    font-weight: 500;
+    font-weight: var(--fw-medium);
     cursor: pointer;
     list-style: none;
 }
@@ -766,12 +765,12 @@
 
 .pf .detail-tab {
     justify-content: center;
-    min-height: 44px;
+    min-height: 38px;
     padding: 0 12px;
-    border-radius: 14px;
+    border-radius: 12px;
     color: var(--pf-faint);
-    font-size: .95rem;
-    font-weight: 500;
+    font-size: .9rem;
+    font-weight: var(--fw-medium);
 }
 
 .pf .detail-tab:hover {
@@ -794,20 +793,21 @@
 }
 
 .pf .detail-tab-panel {
-    padding: 14px 24px 24px;
+    padding: 10px 16px 16px;
 }
 
+/* Datos del predio en dos columnas compactas: etiqueta arriba y valor abajo. */
 .pf .detail-facts {
-    display: block;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 16px;
     margin: 0;
 }
 
 .pf .detail-facts>div {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 16px;
-    padding: 16px 0;
+    display: grid;
+    gap: 1px;
+    padding: 8px 0;
     border: 0;
     border-bottom: 1px solid var(--pf-line-soft);
     border-radius: 0;
@@ -816,37 +816,36 @@
 
 .pf .detail-facts dt {
     color: var(--pf-muted);
-    font-size: .95rem;
-    font-weight: 300;
+    font-size: .76rem;
+    font-weight: var(--fw-regular);
 }
 
 .pf .detail-facts dd {
     margin: 0;
     color: var(--pf-ink);
-    font-size: .95rem;
-    font-weight: 600;
-    text-align: right;
+    font-size: .92rem;
+    font-weight: var(--fw-semibold);
 }
 
 .pf .detail-tab-panel h3 {
-    margin: 26px 0 12px;
+    margin: 14px 0 6px;
     color: var(--pf-ink);
     font-size: 1.05rem;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
 }
 
 .pf .detail-tab-panel h2:not(.sr-only) {
     margin: 4px 0 8px;
     color: var(--pf-ink);
     font-size: 1.05rem;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
 }
 
 .pf-note {
     margin: 0;
     color: var(--pf-text);
     font-size: .94rem;
-    font-weight: 300;
+    font-weight: var(--fw-light);
     line-height: 1.5;
 }
 
@@ -863,9 +862,9 @@
 }
 
 .pf .detail-plot {
-    gap: 8px;
-    margin-top: 12px;
-    padding: 16px;
+    gap: 6px;
+    margin-top: 8px;
+    padding: 12px;
     border: 1px solid var(--pf-line);
     border-radius: 16px;
     background: #fff;
@@ -873,22 +872,42 @@
 
 .pf .detail-plot-head strong {
     color: var(--pf-ink);
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
 }
 
 .pf .detail-plot-head p,
 .pf .detail-plot p {
     color: var(--pf-muted);
-    font-weight: 300;
+    font-weight: var(--fw-light);
 }
 
 .pf .plot-actions {
     margin: 4px 0;
 }
 
+/* Temporadas en la ficha: cada una en una o dos líneas (cultivo, estado y fechas seguidos; «Editar» a la derecha). */
+.pf .plot-season-list {
+    gap: 6px;
+    margin-top: 4px;
+}
+
 .pf .plot-season-list li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 2px 10px;
+    padding: 8px 10px;
     border-radius: 12px;
     background: #f8fafc;
+}
+
+.pf .plot-season-list li > span:not(.state-chip) {
+    color: var(--pf-muted);
+    font-size: .82rem;
+}
+
+.pf .plot-season-list li > a {
+    margin-left: auto;
 }
 
 .pf .detail-empty-state.pf-plots-empty {
@@ -1023,10 +1042,9 @@
     }
 }
 
-/* ── Fondo, tipografía y migas de la ficha ── */
+/* ── Fondo y migas de la ficha (la tipografía es la global de tema-figma.css) ── */
 .app-body:has(.pf) {
     background: #f6f8f7;
-    font-family: Outfit, "Source Sans 3", "Segoe UI", sans-serif;
 }
 
 .app-body:has(.pf) .crumbs {
@@ -1041,5 +1059,5 @@
 
 .app-body:has(.pf) .crumbs .is-current {
     color: #0f1b2d;
-    font-weight: 500;
+    font-weight: var(--fw-medium);
 }
