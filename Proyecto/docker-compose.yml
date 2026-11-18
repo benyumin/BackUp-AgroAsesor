@@ -9,7 +9,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      # Se pueden sobrescribir creando un archivo .env junto a este (ver .env.example).
+      # Se pueden sobrescribir creando un archivo .env junto a este.
       DJANGO_DEBUG: ${DJANGO_DEBUG:-True}
       DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-cambia-esta-clave-solo-para-desarrollo}
       DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-127.0.0.1,localhost}
