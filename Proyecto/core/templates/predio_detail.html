@@ -2,15 +2,9 @@
 {% load static agro_assets ayudas %}
 {% block title %}{{ predio.nombre }} · AgroAsesor{% endblock %}
 {% block extra_css %}
-<<<<<<< Updated upstream
     <link rel="stylesheet" href="{% static 'css/predios.css' %}?v=35">
     <link rel="stylesheet" href="{% static 'css/mapa-google.css' %}?v=2">
     <link rel="stylesheet" href="{% static 'css/predio-ficha.css' %}?v=3">
-=======
-    <link rel="stylesheet" href="{% static 'css/predios.css' %}?v=38">
-    <link rel="stylesheet" href="{% static 'css/mapa-google.css' %}?v=3">
-    <link rel="stylesheet" href="{% static 'css/predio-ficha.css' %}?v=7">
->>>>>>> Stashed changes
 {% endblock %}
 {% block content %}
     <nav class="crumbs" aria-label="Dónde estás"><a href="{% url 'predios' %}">Mis predios</a><span aria-hidden="true">›</span>{% if selected_potrero %}<a href="{% url 'predio_detail' predio.pk %}">{{ predio.nombre }}</a><span aria-hidden="true">›</span><span class="is-current" aria-current="page">{{ selected_potrero.nombre }}</span>{% else %}<span class="is-current" aria-current="page">{{ predio.nombre }}</span>{% endif %}</nav>
