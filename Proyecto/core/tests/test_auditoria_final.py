@@ -61,12 +61,23 @@ class PantallasTests(TestCase):
         r = self.client.get('/')
         html = r.content.decode()
         indicadores = html[html.index('id="stats"') : html.index('class="dash-desk"')]
-        self.assertEqual(indicadores.count('class="card dash-stat'), 3)
-        for texto in ('Predios registrados', 'Potreros registrados', 'Cultivos activos'):
+        self.assertEqual(indicadores.count('class="card dash-stat'), 4)  # predios, potreros, cultivos y pendientes
+        for texto in ('Predios registrados', 'Potreros registrados', 'Cultivos activos', 'Actividades pendientes'):
             self.assertIn(texto, indicadores)
         self.assertNotIn('Superficie', indicadores)
         self.assertContains(r, 'Distribución de superficie')  # las superficies siguen, una sola vez
         self.assertContains(r, 'Sin asignar')
+
+    def test_inicio_sin_texto_de_prueba_ni_administracion_en_el_menu(self):
+        html = self.client.get('/').content.decode()
+        self.assertNotIn('dash-texto-prueba', html)  # el texto «AgroAsesor» suelto sobre el banner ya no existe
+        self.assertEqual(html.count('<h1'), 1)
+        self.user.is_staff = True
+        self.user.save()
+        respuesta = self.client.get('/')
+        self.assertNotIn('Administración', [item.get('label') for item in respuesta.context['menu']])
+        self.assertNotContains(respuesta, 'href="/panel-admin/"')  # sin enlace en el menú lateral
+        self.assertEqual(self.client.get('/panel-admin/').status_code, 200)  # la vista y sus permisos siguen
 
     def test_calculadora_avisa_el_limite_de_superficie_sin_ceros_de_relleno(self):
         r = self.client.post(

@@ -37,6 +37,7 @@ def map_config():
         'attribution': settings.MAP_TILE_ATTRIBUTION,
         # Clave pública del navegador de Google Maps (se protege con restricciones de sitio en Google Cloud).
         'google_maps_key': settings.GOOGLE_MAPS_API_KEY,
+        'google_map_id': settings.GOOGLE_MAPS_MAP_ID,
         'debug': settings.DEBUG,
     }
 

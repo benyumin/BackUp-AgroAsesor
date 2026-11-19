@@ -1,6 +1,6 @@
 """Calculadora agrícola (semillas, insumos y «¿Me alcanza?»).
 
-``decisiones`` muestra la pantalla; ``calculate`` recibe el cálculo en JSON y ``calculo_pdf`` entrega el informe
+``calculadoras`` es la página de entrada con las tres tarjetas; ``decisiones`` muestra la calculadora; ``calculate`` recibe el cálculo en JSON y ``calculo_pdf`` entrega el informe
 PDF de un cálculo guardado. Las fórmulas y validaciones están en ``core.calculos`` y el diseño del PDF en
 ``core.pdf``.
 """
@@ -68,3 +68,8 @@ def decisiones(request):
     if tool not in {'llevar', 'alcanza'}:
         tool = 'llevar'
     return render_page(request, 'decisiones.html', 'decisiones', {'initial_tool': tool})
+
+
+def calculadoras(request):
+    """Página principal de «Calculadoras»: tres tarjetas que abren las calculadoras de ``decisiones``."""
+    return render_page(request, 'calculadoras.html', 'calculadoras')

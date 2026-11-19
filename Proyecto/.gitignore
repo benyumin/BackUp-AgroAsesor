@@ -12,3 +12,15 @@ core/static/vendor/
 *.bak
 *.tmp
 *.tgz
+
+# Credenciales y archivos de entorno
+.env
+.env.*
+!.env.example
+!.env.sample
+
+# Entornos virtuales Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]

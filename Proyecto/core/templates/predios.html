@@ -1,14 +1,10 @@
+
 {% extends "body.html" %}
 {% load static agro_assets ayudas %}
 {% block title %}Mis predios y potreros · AgroAsesor{% endblock %}
 {% block extra_css %}
-<<<<<<< Updated upstream
     <link rel="stylesheet" href="{% static 'css/predios.css' %}?v=35">
     <link rel="stylesheet" href="{% static 'css/mapa-google.css' %}?v=2">
-=======
-    <link rel="stylesheet" href="{% static 'css/predios.css' %}?v=38">
-    <link rel="stylesheet" href="{% static 'css/mapa-google.css' %}?v=3">
->>>>>>> Stashed changes
 {% endblock %}
 {% block content %}
     <div class="page-hero terrain-page-heading">
@@ -462,8 +458,11 @@
     </form>
 </dialog>
 {% endblock %}
-<<<<<<< Updated upstream
-{% block extra_js %}{{ maps_config|json_script:'maps-config' }}<script src="{% vendor 'leaflet/leaflet.js' 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js' %}"></script><script src="{% vendor 'leaflet/leaflet-geoman.min.js' 'https://unpkg.com/@geoman-io/leaflet-geoman-free@2.18.0/dist/leaflet-geoman.min.js' %}"></script><script src="{% static 'js/agro-basemap.js' %}?v=3"></script><script src="{% static 'js/predios-map.js' %}?v=31"></script><script src="{% static 'js/predios-view.js' %}?v=1"></script>{% endblock %}
-=======
-{% block extra_js %}{{ maps_config|json_script:'maps-config' }}<script src="{% vendor 'leaflet/leaflet.js' 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js' %}"></script><script src="{% vendor 'leaflet/leaflet-geoman.min.js' 'https://unpkg.com/@geoman-io/leaflet-geoman-free@2.18.0/dist/leaflet-geoman.min.js' %}"></script><script src="{% static 'js/agro-basemap.js' %}?v=3"></script><script src="{% static 'js/predios-map.js' %}?v=32"></script><script src="{% static 'js/predios-view.js' %}?v=1"></script>{% endblock %}
->>>>>>> Stashed changes
+{% block extra_js %}
+{{ maps_config|json_script:'maps-config' }}
+<script src="{% vendor 'leaflet/leaflet.js' 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js' %}"></script>
+<script src="{% vendor 'leaflet/leaflet-geoman.min.js' 'https://unpkg.com/@geoman-io/leaflet-geoman-free@2.18.0/dist/leaflet-geoman.min.js' %}"></script>
+<script src="{% static 'js/agro-basemap.js' %}?v=3"></script>
+<script src="{% static 'js/predios-map.js' %}?v=32"></script>
+<script src="{% static 'js/predios-view.js' %}?v=1"></script>
+{% endblock %}

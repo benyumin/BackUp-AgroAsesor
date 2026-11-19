@@ -1,0 +1,199 @@
+{% extends "body.html" %}
+{% load static %}
+{% block title %}Laboratorio del mapa · AgroAsesor{% endblock %}
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/mapa-google.css' %}?v=1">
+    <style>
+        .lab-grid { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 16px; align-items: start; }
+        .lab-map { position: relative; height: 66vh; min-height: 420px; border-radius: var(--radius); background: #e9efe9; overflow: hidden; }
+        .lab-bar { display: flex; flex-wrap: wrap; gap: 10px 14px; margin-bottom: 12px; align-items: center; }
+        .lab-seg { display: inline-flex; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--paper); }
+        .lab-seg button { min-height: 44px; padding: 8px 14px; border: 0; background: transparent; font: inherit; color: var(--green-dark); cursor: pointer; }
+        .lab-seg button + button { border-left: 1px solid var(--line); }
+        .lab-seg button[aria-pressed="true"] { background: var(--green); color: #fff; font-weight: 600; }
+        .lab-side { display: grid; gap: 12px; }
+        .lab-side h2 { margin: 0 0 8px; }
+        .lab-kv { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; font-size: .92rem; }
+        .lab-kv dt { color: var(--muted); }
+        .lab-kv dd { margin: 0; word-break: break-word; }
+        .lab-msg { min-height: 1.4em; margin: 0 0 10px; font-weight: 600; }
+        .lab-msg[data-kind="error"] { color: #b42318; }
+        .lab-msg[data-kind="ok"] { color: #255b37; }
+        .lab-text, .lab-log { width: 100%; box-sizing: border-box; font: 12px/1.4 ui-monospace, Menlo, Consolas, monospace; border: 1px solid var(--line); border-radius: 10px; padding: 8px; background: #fff; }
+        .lab-text { height: 96px; resize: vertical; }
+        .lab-log { height: 150px; overflow: auto; margin: 0; white-space: pre-wrap; }
+        @media (max-width: 900px) {
+            .lab-grid { grid-template-columns: 1fr; }
+            .lab-map { height: 58vh; min-height: 360px; }
+        }
+    </style>
+{% endblock %}
+{% block content %}
+    <div class="page-hero">
+        <div>
+            <h1 class="page-title">Laboratorio del mapa · fase 0</h1>
+            <p class="page-sub">Prueba temporal solo para administradores: mapa de Google sin Leaflet. Arrastra un punto para moverlo; agrega y elimina puntos como se indica abajo.</p>
+        </div>
+    </div>
+    <div class="lab-grid">
+        <section class="card">
+            <div class="lab-bar" aria-label="Opciones de prueba">
+                <div class="lab-seg" data-group="mode" role="group" aria-label="Editor de vértices">
+                    <button type="button" data-value="native" aria-pressed="true">Editor nativo</button>
+                    <button type="button" data-value="custom" aria-pressed="false">Editor propio (táctil)</button>
+                </div>
+                <div class="lab-seg" data-group="target" role="group" aria-label="Figura a editar">
+                    <button type="button" data-value="potrero" aria-pressed="true">Potrero</button>
+                    <button type="button" data-value="predio" aria-pressed="false">Predio</button>
+                </div>
+                <div class="lab-seg" data-group="view" role="group" aria-label="Vista del mapa">
+                    <button type="button" data-value="normal" aria-pressed="true">Normal</button>
+                    <button type="button" data-value="satellite" aria-pressed="false">Satélite</button>
+                </div>
+            </div>
+            <p class="lab-msg" id="lab-msg" role="status" aria-live="polite" data-kind="ok">Cargando el mapa…</p>
+            <div class="lab-map" id="lab-map"></div>
+            <div class="lab-bar" style="margin: 12px 0 0">
+                <button type="button" class="btn-secondary-agro" id="lab-delete" disabled>Eliminar el punto seleccionado</button>
+                <button type="button" class="btn-ghost-agro" id="lab-reset">Restablecer figuras</button>
+            </div>
+        </section>
+        <aside class="lab-side">
+            <section class="card">
+                <h2>Estado</h2>
+                <dl class="lab-kv">
+                    <dt>Motor</dt><dd id="lab-engine">—</dd>
+                    <dt>Map ID</dt><dd id="lab-mapid">—</dd>
+                    <dt>Pantalla</dt><dd id="lab-pointer">—</dd>
+                    <dt>Puntos</dt><dd id="lab-count">—</dd>
+                    <dt>Seleccionado</dt><dd id="lab-selected">ninguno</dd>
+                    <dt>GeoJSON</dt><dd id="lab-roundtrip">—</dd>
+                </dl>
+            </section>
+            <section class="card">
+                <h2>Cómo probar</h2>
+                <p class="muted" style="margin: 0; font-size: .92rem">
+                    <b>Mover:</b> arrastra un punto. <b>Agregar:</b> toca el «+» del medio de un lado.
+                    <b>Eliminar:</b> clic derecho sobre el punto (computador) o toca el punto y pulsa «Eliminar el punto seleccionado».
+                    Un contorno que se cruza se pinta en rojo y vuelve al último válido; el potrero no puede salir del predio.
+                </p>
+            </section>
+            <section class="card">
+                <h2>GeoJSON actual</h2>
+                <textarea class="lab-text" id="lab-geojson" readonly aria-label="GeoJSON de la figura editada"></textarea>
+            </section>
+            <section class="card">
+                <h2>Registro de eventos</h2>
+                <pre class="lab-log" id="lab-log" aria-live="off"></pre>
+            </section>
+        </aside>
+    </div>
+    {{ maps_config|json_script:'maps-config' }}
+{% endblock %}
+{% block extra_js %}
+<script src="{% static 'js/agro-gmap.js' %}?v=1"></script>
+<script>
+(function () {
+  'use strict';
+  var geo = window.AgroGMap.geo;
+  var config = JSON.parse(document.getElementById('maps-config').textContent);
+  var byId = function (id) { return document.getElementById(id); };
+  var DEFAULTS = {
+    predio: [[-71.2197, -33.6891], [-71.2150, -33.6896], [-71.2137, -33.6866], [-71.2145, -33.6841], [-71.2185, -33.6838], [-71.2199, -33.6865]],
+    potrero: [[-71.2185, -33.6875], [-71.2160, -33.6878], [-71.2155, -33.6858], [-71.2178, -33.6855]]
+  };
+  var STYLES = {
+    predio: { strokeColor: '#3d6e8c', strokeWeight: 2, fillColor: '#8daac4', fillOpacity: 0.15 },
+    potrero: { strokeColor: '#0f7a47', strokeWeight: 3, fillColor: '#34a36b', fillOpacity: 0.34 }
+  };
+  var state = { mode: 'native', target: 'potrero', view: 'normal' };
+  var rings = { predio: copy(DEFAULTS.predio), potrero: copy(DEFAULTS.potrero) };
+  var shapes = {};
+  var ctrl = null;
+  var editor = null;
+
+  function copy(ring) { return ring.map(function (p) { return p.slice(); }); }
+  function say(text, kind) { var el = byId('lab-msg'); el.textContent = text; el.dataset.kind = kind || 'ok'; }
+  function log(name, detail) {
+    var el = byId('lab-log');
+    var t = new Date().toLocaleTimeString('es-CL', { hour12: false });
+    el.textContent = (t + '  ' + name + (detail === undefined ? '' : '  ' + detail) + '\n' + el.textContent).slice(0, 4000);
+  }
+
+  function refresh() {
+    var ring = rings[state.target];
+    byId('lab-count').textContent = ring.length;
+    byId('lab-geojson').value = JSON.stringify(geo.featureFromRing(ring));
+    var back = JSON.stringify(geo.ringFromGeoJSON(geo.featureFromRing(ring)));
+    byId('lab-roundtrip').textContent = back === JSON.stringify(ring) ? 'ida y vuelta [lng, lat] correcta' : 'ERROR de ida y vuelta';
+  }
+
+  function startEditing() {
+    if (!ctrl) return;
+    if (editor) editor.stop();
+    Object.keys(shapes).forEach(function (key) { shapes[key].setOptions({ clickable: key === state.target }); });
+    var validate = state.target === 'potrero'
+      ? function (ring) { return geo.ringInside(ring, rings.predio) ? true : 'El potrero debe quedar dentro de su predio.'; }
+      : null;
+    editor = ctrl.edit(shapes[state.target], {
+      mode: state.mode,
+      validate: validate,
+      onChange: function (ring) { rings[state.target] = ring; refresh(); say('Contorno válido (' + ring.length + ' puntos).', 'ok'); },
+      onReject: function (message) { say(message, 'error'); },
+      onSelect: function (index) {
+        byId('lab-selected').textContent = index === null ? 'ninguno' : 'punto ' + (index + 1);
+        byId('lab-delete').disabled = index === null;
+      },
+      onEvent: log
+    });
+    refresh();
+    log('editor', state.mode + ' → ' + state.target);
+  }
+
+  function bindGroup(name, apply) {
+    var group = document.querySelector('[data-group="' + name + '"]');
+    group.addEventListener('click', function (event) {
+      var button = event.target.closest('button');
+      if (!button) return;
+      group.querySelectorAll('button').forEach(function (b) { b.setAttribute('aria-pressed', String(b === button)); });
+      state[name] = button.dataset.value;
+      apply();
+    });
+  }
+  bindGroup('mode', startEditing);
+  bindGroup('target', startEditing);
+  bindGroup('view', function () { if (ctrl) { ctrl.setView(state.view); log('vista', state.view); } });
+  byId('lab-delete').addEventListener('click', function () { if (editor && editor.deleteSelected()) log('eliminar', 'punto eliminado'); });
+  byId('lab-reset').addEventListener('click', function () {
+    if (!ctrl) return;
+    rings = { predio: copy(DEFAULTS.predio), potrero: copy(DEFAULTS.potrero) };
+    Object.keys(shapes).forEach(function (key) { shapes[key].setPath(geo.toLatLngs(rings[key])); });
+    startEditing();
+    say('Figuras restablecidas.', 'ok');
+  });
+
+  byId('lab-engine').textContent = 'Google Maps' + (window.L ? ' (¡Leaflet presente!)' : ' · Leaflet ausente');
+  var coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+  byId('lab-pointer').textContent = (coarse ? 'táctil' : 'ratón') + ' · ' + (navigator.maxTouchPoints || 0) + ' toques · ' + window.innerWidth + 'px';
+
+  window.AgroGMap.create(byId('lab-map'), config, {
+    onUnavailable: function (reason) {
+      byId('lab-engine').textContent = 'Google Maps no disponible (' + reason + ')';
+      say('El mapa no está disponible temporalmente.', 'error');
+    }
+  }).then(function (c) {
+    ctrl = c;
+    byId('lab-mapid').textContent = c.usingDemoMapId ? 'DEMO_MAP_ID (solo pruebas)' : 'Map ID propio';
+    shapes.predio = c.addPolygon(rings.predio, STYLES.predio);
+    shapes.potrero = c.addPolygon(rings.potrero, STYLES.potrero);
+    var pin = c.addMarker([-71.2167, -33.6866], { title: 'Marcador avanzado (arrástralo)', draggable: true });
+    pin.addListener('dragend', function (event) {
+      if (event.latLng) log('marcador dragend', event.latLng.lng().toFixed(5) + ', ' + event.latLng.lat().toFixed(5));
+    });
+    c.fit([rings.predio], { padding: 40, maxZoom: 17 });
+    startEditing();
+    say('Mapa listo. Arrastra los puntos del potrero.', 'ok');
+  }).catch(function () { /* el aviso ya se muestra en pantalla; el resto de la aplicación sigue igual */ });
+})();
+</script>
+{% endblock %}

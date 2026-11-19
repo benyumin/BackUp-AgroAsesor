@@ -15,7 +15,7 @@ Proyecto/
 ├── AgroAsesor/          configuración de Django (settings, urls)
 ├── core/                la aplicación
 │   ├── models.py        tablas: predios, potreros, temporadas, actividades, catálogo, cálculos
-│   ├── views.py         páginas y respuestas JSON
+│   ├── views/           páginas y respuestas JSON (un módulo por área)
 │   ├── forms.py         formularios y validaciones
 │   ├── validators.py    RUT, teléfono y otros datos de entrada
 │   ├── agronomy.py      ventanas de siembra/cosecha y evaluación de fechas del calendario
@@ -93,6 +93,7 @@ Se definen en `Proyecto/.env` (parte copiando `.env.example`). Ese archivo no se
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | inicio de sesión con Google; sin ellas el botón no aparece |
 | `GOOGLE_REDIRECT_URI` | opcional: URL de retorno exacta registrada en Google |
 | `GOOGLE_MAPS_API_KEY` | clave de Google Maps JavaScript API para el mapa de predios; sin ella se usa el mapa de respaldo |
+| `GOOGLE_MAPS_MAP_ID` | Map ID propio de Google Cloud para los marcadores avanzados; vacío usa `DEMO_MAP_ID` (solo pruebas) |
 
 ### Inicio de sesión con Google
 

@@ -1,0 +1,40 @@
+{% extends "body.html" %}
+{% load static %}
+{% block title %}Calculadoras · AgroAsesor{% endblock %}
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/calculadora.css' %}?v=10">
+{% endblock %}
+{% block content %}
+    <div class="page-hero">
+        <div>
+            <h1 class="page-title">Calculadoras</h1>
+            <p class="page-sub">Elige qué necesitas calcular para tu potrero.</p>
+        </div>
+    </div>
+    <div class="calc-hub">
+        <article class="card calc-hub-card">
+            <span class="calc-hub-ico tone-green" aria-hidden="true"><i data-lucide="sprout"></i></span>
+            <h2>Semillas</h2>
+            <p>Calcula cuánta semilla necesitas para sembrar tu potrero.</p>
+            <a class="btn-primary-agro"
+               href="{% url 'decisiones' %}?herramienta=llevar&amp;tipo=semillas"
+               aria-label="Abrir la calculadora de semillas">Calcular semillas<i data-lucide="arrow-right" aria-hidden="true"></i></a>
+        </article>
+        <article class="card calc-hub-card">
+            <span class="calc-hub-ico tone-amber" aria-hidden="true"><i data-lucide="flask-conical"></i></span>
+            <h2>Fertilizantes</h2>
+            <p>Calcula cuánto fertilizante u otro producto debes aplicar.</p>
+            <a class="btn-primary-agro"
+               href="{% url 'decisiones' %}?herramienta=llevar&amp;tipo=insumos"
+               aria-label="Abrir la calculadora de fertilizantes">Calcular fertilizantes<i data-lucide="arrow-right" aria-hidden="true"></i></a>
+        </article>
+        <article class="card calc-hub-card">
+            <span class="calc-hub-ico tone-blue" aria-hidden="true"><i data-lucide="scale"></i></span>
+            <h2>¿Me alcanza?</h2>
+            <p>Comprueba si lo que tienes alcanza para cubrir tu superficie.</p>
+            <a class="btn-primary-agro"
+               href="{% url 'decisiones' %}?herramienta=alcanza"
+               aria-label="Abrir la comprobación ¿Me alcanza?">Comprobar<i data-lucide="arrow-right" aria-hidden="true"></i></a>
+        </article>
+    </div>
+{% endblock %}

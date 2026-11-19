@@ -49,21 +49,28 @@ class MenuAgrupadoTests(Base):
         for etiqueta in ('>Mapa<', '>Toma de decisiones<', '>Buscar<'):
             self.assertNotIn(etiqueta, nav)
         # Todo sigue abriendo: el mapa dentro de Mis predios, el buscador arriba y el centro de decisiones.
-        for url in ('/predios/', '/busqueda/', '/decisiones/', '/calendario/', '/actividades/', '/productos/', '/reportes/'):
+        for url in ('/predios/', '/busqueda/', '/calculadoras/', '/decisiones/', '/calendario/', '/actividades/', '/productos/', '/reportes/'):
             self.assertEqual(self.client.get(url).status_code, 200, url)
         self.assertIn('action="/busqueda/"', html)
 
-    def test_en_las_calculadoras_se_marca_la_herramienta_abierta(self):
-        casos = (
-            ('/decisiones/', 'Semillas'),
-            ('/decisiones/?herramienta=llevar&tipo=insumos', 'Fertilizantes'),
-            ('/decisiones/?herramienta=alcanza', '¿Me alcanza?'),
-        )
-        for url, esperada in casos:
+    def test_calculadoras_es_un_enlace_directo_con_tres_tarjetas(self):
+        for url in ('/calculadoras/', '/decisiones/', '/decisiones/?herramienta=alcanza'):
             menu = self.client.get(url).context['menu']
-            grupo = next(item for item in menu if item.get('label') == 'Calculadoras')
-            self.assertTrue(grupo['open'], url)
-            self.assertEqual([sub['label'] for sub in grupo['children'] if sub['active']], [esperada], url)
+            item = next(i for i in menu if i.get('label') == 'Calculadoras')
+            self.assertEqual(item['href'], '/calculadoras/', url)
+            self.assertTrue(item['active'], url)
+            self.assertNotIn('children', item, url)
+        html = self.client.get('/calculadoras/').content.decode()
+        self.assertNotIn('nav-group', html)  # el desplegable del menú ya no existe
+        for etiqueta in ('Semillas', 'Fertilizantes', '¿Me alcanza?'):
+            self.assertIn(f'<h2>{etiqueta}</h2>', html)
+        for destino in (
+            '/decisiones/?herramienta=llevar&amp;tipo=semillas',
+            '/decisiones/?herramienta=llevar&amp;tipo=insumos',
+            '/decisiones/?herramienta=alcanza',
+        ):
+            self.assertIn(f'href="{destino}"', html)
+            self.assertEqual(self.client.get(destino.replace('&amp;', '&')).status_code, 200, destino)
 
 
 class UnSoloBotonDePlanificacionTests(Base):

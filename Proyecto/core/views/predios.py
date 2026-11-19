@@ -15,7 +15,7 @@ from decimal import Decimal, InvalidOperation
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
-from django.core.exceptions import ValidationError
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Count, Sum
@@ -750,3 +750,12 @@ def potrero_assign_crop(request, pk):
     except ValidationError as exc:
         return JsonResponse({'ok': False, 'error': _validation_messages(exc)}, status=400)
     return JsonResponse({'ok': True, 'message': message, 'plot': _plot_response(plot)})
+
+
+def mapa_prueba(request):
+    """Laboratorio temporal de la migración a Google Maps (fase 0): solo administradores, sin Leaflet."""
+    if not request.user.is_authenticated:
+        return redirect('login')
+    if not request.user.is_staff:
+        raise PermissionDenied
+    return render_page(request, 'mapa_prueba.html', 'mapa_prueba', {'maps_config': map_config()})

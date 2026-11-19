@@ -2,16 +2,15 @@
 {% load static ayudas %}
 {% block title %}Hoy · AgroAsesor{% endblock %}
 {% block extra_css %}
-    <link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v=12">
+    <link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v=14">
     <link rel="stylesheet" href="{% static 'css/activities.css' %}?v=12">
 {% endblock %}
 {% block content %}
     <div class="dash">
-        {# Texto de prueba (temporal) en la parte superior del inicio. #}
-        <p class="dash-texto-prueba" style="margin:0 0 8px;text-align:right;color:#0b6b4b;font-weight:600;">AgroAsesor</p>
-        <section class="dash-hero">
-            <div>
-                <h1>Bienvenido a AgroAsesor{% if first_name %}, {{ first_name }}{% endif %}</h1>
+        <section class="dash-hero" aria-labelledby="dash-hero-title">
+            <div class="dash-hero-copy">
+                <span class="dash-eyebrow">{% now "l j \d\e F" %}</span>
+                <h1 id="dash-hero-title">Bienvenido a AgroAsesor{% if first_name %}, <span class="dash-hero-name">{{ first_name }}</span>{% endif %}</h1>
                 <p>{% if farm_data.stats.predios %}Revisa el estado de tus predios, potreros y actividades agrícolas.{% else %}Organiza tu campo y toma decisiones de siembra con datos reales.{% endif %}</p>
             </div>
             {% if farm_data.stats.predios %}<a class="button dash-hero-btn" href="{% url 'predios' %}">
@@ -49,6 +48,10 @@
             <article class="card dash-stat crops">
                 <span class="stat-icon"><i data-lucide="sprout"></i></span>
                 <span><span class="muted">Cultivos activos</span><strong class="stat-value">{{ farm_data.stats.cultivos }}</strong></span>
+            </article>
+            <article class="card dash-stat pending">
+                <span class="stat-icon"><i data-lucide="clipboard-list"></i></span>
+                <span><span class="muted">Actividades pendientes</span><strong class="stat-value">{{ pending_activity_count }}</strong></span>
             </article>
         </section>
         <div class="dash-desk">
@@ -128,32 +131,6 @@
                         </div>
                     {% endif %}
                 </section>
-                <section class="card dash-distribution">
-                    <div class="section-heading">
-                        <div>
-                            <h2>Distribución de superficie</h2>
-                        </div>
-                    </div>
-                    <div class="distribution-labels">
-                        <span>Superficie total de predios <strong>{{ farm_data.stats.superficie_predios|floatformat:2 }} ha</strong></span>
-                        <span>Asignada a potreros <strong>{{ farm_data.stats.superficie|floatformat:2 }} ha</strong></span>
-                        <span>Sin asignar <strong>{{ farm_data.stats.superficie_sin_asignar|floatformat:2 }} ha</strong></span>
-                    </div>
-                    {% if farm_data.stats.superficie_predios %}
-                        <div class="distribution-bar"
-                             role="progressbar"
-                             aria-label="Porcentaje de superficie de predios asignada a potreros"
-                             aria-valuemin="0"
-                             aria-valuemax="100"
-                             aria-valuenow="{{ farm_data.stats.distribucion_bar_pct|floatformat:0 }}">
-                            <span style="width: {{ farm_data.stats.distribucion_bar_pct|floatformat:0 }}%"></span>
-                        </div>
-                        <p class="distribution-caption">{{ farm_data.stats.distribucion_pct|floatformat:1 }}% de la superficie registrada está asignada a potreros.</p>
-                        {% if farm_data.stats.sobreasignada %}<p class="distribution-warning" role="status">La superficie asignada supera la superficie total de predios. Revisa las áreas registradas.</p>{% endif %}
-                    {% else %}
-                        <div class="distribution-empty"><p>Registra un predio para consultar la distribución de superficie.</p><a href="{% url 'predio_create' %}">Registrar predio</a></div>
-                    {% endif %}
-                </section>
             </div>
             <aside class="dash-side-column">
                 <section class="card dash-today">
@@ -189,6 +166,32 @@
                     {% endfor %}
                     <a class="text-link activities-link"
                        href="{% url 'calendario' %}">Abrir planificación <i data-lucide="arrow-right"></i></a>
+                </section>
+                <section class="card dash-distribution">
+                    <div class="section-heading">
+                        <div>
+                            <h2>Distribución de superficie</h2>
+                        </div>
+                    </div>
+                    <div class="distribution-labels">
+                        <span>Superficie total de predios <strong>{{ farm_data.stats.superficie_predios|floatformat:2 }} ha</strong></span>
+                        <span>Asignada a potreros <strong>{{ farm_data.stats.superficie|floatformat:2 }} ha</strong></span>
+                        <span>Sin asignar <strong>{{ farm_data.stats.superficie_sin_asignar|floatformat:2 }} ha</strong></span>
+                    </div>
+                    {% if farm_data.stats.superficie_predios %}
+                        <div class="distribution-bar"
+                             role="progressbar"
+                             aria-label="Porcentaje de superficie de predios asignada a potreros"
+                             aria-valuemin="0"
+                             aria-valuemax="100"
+                             aria-valuenow="{{ farm_data.stats.distribucion_bar_pct|floatformat:0 }}">
+                            <span style="width: {{ farm_data.stats.distribucion_bar_pct|floatformat:0 }}%"></span>
+                        </div>
+                        <p class="distribution-caption">{{ farm_data.stats.distribucion_pct|floatformat:1 }}% de la superficie registrada está asignada a potreros.</p>
+                        {% if farm_data.stats.sobreasignada %}<p class="distribution-warning" role="status">La superficie asignada supera la superficie total de predios. Revisa las áreas registradas.</p>{% endif %}
+                    {% else %}
+                        <div class="distribution-empty"><p>Registra un predio para consultar la distribución de superficie.</p><a href="{% url 'predio_create' %}">Registrar predio</a></div>
+                    {% endif %}
                 </section>
                 <section class="card dash-calculations">
                     <div class="section-heading">

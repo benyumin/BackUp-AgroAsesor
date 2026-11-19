@@ -86,8 +86,8 @@
 
 .catalog-layout {
     display: grid;
-    grid-template-columns: 300px minmax(0, 1fr);
-    gap: 18px;
+    grid-template-columns: 268px minmax(0, 1fr);
+    gap: 20px;
     align-items: start;
 }
 
@@ -96,6 +96,11 @@
     top: 84px;
     display: grid;
     gap: 2px;
+    padding: 18px;
+    max-height: calc(100vh - 104px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
 }
 
 .catalog-filters h2 {
@@ -120,30 +125,71 @@
 .results-bar p {
     margin: 0;
     color: var(--muted);
+    font-size: 0.95rem;
+}
+
+.results-bar strong {
+    color: var(--green-dark);
 }
 
 .product-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 14px;
+    grid-template-columns: repeat(auto-fill, minmax(256px, 1fr));
+    gap: 16px;
 }
 
 .product-card {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    padding: 16px 18px;
+    gap: 10px;
+    padding: 16px 18px 14px;
     border-radius: 16px;
     background: var(--paper);
     border: 1px solid var(--line);
     box-shadow: var(--shadow);
     border-top: 4px solid var(--cat, var(--green));
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.product-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 14px 34px rgba(30, 61, 40, 0.1);
+}
+
+/* Estado de verificación: punto de color + texto (el color nunca es la única señal). */
+.product-card header .badge,
+.sheet-badges .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    white-space: nowrap;
+}
+
+.product-card header .badge::before,
+.sheet-badges .badge::before {
+    content: "";
+    flex: 0 0 6px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+}
+
+.product-card header .badge.amber::before,
+.sheet-badges .badge.amber::before {
+    background: var(--amber);
+}
+
+.product-card header .badge.red::before,
+.sheet-badges .badge.red::before {
+    background: #c0463a;
 }
 
 .product-card header {
     display: flex;
+    flex-wrap: wrap;
     justify-content: space-between;
-    gap: 8px;
+    gap: 4px 8px;
     align-items: center;
 }
 
@@ -157,7 +203,9 @@
 
 .product-card h3 {
     margin: 0;
-    font-size: 1.08rem;
+    font-size: 1.18rem;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
 }
 
 .product-card h3 a {
@@ -172,33 +220,40 @@
 .product-sub {
     margin: 0;
     color: var(--muted);
-    font-size: 0.9rem;
+    font-size: 0.88rem;
+    line-height: 1.35;
     min-height: 1.3em;
 }
 
 .product-card dl {
     display: grid;
-    gap: 4px;
-    margin: 4px 0 0;
-    padding-top: 8px;
-    border-top: 1px dashed var(--line);
+    gap: 6px;
+    margin: 2px 0 0;
+    padding: 10px 12px;
+    border: 1px solid #e9efe6;
+    border-radius: 12px;
+    background: #f7faf6;
 }
 
 .product-card dl div {
     display: flex;
     justify-content: space-between;
-    gap: 10px;
+    align-items: baseline;
+    gap: 12px;
     font-size: 0.9rem;
 }
 
 .product-card dt {
+    flex-shrink: 0;
     color: var(--muted);
+    font-size: 0.84rem;
 }
 
 .product-card dd {
     margin: 0;
     font-weight: var(--fw-semibold);
     text-align: right;
+    overflow-wrap: anywhere;
 }
 
 .product-card footer {
@@ -207,12 +262,14 @@
     align-items: center;
     gap: 8px;
     flex-wrap: wrap;
-    padding-top: 8px;
+    padding-top: 4px;
 }
 
 .product-card footer .button {
     margin-left: auto;
-    padding: 8px 14px;
+    padding: 7px 14px;
+    min-height: 36px;
+    font-size: 0.88rem;
 }
 
 .calc-ok,
@@ -220,16 +277,20 @@
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    font-size: 0.82rem;
+    padding: 3px 9px 3px 7px;
+    border-radius: 999px;
+    font-size: 0.8rem;
     font-weight: var(--fw-semibold);
 }
 
 .calc-ok {
     color: var(--green);
+    background: var(--green-soft);
 }
 
 .calc-no {
-    color: #8a6d12;
+    color: #7a5f0d;
+    background: var(--amber-soft);
 }
 
 .calc-ok svg,
@@ -323,6 +384,7 @@
     margin: 16px 0 0;
     padding: 12px 14px;
     border-radius: 12px;
+    border-left: 4px solid var(--amber);
     background: var(--amber-soft);
     color: #5f4f12;
 }
@@ -337,18 +399,36 @@
 }
 
 .sheet-section h3 {
-    margin: 0 0 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 12px;
     font-size: 0.86rem;
     text-transform: uppercase;
     letter-spacing: 0.06em;
     color: var(--green);
 }
 
+.sheet-section h3::before {
+    content: "";
+    flex: 0 0 4px;
+    height: 14px;
+    border-radius: 2px;
+    background: var(--green-light);
+}
+
 .sheet-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 12px 18px;
+    gap: 10px;
     margin: 0;
+}
+
+.sheet-grid > div {
+    padding: 10px 12px;
+    border: 1px solid #e9efe6;
+    border-radius: 12px;
+    background: #f7faf6;
 }
 
 .sheet-grid .span-all {
@@ -469,14 +549,28 @@
     display: none;
 }
 
+@media (prefers-reduced-motion: reduce) {
+    .product-card {
+        transition: none;
+    }
+
+    .product-card:hover {
+        transform: none;
+    }
+}
+
+/* Notebooks: las 7 categorías se reparten sin dejar huecos (Todos ocupa dos columnas). */
 @media (max-width: 1280px) {
     .category-strip {
         grid-template-columns: repeat(4, minmax(0, 1fr));
     }
+
+    .category-strip .category-chip:first-child {
+        grid-column: span 2;
+    }
 }
 
 @media (max-width: 1100px) {
-
     .catalog-layout,
     .sheet-layout {
         grid-template-columns: 1fr;
@@ -490,6 +584,8 @@
     .catalog-filters {
         grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 0 12px;
+        max-height: none;
+        overflow: visible;
     }
 
     .catalog-filters h2,
@@ -500,9 +596,20 @@
     }
 }
 
+/* Tablet vertical: el encabezado ocupa todo el ancho y queda alineado con las tarjetas. */
+@media (max-width: 1024px) {
+    .page-hero {
+        align-items: stretch;
+    }
+}
+
 @media (max-width: 700px) {
     .category-strip {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .category-strip .category-chip:first-child {
+        grid-column: 1 / -1;
     }
 
     .catalog-filters,
@@ -517,4 +624,21 @@
     .sheet-head {
         flex-direction: column;
     }
-}
+
+    .product-card footer .button {
+        min-height: 42px;
+    }
+}
+
+/* Ficha impresa: sin recuadros ni adornos, solo texto. */
+@media print {
+    .sheet-grid > div {
+        padding: 0;
+        border: 0;
+        background: none;
+    }
+
+    .sheet-section h3::before {
+        display: none;
+    }
+}

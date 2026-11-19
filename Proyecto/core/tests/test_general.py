@@ -388,9 +388,6 @@ class TerrainTests(TestCase):
                 'Actividades',
                 'Calendario',
                 'Calculadoras',
-                'Semillas',
-                'Fertilizantes',
-                '¿Me alcanza?',
                 'Catálogo agrícola',
                 'Reportes',
             ],
@@ -1174,13 +1171,13 @@ class TerrainTests(TestCase):
         self.assertNotContains(response, 'Calcula, planifica y optimiza los recursos de tus predios')  # sin encabezado
         for text in ('Cuánto llevar', '¿Me alcanza?'):
             self.assertContains(response, text)
-        # El centro de decisiones se abre desde el grupo «Calculadoras»: ya no hay una segunda entrada que lo repita.
+        # El centro de decisiones se abre desde «Calculadoras» (enlace directo a su página): sin segunda entrada ni submenú.
         menu = response.context['menu']
         self.assertEqual([item for item in menu if item.get('href') == '/decisiones/'], [])
-        grupo = next(item for item in menu if item.get('label') == 'Calculadoras')
-        self.assertEqual([sub['label'] for sub in grupo['children']], ['Semillas', 'Fertilizantes', '¿Me alcanza?'])
-        self.assertTrue(grupo['open'])
-        self.assertEqual([sub['label'] for sub in grupo['children'] if sub['active']], ['Semillas'])
+        calculadoras = next(item for item in menu if item.get('label') == 'Calculadoras')
+        self.assertEqual(calculadoras['href'], '/calculadoras/')
+        self.assertNotIn('children', calculadoras)
+        self.assertTrue(calculadoras['active'])
 
     def test_csrf_required_to_save_terrain(self):
         client = Client(enforce_csrf_checks=True)
@@ -1608,7 +1605,6 @@ class ActividadAgricolaTests(TestCase):
         self.assertContains(response, 'Potreros activos')
         self.assertContains(response, 'Distribución de superficie')
         self.assertContains(response, 'Calculadoras')
-        self.assertContains(response, 'Fertilizantes')
         self.assertNotContains(response, '<nav class="card quick-links"')
         self.assertContains(response, f'/predios/{self.predio.pk}/')
         self.assertContains(response, f'/predios/{self.predio.pk}/potreros/{self.potrero.pk}/editar/')

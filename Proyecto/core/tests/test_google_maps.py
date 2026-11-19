@@ -118,3 +118,62 @@ class GoogleMapsScriptTests(TestCase):
         self.assertIn('if (map.agroGoogleMaster && !event.fromGoogle) return;', fuente('js', 'predios-map.js'))
         for archivo in ('predios-map.js', 'predio-detail.js'):
             self.assertIn('window.AgroBasemap.MAP_OPTIONS', fuente('js', archivo))
+
+
+class LaboratorioMapaFase0Tests(TestCase):
+    """Fase 0 de la migración: laboratorio solo para administradores, con Google como único motor del mapa."""
+
+    def setUp(self):
+        usuarios = get_user_model().objects
+        self.admin = usuarios.create_user('admin', email='admin@example.com', password='Campo-Seguro-2026!', is_staff=True)
+        self.user = usuarios.create_user('ana', email='ana@example.com', password='Campo-Seguro-2026!')
+
+    def test_solo_los_administradores_abren_el_laboratorio(self):
+        self.assertEqual(self.client.get('/mapa-prueba/').status_code, 302)  # sin sesión: al inicio de sesión
+        self.client.force_login(self.user)
+        self.assertEqual(self.client.get('/mapa-prueba/').status_code, 403)
+        self.client.force_login(self.admin)
+        self.assertEqual(self.client.get('/mapa-prueba/').status_code, 200)
+
+    @override_settings(GOOGLE_MAPS_API_KEY='clave-de-prueba-123', GOOGLE_MAPS_MAP_ID='')
+    def test_el_laboratorio_carga_solo_google_y_no_el_mapa_antiguo(self):
+        self.client.force_login(self.admin)
+        r = self.client.get('/mapa-prueba/')
+        html = r.content.decode()
+        self.assertContains(r, 'js/agro-gmap.js')
+        for antiguo in ('leaflet.js', 'leaflet-geoman.min.js', 'js/agro-basemap.js', 'js/predios-map.js'):
+            self.assertNotIn(antiguo, html)
+        config = config_del_mapa(r)
+        self.assertEqual(config['google_maps_key'], 'clave-de-prueba-123')
+        self.assertEqual(config['google_map_id'], '')  # vacío: el módulo usa DEMO_MAP_ID solo para pruebas
+
+    @override_settings(GOOGLE_MAPS_API_KEY='clave-de-prueba-123', GOOGLE_MAPS_MAP_ID='mi-map-id-propio')
+    def test_el_map_id_propio_llega_a_la_configuracion_del_mapa(self):
+        self.client.force_login(self.admin)
+        self.assertEqual(config_del_mapa(self.client.get('/mapa-prueba/'))['google_map_id'], 'mi-map-id-propio')
+
+    @override_settings(GOOGLE_MAPS_MAP_ID='')
+    def test_las_pantallas_actuales_no_cambian_sin_map_id(self):
+        self.client.force_login(self.user)
+        r = self.client.get('/predios/')
+        self.assertEqual(config_del_mapa(r)['google_map_id'], '')  # agro-basemap.js solo usa mapId si viene con valor
+        self.assertContains(r, 'leaflet.js')  # Leaflet sigue hasta terminar la migración
+
+    def test_el_map_id_se_configura_por_entorno_y_docker_lo_recibe(self):
+        self.assertIn("os.getenv('GOOGLE_MAPS_MAP_ID', '')", (RAIZ / 'AgroAsesor' / 'settings.py').read_text(encoding='utf-8'))
+        self.assertIn('GOOGLE_MAPS_MAP_ID=', (RAIZ / '.env.example').read_text(encoding='utf-8'))
+        compose = (RAIZ / 'docker-compose.yml').read_text(encoding='utf-8')
+        self.assertIn('GOOGLE_MAPS_MAP_ID: ${GOOGLE_MAPS_MAP_ID:-}', compose)
+
+    def test_el_modulo_nuevo_es_solo_google_con_marcadores_avanzados_y_aviso(self):
+        js = fuente('js', 'agro-gmap.js')
+        for prohibido in ('leaflet', 'openstreetmap', 'arcgisonline', 'drawingmanager'):
+            self.assertNotIn(prohibido, js.lower())
+        self.assertNotIn('google.maps.Marker(', js)  # el marcador clásico está deprecado
+        self.assertIn('AdvancedMarkerElement', js)
+        self.assertIn("const DEMO_MAP_ID = 'DEMO_MAP_ID';", js)
+        self.assertIn('mapId: cfg.google_map_id || DEMO_MAP_ID', js)
+        self.assertIn('El mapa no está disponible temporalmente.', js)
+        self.assertIn('editable: true', js)  # editor nativo de Google
+        self.assertIn("opt.mode === 'custom' ? editCustom : editNative", js)  # y editor propio táctil
+

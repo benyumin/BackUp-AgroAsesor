@@ -34,29 +34,6 @@ def build_menu(request, current):
     «Mis predios»), «Toma de decisiones» (es la misma página de las calculadoras) y «Buscar» (ya está el buscador
     de la barra superior). Las pantallas y sus direcciones siguen existiendo.
     """
-    tool = request.GET.get('herramienta', 'llevar') if current == 'decisiones' else ''
-    kind = request.GET.get('tipo', '')
-    calculators = [
-        {
-            'label': 'Semillas',
-            'icon': 'wheat',
-            'href': reverse('decisiones') + '?herramienta=llevar&tipo=semillas',
-            'active': current == 'decisiones' and tool == 'llevar' and kind != 'insumos',
-        },
-        {
-            'label': 'Fertilizantes',
-            'icon': 'flask-conical',
-            'href': reverse('decisiones') + '?herramienta=llevar&tipo=insumos',
-            'active': current == 'decisiones' and tool == 'llevar' and kind == 'insumos',
-        },
-        {
-            'label': '¿Me alcanza?',
-            'icon': 'scale',
-            'href': reverse('decisiones') + '?herramienta=alcanza',
-            'active': current == 'decisiones' and tool == 'alcanza',
-        },
-    ]
-    in_calculators = current == 'decisiones'
     items = [
         {'section': 'Mi terreno'},
         {'label': 'Inicio', 'icon': 'house', 'href': reverse('dashboard'), 'active': current == 'dashboard'},
@@ -78,9 +55,8 @@ def build_menu(request, current):
         {
             'label': 'Calculadoras',
             'icon': 'calculator',
-            'children': calculators,
-            'open': in_calculators,
-            'active': False,  # se marca la calculadora abierta, no el grupo
+            'href': reverse('calculadoras'),
+            'active': current in ('calculadoras', 'decisiones'),
         },
         {
             'label': 'Catálogo agrícola',
@@ -91,15 +67,6 @@ def build_menu(request, current):
         {'section': 'Informes'},
         {'label': 'Reportes', 'icon': 'file-text', 'href': reverse('reportes'), 'active': current == 'reportes'},
     ]
-    if request.user.is_staff:
-        items.append(
-            {
-                'label': 'Administración',
-                'icon': 'shield-check',
-                'href': reverse('admin_panel'),
-                'active': current == 'admin_panel',
-            }
-        )
     return items
 
 

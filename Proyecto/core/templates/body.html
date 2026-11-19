@@ -7,10 +7,10 @@
         <title>{% block title %}AgroAsesor{% endblock %}</title>
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link rel="stylesheet" href="{% static 'css/body.css' %}?v=12">
+        <link rel="stylesheet" href="{% static 'css/body.css' %}?v=13">
         <link href="{% vendor 'fonts/outfit.css' 'https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap' %}"
               rel="stylesheet">
-        <link rel="stylesheet" href="{% static 'css/tema-figma.css' %}?v=4">
+        <link rel="stylesheet" href="{% static 'css/tema-figma.css' %}?v=5">
         <link rel="stylesheet" href="{% static 'css/componentes.css' %}?v=1">
         {% if current == "predios" %}
             <link rel="stylesheet"
@@ -37,19 +37,6 @@
                     {% for item in menu %}
                         {% if item.section %}
                             <p class="nav-section">{{ item.section }}</p>
-                        {% elif item.children %}
-                            <details class="nav-group"{% if item.open %} open{% endif %}>
-                                <summary class="nav-link{% if item.active %} is-active{% endif %}">
-                                    <i data-lucide="{{ item.icon }}"></i><span>{{ item.label }}</span><i data-lucide="chevron-down"
-   class="nav-caret"></i>
-                                </summary>
-                                <div class="nav-sub">
-                                    {% for sub in item.children %}
-                                        <a class="nav-sublink{% if sub.active %} is-active{% endif %}"
-                                           href="{{ sub.href }}"><i data-lucide="{{ sub.icon }}"></i><span>{{ sub.label }}</span></a>
-                                    {% endfor %}
-                                </div>
-                            </details>
                         {% else %}
                             <a href="{{ item.href }}"
                                class="nav-link{% if item.active %} is-active{% endif %}"><i data-lucide="{{ item.icon }}"></i><span>{{ item.label }}</span></a>

@@ -190,8 +190,7 @@
     margin-top: 0;
 }
 
-.app-body .sidebar .nav-link,
-.app-body .sidebar .nav-sublink {
+.app-body .sidebar .nav-link {
     gap: 14px;
     min-height: 48px;
     padding: 10px 14px;
@@ -202,8 +201,7 @@
     font-weight: var(--fw-regular);
 }
 
-.app-body .sidebar .nav-link svg,
-.app-body .sidebar .nav-sublink svg {
+.app-body .sidebar .nav-link svg {
     width: 20px;
     height: 20px;
     flex: 0 0 20px;
@@ -211,21 +209,17 @@
 }
 
 .app-body .sidebar .nav-link:hover,
-.app-body .sidebar .nav-sublink:hover,
-.app-body .sidebar .nav-link:focus-visible,
-.app-body .sidebar .nav-sublink:focus-visible {
+.app-body .sidebar .nav-link:focus-visible {
     background: #f1f5f9;
     color: #0f1b2d;
 }
 
-.app-body .sidebar .nav-link:focus-visible,
-.app-body .sidebar .nav-sublink:focus-visible {
+.app-body .sidebar .nav-link:focus-visible {
     outline: 2px solid #0b6b4b;
     outline-offset: -2px;
 }
 
-.app-body .sidebar .nav-link.is-active,
-.app-body .sidebar .nav-sublink.is-active {
+.app-body .sidebar .nav-link.is-active {
     background: #e6f7ef;
     color: #0b6b4b;
     font-weight: var(--fw-medium);
@@ -239,10 +233,6 @@
     margin-left: auto;
     border-radius: 50%;
     background: #0b9a66;
-}
-
-.app-body .nav-sub {
-    border-left-color: #e6eaee;
 }
 
 .app-body .topbar {

@@ -42,6 +42,7 @@ from .base import (  # noqa: F401
     render_page,
 )
 from .calculadora import (  # noqa: F401
+    calculadoras,
     calculate,
     calculo_pdf,
     decisiones,
@@ -80,6 +81,7 @@ from .inicio import (  # noqa: F401
     dashboard,
 )
 from .predios import (  # noqa: F401
+    mapa_prueba,
     RESUBMIT_WINDOW,
     potrero_api,
     potrero_assign_crop,
