@@ -143,10 +143,3 @@ python manage.py importar_catalogo data --aplicar --actualizar    # además corr
 - El orden de carga es zonas → cultivos → problemas → insumos → usos → calendario y rendimientos.
 - Es seguro repetirlo: no duplica registros ni borra valores guardados.
 
-## Pruebas
-
-```powershell
-.\.venv\Scripts\python.exe Proyecto/manage.py test core
-```
-
-Las pruebas de la API Flask están en `backend_flask/tests` (ver su README).
