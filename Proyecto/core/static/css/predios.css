@@ -698,8 +698,7 @@ dialog::backdrop {
     border-radius: 11px;
 }
 
-.vertex-details summary,
-.history-geometry summary {
+.vertex-details summary {
     color: var(--green-dark);
     font-weight: var(--fw-semibold);
     cursor: pointer;
@@ -711,56 +710,6 @@ dialog::backdrop {
     padding-left: 26px;
     color: var(--muted);
     font-variant-numeric: tabular-nums;
-}
-
-/* Coordenadas del historial: tabla pequeña de vértices (sin la estructura GeoJSON) */
-.coords-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
-    gap: 12px;
-    margin-top: 8px;
-}
-
-.coords-table {
-    width: 100%;
-    max-width: 360px;
-    box-sizing: border-box;
-    table-layout: fixed;
-    border-collapse: collapse;
-    border: 1px solid var(--line, #e6eaee);
-    font-size: .8rem;
-    font-variant-numeric: tabular-nums;
-}
-
-.coords-table caption {
-    padding: 0 0 4px;
-    text-align: left;
-    color: var(--ink);
-    font-size: .82rem;
-    font-weight: var(--fw-semibold);
-}
-
-.coords-table th,
-.coords-table td {
-    padding: 5px 8px;
-    border-bottom: 1px solid var(--line, #e6eaee);
-    text-align: right;
-}
-
-.coords-table th:first-child,
-.coords-table td:first-child {
-    width: 56px;
-    text-align: center;
-}
-
-.coords-table thead th {
-    background: #f4f6f2;
-    color: var(--muted);
-    font-weight: var(--fw-semibold);
-}
-
-.coords-table tbody tr:last-child td {
-    border-bottom: 0;
 }
 
 .history-list {
@@ -826,16 +775,6 @@ dialog::backdrop {
     margin: 7px 0;
     line-height: 1.4;
 }
-
-.history-geometry {
-    margin-top: 10px;
-}
-
-.history-geometry h4 {
-    margin: 9px 0 4px;
-    font-size: .82rem;
-}
-
 
 .terrain-layout .map-card,
 .terrain-layout .terrain-form-card {

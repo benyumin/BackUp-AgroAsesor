@@ -1,4 +1,0 @@
-nombre;tipo;descripcion;sintomas;fuente_nombre;fuente_url;cultivos
-PLAGA DEMO A;pest;Problema ficticio utilizado exclusivamente para pruebas funcionales.;Síntomas DEMO ficticios.;FUENTE DEMO AGROASESOR;https://example.invalid/agroasesor-demo;PAPA DEMO|MAIZ DEMO
-ENFERMEDAD DEMO B;disease;Problema ficticio utilizado exclusivamente para pruebas funcionales.;Síntomas DEMO ficticios.;FUENTE DEMO AGROASESOR;https://example.invalid/agroasesor-demo;LECHUGA DEMO
-DEFICIENCIA DEMO C;nutrition;Problema ficticio utilizado exclusivamente para pruebas funcionales.;Síntomas DEMO ficticios.;FUENTE DEMO AGROASESOR;https://example.invalid/agroasesor-demo;PAPA DEMO|LECHUGA DEMO|MAIZ DEMO

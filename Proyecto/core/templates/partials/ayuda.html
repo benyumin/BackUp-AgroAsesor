@@ -1,7 +1,7 @@
-{% comment %}Consejo de la sección. Abierto la primera vez; plegado (una línea con ícono) después de «Entendido».
-ayudas.js guarda que se plegó sin recargar; sin JavaScript, el formulario hace lo mismo.{% endcomment %}
+{% comment %}Consejo de la sección. Llega plegado (una línea con ícono); ayudas.js lo abre la primera vez y «Entendido» lo
+vuelve a plegar. El navegador recuerda cuáles ya se plegaron: no se guarda nada en la base de datos.{% endcomment %}
 {% if ayuda %}
-    <details class="ayuda no-print" data-ayuda="{{ clave }}"{% if abierta %} open{% endif %}>
+    <details class="ayuda no-print" data-ayuda="{{ clave }}">
         <summary>
             <span class="ayuda-ico" aria-hidden="true"><i data-lucide="lightbulb"></i></span>
             <span class="ayuda-resumen">{{ ayuda.resumen }}</span>
@@ -10,10 +10,9 @@ ayudas.js guarda que se plegó sin recargar; sin JavaScript, el formulario hace 
         <div class="ayuda-body">
             <p class="ayuda-titulo">{{ ayuda.titulo }}</p>
             <ol class="ayuda-pasos">{% for paso in ayuda.pasos %}<li>{{ paso }}</li>{% endfor %}</ol>
-            <form method="post" action="{% url 'ayuda_ocultar' clave %}" class="ayuda-form">
-                {% csrf_token %}
-                <button class="btn-ghost-agro btn-sm" type="submit">Entendido</button>
-            </form>
+            <div class="ayuda-form">
+                <button class="btn-ghost-agro btn-sm ayuda-cerrar" type="button">Entendido</button>
+            </div>
         </div>
     </details>
 {% endif %}

@@ -50,7 +50,6 @@ def registro(**valores):
         'email': 'rosa@example.com',
         'telefono': '+56 9 8765 4321',
         'comuna': 'Melipilla',
-        'rut': '',
         'password1': PASSWORD,
         'password2': PASSWORD,
         'acepta_politicas': 'on',
@@ -141,7 +140,6 @@ class RegistroVistaOficialTests(TestCase):
             '<h1>Crear Cuenta</h1>',
             'Formulario exclusivo para registro de agricultores y productores locales.',
             'name="nombre_completo"',
-            'name="rut"',
             'name="telefono"',
             'name="email"',
             'name="comuna"',
@@ -161,25 +159,23 @@ class RegistroVistaOficialTests(TestCase):
         self.assertContains(r, 'href="?mode=login"')
 
     def test_registro_crea_un_agricultor_y_entra_al_inicio(self):
-        r = self.client.post('/login/', registro(rut='12.345.678-5'))
+        r = self.client.post('/login/', registro())
         self.assertRedirects(r, '/', fetch_redirect_response=False)
         user = User.objects.get(email='rosa@example.com')
         self.assertFalse(user.is_staff)  # el registro público nunca crea administradores
         self.assertFalse(user.is_superuser)
         self.assertEqual(user.agricultor.comuna, 'Melipilla')
-        self.assertEqual(user.agricultor.rut, '12345678-5')
         self.assertTrue(user.aceptaciones_politicas.exists())
 
-    def test_rut_invalido_o_repetido_se_rechaza(self):
-        r = self.client.post('/login/', registro(rut='12.345.678-9'))
-        self.assertEqual(r.status_code, 200)
-        self.assertContains(r, 'class="errorlist"')
-        self.assertFalse(User.objects.filter(email='rosa@example.com').exists())
-        self.client.post('/login/', registro(rut='12.345.678-5'))
-        Client().post('/logout/')
-        otro = Client().post('/login/', registro(email='otra@example.com', rut='12.345.678-5'))
-        self.assertContains(otro, 'Este RUT ya está registrado en otra cuenta.')
-        self.assertFalse(User.objects.filter(email='otra@example.com').exists())
+    def test_registro_ya_no_pide_ni_guarda_rut(self):
+        """El RUT se eliminó del registro y de la base: ni se muestra ni se guarda aunque alguien lo envíe."""
+        pagina = self.client.get('/login/?mode=register')
+        self.assertNotContains(pagina, 'name="rut"')
+        self.assertNotContains(pagina, 'RUT (opcional)')
+        r = self.client.post('/login/', registro(rut='12.345.678-5'))  # un campo desconocido se ignora
+        self.assertRedirects(r, '/', fetch_redirect_response=False)
+        ficha = User.objects.get(email='rosa@example.com').agricultor
+        self.assertNotIn('rut', [campo.name for campo in ficha._meta.get_fields()])
 
     def test_contrasenas_distintas_o_debiles_se_rechazan(self):
         distinta = self.client.post('/login/', registro(password2='Otra-Clave-2026!'))

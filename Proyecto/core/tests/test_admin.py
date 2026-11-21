@@ -88,7 +88,6 @@ class RegistroPublicoNoCreaAdministradoresTests(TestCase):
                 'email': 'pedro@example.com',
                 'telefono': '+56 9 1234 5678',
                 'comuna': 'Melipilla',
-                'rut': '',
                 'password1': 'Clave-muy-segura-2026',
                 'password2': 'Clave-muy-segura-2026',
                 'acepta_politicas': 'on',

@@ -30,7 +30,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
 from core.catalog import ensure_insumo_categories
-from core.models import Cultivo, Insumo, ProblemaAgricola, ReferenciaAgronomica, TipoInsumo, UsoInsumoCultivo, Zona
+from core.models import Cultivo, Insumo, ReferenciaAgronomica, TipoInsumo, Zona
 
 TEMPLATE = {
     "_instrucciones": (
@@ -61,17 +61,6 @@ TEMPLATE = {
         {"nombre": "Herbicida"},
         {"nombre": "Fungicida"},
         {"nombre": "Insecticida"},
-    ],
-    "problemas": [
-        {
-            "nombre": "",
-            "tipo": "pest | disease | weed | nutrition | other",
-            "descripcion": "",
-            "sintomas": "",
-            "fuente_nombre": "",
-            "fuente_url": "",
-            "cultivos": [""],
-        }
     ],
     "referencias": [
         {
@@ -117,7 +106,6 @@ TEMPLATE = {
             "tipo": "",
             "cultivo": "",
             "zona": "",
-            "problemas": [],
             "descripcion": "",
             "fabricante": "",
             "estado_verificacion": "unverified",
@@ -159,31 +147,17 @@ TEMPLATE = {
             "pureza_pct": None,
         }
     ],
-    "usos": [
-        {
-            "cultivo": "",
-            "problema": "",
-            "insumo": "",
-            "tipo": "",
-            "fuente_nombre": "",
-            "fuente_url": "",
-            "fecha_verificacion": None,
-            "activo": True,
-        }
-    ],
 }
 
 CSV_SECTIONS = {
     'zonas': 'zonas',
     'cultivos': 'cultivos',
-    'problemas': 'problemas',
     'insumos': 'insumos',
-    'usos': 'usos',
     'calendario': 'referencias',
     'rendimientos': 'referencias',
 }
 BOOL_FIELDS = {'activo', 'vigente', 'dosis_verificada'}
-LIST_FIELDS = {'problemas', 'cultivos', 'cultivos_autorizados', 'objetivos_control'}
+LIST_FIELDS = {'cultivos_autorizados', 'objetivos_control'}
 INT_FIELDS = {'anio_referencia', 'duracion_ciclo_dias'}
 
 
@@ -416,12 +390,6 @@ class Command(BaseCommand):
         for record in data.get('tipos_insumo', []):
             if record.get('nombre'):
                 self._save('Tipos de insumo', TipoInsumo, {'nombre': record['nombre']}, {})
-        for record in data.get('problemas', []):
-            if not record.get('nombre'):
-                continue
-            values = _clean_values(ProblemaAgricola, record, {'nombre', 'cultivos'})
-            crops = [self._get(Cultivo, name, 'El cultivo') for name in record.get('cultivos', []) if name]
-            self._save('Problemas', ProblemaAgricola, {'nombre': record['nombre']}, values, {'cultivos': crops})
         for record in data.get('referencias', []):
             if not record.get('cultivo') or not record.get('zona'):
                 continue
@@ -436,37 +404,10 @@ class Command(BaseCommand):
         for record in data.get('insumos', []):
             if not record.get('nombre'):
                 continue
-            values = _clean_values(Insumo, record, {'nombre', 'tipo', 'cultivo', 'zona', 'problemas'})
+            values = _clean_values(Insumo, record, {'nombre', 'tipo', 'cultivo', 'zona'})
             values['cultivo'] = self._get(Cultivo, record.get('cultivo'), 'El cultivo')
             values['zona'] = self._get(Zona, record.get('zona'), 'La zona')
             tipo = self._get(TipoInsumo, record.get('tipo'), 'El tipo de insumo')
             if tipo is None:
                 raise CommandError(f'El insumo «{record["nombre"]}» requiere un tipo.')
-            problems = [
-                self._get(ProblemaAgricola, name, 'El problema') for name in record.get('problemas', []) if name
-            ]
-            self._save('Insumos', Insumo, {'nombre': record['nombre'], 'tipo': tipo}, values, {'problemas': problems})
-        for record in data.get('usos', []):
-            if not (record.get('cultivo') and record.get('problema') and record.get('insumo')):
-                continue
-            crop = self._get(Cultivo, record['cultivo'], 'El cultivo')
-            problem = self._get(ProblemaAgricola, record['problema'], 'El problema')
-            products = Insumo.objects.filter(nombre=record['insumo'])
-            if record.get('tipo'):
-                products = products.filter(tipo__nombre=record['tipo'])
-            if products.count() != 1:
-                raise CommandError(
-                    f'El insumo «{record["insumo"]}» '
-                    + (
-                        'no existe en el catálogo ni en el archivo.'
-                        if not products.exists()
-                        else 'está repetido: indica también su tipo.'
-                    )
-                )
-            values = _clean_values(UsoInsumoCultivo, record, {'cultivo', 'problema', 'insumo', 'tipo'})
-            self._save(
-                'Usos cultivo → problema → insumo',
-                UsoInsumoCultivo,
-                {'cultivo': crop, 'problema': problem, 'insumo': products.get()},
-                values,
-            )
+            self._save('Insumos', Insumo, {'nombre': record['nombre'], 'tipo': tipo}, values)

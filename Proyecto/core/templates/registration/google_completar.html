@@ -25,19 +25,11 @@
                             {{ form.nombre_completo }}
                             {{ form.nombre_completo.errors }}
                         </label>
-                        <div class="row-2">
-                            <label class="field" for="{{ form.rut.id_for_label }}">
-                                <span>{{ form.rut.label }}</span>
-                                {{ form.rut }}
-                                <small class="pass-help">{{ form.rut.help_text }}</small>
-                                {{ form.rut.errors }}
-                            </label>
-                            <label class="field" for="{{ form.telefono.id_for_label }}">
-                                <span>{{ form.telefono.label }}</span>
-                                {{ form.telefono }}
-                                {{ form.telefono.errors }}
-                            </label>
-                        </div>
+                        <label class="field" for="{{ form.telefono.id_for_label }}">
+                            <span>{{ form.telefono.label }}</span>
+                            {{ form.telefono }}
+                            {{ form.telefono.errors }}
+                        </label>
                         <label class="field" for="{{ form.comuna.id_for_label }}">
                             <span>{{ form.comuna.label }}</span>
                             {{ form.comuna }}

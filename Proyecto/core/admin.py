@@ -1,11 +1,9 @@
 from django.contrib import admin
 
 from .models import (
-    CargaCatalogo,
     AceptacionPoliticas,
     ActividadAgricola,
     CalculoAgricola,
-    ConfiguracionAgronomica,
     Cultivo,
     Insumo,
     TipoInsumo,
@@ -16,8 +14,6 @@ from .models import (
     Potrero,
     ReferenciaAgronomica,
     TemporadaCultivo,
-    ProblemaAgricola,
-    UsoInsumoCultivo,
 )
 
 
@@ -142,39 +138,19 @@ class ReferenciaAgronomicaAdmin(admin.ModelAdmin):
     readonly_fields = ('creado', 'actualizado')
 
 
-@admin.register(ConfiguracionAgronomica)
-class ConfiguracionAgronomicaAdmin(admin.ModelAdmin):
-    list_display = ('margen_ventana_dias',)
-
-    def has_add_permission(self, request):
-        return not ConfiguracionAgronomica.objects.exists()
-
-    def has_delete_permission(self, request, obj=None):
-        return False
-
-
 @admin.register(TipoInsumo)
 class TipoInsumoAdmin(admin.ModelAdmin):
     list_display = ('nombre',)
     search_fields = ('nombre',)
 
 
-@admin.register(ProblemaAgricola)
-class ProblemaAgricolaAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'tipo', 'activo')
-    list_filter = ('tipo', 'activo', 'cultivos')
-    search_fields = ('nombre', 'descripcion', 'sintomas')
-    filter_horizontal = ('cultivos',)
-
-
 @admin.register(Insumo)
 class InsumoAdmin(admin.ModelAdmin):
     list_display = ('nombre', 'tipo', 'cultivo', 'estado_verificacion', 'fecha_verificacion', 'vigencia_actual')
-    list_filter = ('tipo', 'estado_verificacion', 'vigente', 'dosis_verificada', 'problemas')
+    list_filter = ('tipo', 'estado_verificacion', 'vigente', 'dosis_verificada')
     search_fields = ('nombre', 'fabricante', 'numero_autorizacion_sag', 'ingrediente_activo')
-    filter_horizontal = ('problemas',)
     fieldsets = (
-        (None, {'fields': ('nombre', 'tipo', 'cultivo', 'zona', 'problemas', 'descripcion', 'fabricante', 'vigente')}),
+        (None, {'fields': ('nombre', 'tipo', 'cultivo', 'zona', 'descripcion', 'fabricante', 'vigente')}),
         ('Vigencia', {'fields': ('vigencia_desde', 'vigencia_hasta')}),
         (
             'Verificación y trazabilidad',
@@ -250,7 +226,12 @@ class InsumoAdmin(admin.ModelAdmin):
 @admin.register(Agricultor)
 class AgricultorAdmin(admin.ModelAdmin):
     list_display = ('nombre', 'comuna', 'user')
-    search_fields = ('nombre', 'rut', 'user__email')
+    list_select_related = ('user',)
+    search_fields = ('user__first_name', 'user__last_name', 'user__email')
+
+    @admin.display(description='Nombre', ordering='user__first_name')
+    def nombre(self, obj):
+        return obj.user.get_full_name() or obj.user.get_username()
 
 
 @admin.register(AceptacionPoliticas)
@@ -289,8 +270,6 @@ class PredioHistorialAdmin(admin.ModelAdmin):
         'accion',
         'resumen',
         'creado',
-        'geometria_anterior',
-        'geometria_nueva',
         'superficie_anterior_ha',
         'superficie_nueva_ha',
     )
@@ -363,37 +342,3 @@ class ActividadAgricolaAdmin(admin.ModelAdmin):
     list_display = ('nombre', 'tipo', 'potrero', 'usuario', 'fecha_programada', 'estado')
     list_filter = ('tipo', 'estado', 'fecha_programada')
     search_fields = ('nombre', 'potrero__nombre', 'potrero__predio__nombre', 'usuario__email')
-
-
-@admin.register(UsoInsumoCultivo)
-class UsoInsumoCultivoAdmin(admin.ModelAdmin):
-    list_display = ('cultivo', 'problema', 'insumo', 'activo', 'fuente_nombre', 'fecha_verificacion')
-    list_filter = ('activo', 'cultivo', 'problema')
-    search_fields = ('cultivo__nombre', 'problema__nombre', 'insumo__nombre', 'fuente_nombre')
-    list_select_related = ('cultivo', 'problema', 'insumo')
-    actions = ['marcar_no_vigente']
-
-    @admin.action(description='Marcar como no vigente (conserva el historial)')
-    def marcar_no_vigente(self, request, queryset):
-        queryset.update(activo=False)
-
-
-@admin.register(CargaCatalogo)
-class CargaCatalogoAdmin(admin.ModelAdmin):
-    """Historial de cargas del catálogo inicial: solo lectura (lo escribe cargar_catalogo_inicial)."""
-
-    list_display = ('aplicada', 'carpeta', 'huella_corta', 'forzada')
-    readonly_fields = ('aplicada', 'carpeta', 'huella', 'archivos', 'resumen', 'forzada')
-
-    @admin.display(description='huella')
-    def huella_corta(self, obj):
-        return obj.huella[:12]
-
-    def has_add_permission(self, request):
-        return False
-
-    def has_change_permission(self, request, obj=None):
-        return False
-
-    def has_delete_permission(self, request, obj=None):
-        return False

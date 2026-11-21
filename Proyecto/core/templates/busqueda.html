@@ -8,7 +8,7 @@
     <section class="search-hero" aria-labelledby="search-title">
         <div class="search-hero-text">
             <h1 id="search-title" class="page-title">Buscar</h1>
-            <p>Cultivos, semillas, insumos, problemas agrícolas y tus predios. Escribe parte del nombre: «mai» encuentra Maíz.</p>
+            <p>Cultivos, semillas, insumos y tus predios. Escribe parte del nombre: «mai» encuentra Maíz.</p>
         </div>
         <form class="search-form" id="search-form" action="{% url 'busqueda' %}" method="get" role="search">
             {% if search_tab != 'todos' %}<input type="hidden" name="tab" value="{{ search_tab }}">{% endif %}
@@ -82,26 +82,6 @@
                                 <option value="">Todos</option>
                                 {% for value, name in search_filter_options.categoria %}
                                     <option value="{{ value }}" {% if search_filters.categoria == value %}selected{% endif %}>{{ name }}</option>
-                                {% endfor %}
-                            </select>
-                        </label>
-                    {% elif field == 'problema' %}
-                        <label class="sf">
-                            <span>Problema</span>
-                            <select name="problema" form="search-form" data-autosubmit>
-                                <option value="">Todos</option>
-                                {% for value, name in search_filter_options.problema %}
-                                    <option value="{{ value }}" {% if search_filters.problema == value %}selected{% endif %}>{{ name }}</option>
-                                {% endfor %}
-                            </select>
-                        </label>
-                    {% elif field == 'tipo' %}
-                        <label class="sf">
-                            <span>Tipo de problema</span>
-                            <select name="tipo" form="search-form" data-autosubmit>
-                                <option value="">Todos</option>
-                                {% for value, name in search_filter_options.tipo %}
-                                    <option value="{{ value }}" {% if search_filters.tipo == value %}selected{% endif %}>{{ name }}</option>
                                 {% endfor %}
                             </select>
                         </label>

@@ -1,7 +1,7 @@
 """Búsqueda unificada de AgroAsesor (se resuelve en el servidor).
 
 Una sola lógica atiende al buscador de la barra superior y a la página «Buscar»: cultivos, semillas,
-insumos, problemas agrícolas y, solo del usuario autenticado, sus predios y potreros.
+insumos y, solo del usuario autenticado, sus predios y potreros.
 
 Trabaja sobre los mismos datos que ya arma cada página (``catalog_payload`` y ``farm_payload``), de modo
 que no consulta la base dos veces y nunca ve predios de otras cuentas: ``farm_payload`` ya viene filtrado
@@ -29,7 +29,6 @@ TABS = [
     ('cultivos', 'Cultivos', 'sprout'),
     ('semillas', 'Semillas', 'wheat'),
     ('insumos', 'Insumos', 'flask-conical'),
-    ('problemas', 'Problemas', 'bug'),
     ('predios', 'Mis predios', 'map-pin'),
 ]
 TAB_KEYS = [key for key, _label, _icon in TABS]
@@ -39,7 +38,6 @@ SECTIONS = [
     ('cultivos', 'Cultivos', 'sprout'),
     ('semillas', 'Semillas', 'wheat'),
     ('insumos', 'Insumos', 'flask-conical'),
-    ('problemas', 'Problemas agrícolas', 'bug'),
     ('predios', 'Mis predios y potreros', 'map-pin'),
 ]
 
@@ -47,17 +45,8 @@ KIND_META = {
     'cultivo': ('Cultivo', 'sprout', 'crop'),
     'semilla': ('Semilla', 'wheat', 'seed'),
     'insumo': ('Insumo', 'flask-conical', 'input'),
-    'problema': ('Problema', 'bug', 'problem'),
     'predio': ('Predio', 'map-pin', 'farm'),
     'potrero': ('Potrero', 'layout-grid', 'plot'),
-}
-
-PROBLEM_TYPES = {
-    'pest': 'Plagas',
-    'disease': 'Enfermedades',
-    'weed': 'Malezas',
-    'nutrition': 'Problemas nutricionales',
-    'other': 'Otros problemas',
 }
 
 PHYTO_CATEGORIES = {'herbicide', 'fungicide', 'insecticide'}
@@ -67,8 +56,7 @@ TAB_FILTERS = {
     'todos': ('cultivo',),
     'cultivos': ('grupo',),
     'semillas': ('cultivo',),
-    'insumos': ('categoria', 'cultivo', 'problema', 'calculables'),
-    'problemas': ('tipo', 'cultivo'),
+    'insumos': ('categoria', 'cultivo', 'calculables'),
     'predios': ('cultivo',),
 }
 
@@ -159,17 +147,9 @@ def build_items(catalog, farms):
     """Convierte el catálogo y los predios del usuario en resultados comparables, agrupados por pestaña."""
     plots = farms.get('plots', [])
     plots_by_crop = Counter(plot['cropId'] for plot in plots if plot.get('cropId'))
-    crops_by_id = {item['id']: item for item in catalog.get('cultivos', [])}
-    problems = catalog.get('problemas', [])
-    problem_crops = {item['id']: set(item.get('cropIds', [])) for item in problems}
     insumos = [item for item in catalog.get('insumos', []) if item.get('active')]
 
-    products_by_problem = Counter()
-    for insumo in insumos:
-        for problem_id in insumo.get('problemIds', []):
-            products_by_problem[problem_id] += 1
-
-    results = {key: [] for key in ('cultivos', 'semillas', 'insumos', 'problemas', 'predios')}
+    results = {key: [] for key in ('cultivos', 'semillas', 'insumos', 'predios')}
 
     for crop in catalog.get('cultivos', []):
         if crop.get('active') is False:
@@ -235,18 +215,12 @@ def build_items(catalog, farms):
         is_seed = category == 'seed'
         phyto = category in PHYTO_CATEGORIES
         calculable = bool(insumo.get('usable')) and bool(insumo.get('verifiedUse') if phyto else insumo.get('doseVerified'))
-        related_crops = set()
-        for pid in insumo.get('problemIds', []):
-            related_crops |= problem_crops.get(pid, set())
-        if insumo.get('cropId'):
-            related_crops.add(insumo['cropId'])
+        related_crops = {insumo['cropId']} if insumo.get('cropId') else set()
         chips = [
             ('Verificado con fuente', 'green') if insumo.get('verified') else ('Información no verificada', 'neutral'),
         ]
         if insumo.get('doseVerified') and insumo.get('dose') is not None:
             chips.append((f'Dosis: {_number(insumo["dose"])} {insumo.get("unit") or ""}'.strip(), 'dark'))
-        for name in list(insumo.get('problems', []))[:2]:
-            chips.append((name, 'amber'))
         subtitle = insumo.get('categoryLabel') or CATEGORY_LABELS.get(category, '')
         if insumo.get('crop'):
             subtitle += f' · {insumo["crop"]}'
@@ -289,50 +263,10 @@ def build_items(catalog, farms):
                 extra_text=' '.join(
                     str(insumo.get(key) or '')
                     for key in ('manufacturer', 'activeIngredient', 'type', 'seedVariety', 'sagRegistration')
-                )
-                + ' '
-                + ' '.join(insumo.get('problems', [])),
+                ),
                 crop_ids=sorted(related_crops),
                 category=category,
-                problem_ids=list(insumo.get('problemIds', [])),
                 calculable=calculable,
-            )
-        )
-
-    for problem in problems:
-        pid = problem['id']
-        related = products_by_problem.get(pid, 0)
-        crop_names = [crops_by_id[cid]['name'] for cid in problem.get('cropIds', []) if cid in crops_by_id]
-        chips = []
-        if crop_names:
-            extra = f' y {len(crop_names) - 3} más' if len(crop_names) > 3 else ''
-            chips.append(('Afecta: ' + ', '.join(crop_names[:3]) + extra, 'neutral'))
-        chips.append((f'{related} producto{"s" if related != 1 else ""} registrado{"s" if related != 1 else ""}', 'green' if related else 'neutral'))
-        if related:
-            action = _action(
-                'Ver productos', reverse('productos') + '?' + urlencode({'problema': pid}), 'library', True
-            )
-        else:
-            action = _action(
-                'Sin productos registrados',
-                '',
-                'library',
-                True,
-                disabled=True,
-                reason='Aún no hay productos del catálogo asociados a este problema.',
-            )
-        results['problemas'].append(
-            _item(
-                'problema',
-                pid,
-                problem['name'],
-                subtitle=problem.get('typeLabel') or '',
-                summary=_shorten(problem.get('symptoms') or problem.get('description')),
-                chips=chips,
-                actions=[action],
-                extra_text=' '.join(crop_names),
-                crop_ids=list(problem.get('cropIds', [])),
-                problem_type=problem.get('type') or 'other',
             )
         )
 
@@ -400,7 +334,7 @@ def _parse(params):
     query = ' '.join(str(params.get('q', '')).split())[:MAX_QUERY_LENGTH]
     tab = params.get('tab', 'todos')
     tab = tab if tab in TAB_KEYS else 'todos'
-    filters = {key: str(params.get(key, '')).strip() for key in ('cultivo', 'grupo', 'categoria', 'problema', 'tipo')}
+    filters = {key: str(params.get(key, '')).strip() for key in ('cultivo', 'grupo', 'categoria')}
     filters['calculables'] = '1' if params.get('calculables') == '1' else ''
     order = params.get('orden', '')
     try:
@@ -420,12 +354,8 @@ def _passes(item, tab, filters):
     if item['kind'] == 'insumo':
         if 'categoria' in active and filters['categoria'] and item.get('category') != filters['categoria']:
             return False
-        if 'problema' in active and filters['problema'] and filters['problema'] not in item.get('problem_ids', []):
-            return False
         if 'calculables' in active and filters['calculables'] and not item.get('calculable'):
             return False
-    if item['kind'] == 'problema' and 'tipo' in active and filters['tipo'] and item.get('problem_type') != filters['tipo']:
-        return False
     return True
 
 
@@ -567,13 +497,12 @@ def run_search(catalog, farms, params):
     # Conteos de las pestañas: consideran la consulta y el cultivo elegido, para que cada número sea real.
     shared = {**{key: '' for key in filters}, 'cultivo': filters['cultivo']}
     tab_counts = {}
-    for key in ('cultivos', 'semillas', 'insumos', 'problemas', 'predios'):
+    for key in ('cultivos', 'semillas', 'insumos', 'predios'):
         tab_counts[key] = len([item for item in matching(built[key], False) if _passes(item, 'todos', shared)])
     # En «Todos» una semilla de cultivo ya aparece como cultivo: no se cuenta dos veces.
     tab_counts['todos'] = (
         tab_counts['cultivos']
         + tab_counts['insumos']
-        + tab_counts['problemas']
         + tab_counts['predios']
         + len([item for item in matching(built['semillas'], False) if item['id'].startswith('cultivo-') is False and _passes(item, 'todos', shared)])
     )
@@ -704,16 +633,6 @@ def filter_options(tab, built, catalog):
         options['categoria'] = [
             (key, f'{label} ({counts[key]})') for key, label in CATEGORY_LABELS.items() if key != 'seed' and counts.get(key)
         ]
-    if 'problema' in fields:
-        used = {pid for item in built['insumos'] for pid in item.get('problem_ids', [])}
-        options['problema'] = [
-            (problem['id'], problem['name'])
-            for problem in sorted(catalog.get('problemas', []), key=lambda item: fold(item['name']))
-            if problem['id'] in used
-        ]
-    if 'tipo' in fields:
-        counts = Counter(item['problem_type'] for item in built['problemas'])
-        options['tipo'] = [(key, f'{label} ({counts[key]})') for key, label in PROBLEM_TYPES.items() if counts.get(key)]
     return options
 
 
@@ -734,12 +653,6 @@ def explore_data(built, catalog, farms):
         {'label': label, 'count': category_counts[key], 'url': tab_url('insumos', categoria=key)}
         for key, label in CATEGORY_LABELS.items()
         if key != 'seed' and category_counts.get(key)
-    ]
-    type_counts = Counter(item['problem_type'] for item in built['problemas'])
-    problem_chips = [
-        {'label': label, 'count': type_counts[key], 'url': tab_url('problemas', tipo=key)}
-        for key, label in PROBLEM_TYPES.items()
-        if type_counts.get(key)
     ]
     farm_count = len(farms.get('predios', []))
     plot_count = len(farms.get('plots', []))
@@ -780,15 +693,6 @@ def explore_data(built, catalog, farms):
                 'text': 'Fertilizantes, fitosanitarios y otros productos vigentes.',
                 'url': tab_url('insumos'),
                 'chips': category_chips,
-            },
-            {
-                'key': 'problemas',
-                'icon': 'bug',
-                'title': 'Problemas agrícolas',
-                'count': len(built['problemas']),
-                'text': 'Plagas, enfermedades y malezas, con sus productos relacionados.',
-                'url': tab_url('problemas'),
-                'chips': problem_chips,
             },
             {
                 'key': 'predios',

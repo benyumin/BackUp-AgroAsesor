@@ -1,4 +1,4 @@
-"""Buscar: una sola búsqueda en el servidor (cultivos, semillas, insumos, problemas y predios propios)."""
+"""Buscar: una sola búsqueda en el servidor (cultivos, semillas, insumos y predios propios)."""
 
 import re
 from datetime import date
@@ -7,7 +7,7 @@ from decimal import Decimal
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 
-from core.models import Cultivo, Insumo, Potrero, Predio, ProblemaAgricola, TipoInsumo, Zona
+from core.models import Cultivo, Insumo, Potrero, Predio, TipoInsumo, Zona
 from core.search import fold, highlight, run_search
 
 User = get_user_model()
@@ -45,11 +45,6 @@ class BusquedaBase(TestCase):
         self.seed = Insumo.objects.create(tipo=self.seed_type, nombre='Semilla de maíz híbrido', cultivo=self.maize)
         self.weedkiller = Insumo.objects.create(tipo=self.herb, nombre='Herbicida para maíz', cultivo=self.maize)
         self.expired = Insumo.objects.create(tipo=self.fert, nombre='Abono caducado', vigente=False)
-        self.weed = ProblemaAgricola.objects.create(nombre='Maleza de hoja ancha', tipo='weed', sintomas='Cubre el cultivo')
-        self.weed.cultivos.add(self.maize)
-        self.weedkiller.problemas.add(self.weed)
-        self.lonely = ProblemaAgricola.objects.create(nombre='Pulgón del trigo', tipo='pest')
-        self.lonely.cultivos.add(self.wheat)
         self.farm = Predio.objects.create(
             propietario=self.user, nombre='Fundo Las Acacias', ubicacion='Melipilla', superficie_ha=12, zona=self.zone
         )
@@ -99,7 +94,6 @@ class MotorDeBusquedaTests(BusquedaBase):
         self.assertEqual(counts['cultivos'], 1)
         self.assertEqual(counts['semillas'], 1)
         self.assertEqual(counts['insumos'], 1)
-        self.assertEqual(counts['problemas'], 1)  # la maleza que afecta al maíz
         self.assertGreaterEqual(counts['predios'], 1)  # el potrero con maíz
         for key in ('cultivos', 'semillas', 'insumos', 'predios'):
             tab_total = self.get(f'?q=maiz&tab={key}').context['search_total']
@@ -134,21 +128,11 @@ class MotorDeBusquedaTests(BusquedaBase):
         crop = self.get('?q=maiz&tab=cultivos').context['search_items'][0]
         self.assertEqual(crop['primary_action']['label'], 'Ver calendario')
         self.assertIn(f'crop={self.maize.pk}', crop['primary_action']['url'])
-        problem = self.get('?q=maleza&tab=problemas').context['search_items'][0]
-        self.assertEqual(problem['primary_action']['label'], 'Ver productos')
-        self.assertIn(f'problema={self.weed.pk}', problem['primary_action']['url'])
         product = self.get('?q=urea&tab=insumos').context['search_items'][0]
         self.assertEqual(product['primary_action']['label'], 'Ver ficha')
         self.assertEqual(product['primary_action']['url'], f'/productos/{self.urea.pk}/')
         calc = [a for a in product['menu_actions'] if a['label'] == 'Calcular cuánto llevar']
         self.assertEqual(len(calc), 1)  # la urea tiene dosis verificada: se puede calcular
-
-    def test_problem_without_products_has_disabled_action_with_reason(self):
-        problem = self.get('?q=pulgon&tab=problemas').context['search_items'][0]
-        action = problem['primary_action']
-        self.assertTrue(action['disabled'])
-        self.assertTrue(action['reason'])
-        self.assertEqual(action['url'], '')
 
     def test_unverified_product_does_not_offer_calculation(self):
         product = self.get('?q=herbicida&tab=insumos').context['search_items'][0]
@@ -181,8 +165,6 @@ class FiltrosYPaginacionTests(BusquedaBase):
         self.assertEqual([i['title'] for i in response.context['search_items']], ['Herbicida para maíz'])
         response = self.get(f'?tab=insumos&cultivo={self.maize.pk}&categoria=fertilizer')
         self.assertEqual(response.context['search_total'], 0)
-        response = self.get(f'?tab=insumos&problema={self.weed.pk}')
-        self.assertEqual([i['title'] for i in response.context['search_items']], ['Herbicida para maíz'])
 
     def test_only_calculable_filter(self):
         titles = [i['title'] for i in self.get('?tab=insumos&calculables=1').context['search_items']]
@@ -191,14 +173,19 @@ class FiltrosYPaginacionTests(BusquedaBase):
     def test_crop_filter_in_all_limits_every_category(self):
         response = self.get(f'?q=&cultivo={self.maize.pk}')
         keys = {s['key'] for s in response.context['search_sections']}
-        self.assertEqual(keys, {'cultivos', 'semillas', 'insumos', 'problemas', 'predios'})
+        self.assertEqual(keys, {'cultivos', 'semillas', 'insumos', 'predios'})
         for section in response.context['search_sections']:
             for item in section['items']:
                 self.assertIn(str(self.maize.pk), item['crop_ids'], item['title'])
 
-    def test_problem_type_filter(self):
-        titles = [i['title'] for i in self.get('?tab=problemas&tipo=pest').context['search_items']]
-        self.assertEqual(titles, ['Pulgón del trigo'])
+    def test_ya_no_hay_pestana_ni_filtros_de_problemas(self):
+        claves = [tab['key'] for tab in self.get('?q=maiz').context['search_tabs']]
+        self.assertNotIn('problemas', claves)
+        self.assertIn('insumos', claves)
+        self.assertNotContains(self.get('?tab=insumos'), 'name="problema"')
+        # Un enlace antiguo con la pestaña o los filtros de problemas no rompe la página.
+        self.get('?tab=problemas&tipo=pest')
+        self.get('?tab=insumos&problema=1')
 
     def test_group_filter_for_crops(self):
         group = self.get('?tab=cultivos&grupo=cereales').context['search_items']
@@ -227,8 +214,8 @@ class FiltrosYPaginacionTests(BusquedaBase):
     def test_order_by_name_and_by_relevance(self):
         by_name = [i['title'] for i in self.get('?q=maiz&tab=semillas&orden=nombre').context['search_items']]
         self.assertEqual(by_name, sorted(by_name, key=fold))
-        relevant = self.get('?q=trigo&tab=problemas').context['search_items']
-        self.assertEqual(relevant[0]['title'], 'Pulgón del trigo')
+        relevant = self.get('?q=trigo&tab=cultivos').context['search_items']
+        self.assertEqual(relevant[0]['title'], 'Trigo')
 
 
 class ExploracionYVacioTests(BusquedaBase):

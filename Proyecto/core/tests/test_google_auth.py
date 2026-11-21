@@ -214,10 +214,11 @@ class GoogleOAuthTests(TestCase):
         self.assertNotIn('_auth_user_id', self.client.session)
         self.assertFalse(User.objects.filter(email='nueva@gmail.com').exists())  # aún no se crea nada
         pagina = self.client.get('/cuenta/google/completar/')
-        for texto in ('nueva@gmail.com', 'value="Camila Rojas"', 'name="telefono"', 'name="comuna"', 'name="rut"',
+        for texto in ('nueva@gmail.com', 'value="Camila Rojas"', 'name="telefono"', 'name="comuna"',
                       'name="acepta_politicas"', 'name="csrfmiddlewaretoken"', 'class="access-visual"'):
             self.assertContains(pagina, texto)
         self.assertNotContains(pagina, 'name="password1"')
+        self.assertNotContains(pagina, 'name="rut"')  # el RUT ya no se pide
         incompleto = self.client.post('/cuenta/google/completar/', {'nombre_completo': 'Camila Rojas'})
         self.assertContains(incompleto, 'class="errorlist"')
         self.assertFalse(User.objects.filter(email='nueva@gmail.com').exists())
@@ -226,7 +227,6 @@ class GoogleOAuthTests(TestCase):
             '/cuenta/google/completar/',
             {
                 'nombre_completo': 'Camila Rojas',
-                'rut': '12.345.678-5',
                 'telefono': '+56 9 1111 2222',
                 'comuna': 'Melipilla',
                 'acepta_politicas': 'on',
@@ -241,7 +241,7 @@ class GoogleOAuthTests(TestCase):
         self.assertFalse(user.has_usable_password())  # entra con Google; puede crear una clave al recuperar
         self.assertEqual((user.first_name, user.last_name), ('Camila', 'Rojas'))
         ficha = Agricultor.objects.get(user=user)
-        self.assertEqual((ficha.rut, ficha.comuna), ('12345678-5', 'Melipilla'))
+        self.assertEqual(ficha.comuna, 'Melipilla')
         self.assertTrue(AceptacionPoliticas.objects.filter(usuario=user).exists())
         self.assertNotIn(google_auth.CLAVE_REGISTRO, self.client.session)
 
@@ -250,16 +250,6 @@ class GoogleOAuthTests(TestCase):
         r, _, _ = self.volver()
         self.assertRedirects(r, '/', fetch_redirect_response=False)
         self.assertEqual(User.objects.filter(email__iexact='nueva@gmail.com').count(), 1)
-
-    def test_completar_valida_el_rut(self):
-        self.volver()
-        r = self.client.post(
-            '/cuenta/google/completar/',
-            {'nombre_completo': 'Camila Rojas', 'rut': '12.345.678-9', 'telefono': '+56 9 1111 2222',
-             'comuna': 'Melipilla', 'acepta_politicas': 'on'},
-        )
-        self.assertContains(r, 'El RUT no es válido')
-        self.assertFalse(User.objects.filter(email='nueva@gmail.com').exists())
 
     def test_completar_sin_venir_de_google_vuelve_al_login(self):
         r = self.client.get('/cuenta/google/completar/')

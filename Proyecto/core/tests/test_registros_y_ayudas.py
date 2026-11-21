@@ -11,7 +11,6 @@ from django.test import TestCase
 
 from core.models import (
     ActividadAgricola,
-    AyudaOculta,
     CalculoAgricola,
     Cultivo,
     Potrero,
@@ -181,19 +180,12 @@ class ArchivarTests(Base):
 
 
 class AyudasTests(Base):
-    def test_consejo_abierto_la_primera_vez_y_plegado_despues(self):
-        inicio = self.client.get('/').content.decode()
-        self.assertRegex(inicio, r'<details class="ayuda no-print" data-ayuda="bienvenida" open>')
-        self.assertIn('Bienvenido a AgroAsesor: así se trabaja', inicio)
-        respuesta = self.client.post('/ayuda/bienvenida/ocultar/', HTTP_ACCEPT='application/json')
-        self.assertEqual(respuesta.json(), {'ok': True})
-        self.client.post('/ayuda/bienvenida/ocultar/')  # repetir no duplica
-        self.assertEqual(AyudaOculta.objects.filter(usuario=self.user).count(), 1)
+    def test_el_consejo_llega_plegado_y_la_pagina_carga_ayudas_js(self):
         inicio = self.client.get('/').content.decode()
         self.assertRegex(inicio, r'<details class="ayuda no-print" data-ayuda="bienvenida">')
-        self.assertIn('Primeros pasos en AgroAsesor', inicio)  # sigue disponible como una línea
-        self.assertEqual(self.client.post('/ayuda/inventada/ocultar/').status_code, 404)
-        self.assertEqual(self.client.get('/ayuda/bienvenida/ocultar/').status_code, 405)
+        self.assertIn('Bienvenido a AgroAsesor: así se trabaja', inicio)
+        self.assertIn('Primeros pasos en AgroAsesor', inicio)  # la línea que queda cuando está plegado
+        self.assertIn('js/ayudas.js', inicio)
 
     def test_cada_seccion_tiene_su_consejo(self):
         paginas = {
@@ -203,15 +195,17 @@ class AyudasTests(Base):
         for url, clave in paginas.items():
             with self.subTest(url):
                 html = self.client.get(url).content.decode()
-                self.assertIn(f'data-ayuda="{clave}" open', html)
+                self.assertIn(f'data-ayuda="{clave}"', html)
                 self.assertIn('js/ayudas.js', html)
 
-    def test_perfil_permite_volver_a_mostrarlos(self):
-        AyudaOculta.objects.create(usuario=self.user, clave='predios')
+    def test_el_estado_de_los_consejos_ya_no_se_guarda_en_el_servidor(self):
+        self.assertEqual(self.client.post('/ayuda/bienvenida/ocultar/').status_code, 404)
+        self.assertEqual(self.client.post('/ayuda/mostrar/').status_code, 404)
+
+    def test_perfil_permite_volver_a_mostrarlos_desde_el_navegador(self):
         perfil = self.client.get('/cuenta/perfil/').content.decode()
-        self.assertIn('Mostrar de nuevo', perfil)
-        self.assertRedirects(self.client.post('/ayuda/mostrar/'), '/cuenta/perfil/', fetch_redirect_response=False)
-        self.assertFalse(AyudaOculta.objects.filter(usuario=self.user).exists())
+        self.assertIn('data-ayudas-estado', perfil)
+        self.assertIn('data-ayudas-mostrar', perfil)
 
 
 class TipografiaTests(TestCase):

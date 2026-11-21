@@ -302,23 +302,6 @@
                         <p>{{ item.resumen }}</p>
                         {% if item.potrero %}<small>Potrero relacionado: {{ item.potrero.nombre }}</small><br>{% endif %}
                         <small>Responsable: {{ item.usuario.get_full_name|default:item.usuario.username|default:'Usuario eliminado' }}</small>
-                        {% with anteriores=item.geometria_anterior|vertices_geograficos nuevas=item.geometria_nueva|vertices_geograficos %}
-                            {% if anteriores or nuevas %}
-                                <details class="history-geometry">
-                                    <summary>Ver coordenadas registradas</summary>
-                                    <div class="coords-grid">
-                                        {% if anteriores and nuevas %}
-                                            {% include "partials/coordenadas.html" with partes=anteriores titulo="Coordenadas anteriores" %}
-                                            {% include "partials/coordenadas.html" with partes=nuevas titulo="Coordenadas nuevas" %}
-                                        {% elif nuevas %}
-                                            {% include "partials/coordenadas.html" with partes=nuevas titulo="Coordenadas registradas" %}
-                                        {% else %}
-                                            {% include "partials/coordenadas.html" with partes=anteriores titulo="Coordenadas anteriores" %}
-                                        {% endif %}
-                                    </div>
-                                </details>
-                            {% endif %}
-                        {% endwith %}
                         {% if item.superficie_anterior_ha != None or item.superficie_nueva_ha != None %}<small>Superficie: {{ item.superficie_anterior_ha|default:'—' }} ha → {{ item.superficie_nueva_ha|default:'—' }} ha</small>{% endif %}
                     </div>
                 </li>

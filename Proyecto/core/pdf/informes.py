@@ -682,10 +682,6 @@ def informe_producto(producto, faltantes, autor=''):
     uso = [
         ('Cultivo asociado', producto.cultivo.nombre if producto.cultivo_id else 'General'),
         ('Zona', producto.zona.nombre if producto.zona_id else 'Sin restricción registrada'),
-        (
-            'Problemas relacionados',
-            '; '.join(f'{p.get_tipo_display()}: {p.nombre}' for p in producto.problemas.all()) or 'No registrados',
-        ),
     ]
     if producto.is_phyto:
         uso += [

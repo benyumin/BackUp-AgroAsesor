@@ -96,7 +96,6 @@
                             {{ product.zona.nombre|default:"Sin restricción registrada" }}
                         </dd>
                     </div>
-                    <div><dt>Problemas relacionados</dt><dd>{% for problem in product.problemas.all %}{{ problem.get_tipo_display }}: {{ problem.nombre }}{% if not forloop.last %}; {% endif %}{% empty %}—{% endfor %}</dd></div>
                     {% if product.is_phyto %}
                         <div>
                             <dt>Cultivos autorizados</dt>

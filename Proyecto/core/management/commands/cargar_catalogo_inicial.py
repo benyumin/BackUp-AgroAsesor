@@ -1,14 +1,15 @@
-"""Carga CONTROLADA del catálogo inicial desde data/*.csv (cultivos, zona, insumos…).
+"""Carga INICIAL del catálogo desde data/*.csv (cultivos, zona, insumos de referencia…).
 
 Uso:
-    python manage.py cargar_catalogo_inicial            # carga data/ solo si los CSV cambiaron
+    python manage.py cargar_catalogo_inicial            # carga data/ solo si la base aún no tiene cultivos
     python manage.py cargar_catalogo_inicial --simular  # muestra qué haría, sin guardar
-    python manage.py cargar_catalogo_inicial --forzar   # vuelve a pasar por los CSV aunque no hayan cambiado
+    python manage.py cargar_catalogo_inicial --forzar   # vuelve a pasar por los CSV aunque ya haya cultivos
 
 Cómo decide:
-- Calcula la huella SHA-256 de los CSV reconocidos. Si ya hay una carga registrada con esa misma huella
-  (tabla CargaCatalogo), no hace nada: reiniciar Django o el contenedor no vuelve a importar.
-- Si la huella es nueva, ejecuta ``importar_catalogo <carpeta> --aplicar`` (atómico) y registra la carga.
+- Si la base ya tiene cultivos, no hace nada: reiniciar Django o el contenedor no vuelve a importar y un registro
+  borrado a propósito no reaparece. (Antes lo decidía una huella de los CSV guardada en una tabla de control,
+  ``CargaCatalogo``; se eliminó para no mantener una tabla solo para eso.)
+- Si no tiene cultivos, o con ``--forzar``, ejecuta ``importar_catalogo <carpeta> --aplicar`` (atómico).
 
 Garantías (las da importar_catalogo sin --actualizar):
 - No duplica: un registro con el mismo nombre (y tipo, en insumos) se deja como está.
@@ -16,7 +17,6 @@ Garantías (las da importar_catalogo sin --actualizar):
 - No elimina nada.
 """
 
-import hashlib
 from io import StringIO
 from pathlib import Path
 
@@ -26,57 +26,37 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
 from core.management.commands.importar_catalogo import CSV_SECTIONS
-from core.models import CargaCatalogo
+from core.models import Cultivo
 
 
 def archivos_catalogo(carpeta):
     return sorted(p for p in Path(carpeta).glob('*.csv') if p.stem.casefold() in CSV_SECTIONS)
 
 
-def huella_catalogo(archivos):
-    """SHA-256 del nombre y el contenido de cada CSV (en orden): cambia si cambia cualquier archivo."""
-    h = hashlib.sha256()
-    for path in archivos:
-        h.update(path.name.encode('utf-8') + b'\0')
-        h.update(path.read_bytes().replace(b'\r\n', b'\n') + b'\0')
-    return h.hexdigest()
-
-
 class Command(BaseCommand):
-    help = 'Carga el catálogo inicial (data/*.csv) solo si cambió desde la última carga registrada.'
+    help = 'Carga el catálogo inicial (data/*.csv) solo si la base aún no tiene cultivos.'
 
     def add_arguments(self, parser):
         parser.add_argument('carpeta', nargs='?', default=str(Path(settings.BASE_DIR) / 'data'))
-        parser.add_argument('--forzar', action='store_true', help='Vuelve a importar aunque la huella no haya cambiado.')
+        parser.add_argument('--forzar', action='store_true', help='Vuelve a importar aunque la base ya tenga cultivos.')
         parser.add_argument('--simular', action='store_true', help='Valida y muestra el resultado sin guardar nada.')
 
     def handle(self, *args, **options):
         carpeta = Path(options['carpeta'])
         if not carpeta.is_dir():
             raise CommandError(f'No existe la carpeta {carpeta}.')
-        archivos = archivos_catalogo(carpeta)
-        if not archivos:
+        if not archivos_catalogo(carpeta):
             raise CommandError(f'La carpeta {carpeta} no contiene CSV reconocidos.')
-        huella = huella_catalogo(archivos)
-        ya_cargada = CargaCatalogo.objects.filter(huella=huella).exists()
-        if ya_cargada and not options['forzar']:
-            self.stdout.write(f'Catálogo inicial sin cambios (huella {huella[:12]}): no se importa nada.')
+        if Cultivo.objects.exists() and not options['forzar']:
+            self.stdout.write('El catálogo ya tiene datos: no se importa nada (usa --forzar para revisar los CSV de nuevo).')
             return
 
         salida = StringIO()
         argumentos = [str(carpeta)] + ([] if options['simular'] else ['--aplicar'])
         with transaction.atomic():
             call_command('importar_catalogo', *argumentos, stdout=salida)
-            if not options['simular']:
-                CargaCatalogo.objects.create(
-                    huella=huella,
-                    carpeta=carpeta.name,
-                    archivos=[p.name for p in archivos],
-                    resumen=salida.getvalue().strip(),
-                    forzada=bool(options['forzar'] and ya_cargada),
-                )
         self.stdout.write(salida.getvalue().rstrip())
         if options['simular']:
             self.stdout.write(self.style.WARNING('Simulación: no se guardó nada.'))
         else:
-            self.stdout.write(self.style.SUCCESS(f'Catálogo inicial cargado y registrado (huella {huella[:12]}).'))
+            self.stdout.write(self.style.SUCCESS('Catálogo inicial cargado.'))

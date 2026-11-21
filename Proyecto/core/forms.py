@@ -8,11 +8,9 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from .models import ActividadAgricola, Agricultor, Predio, Potrero, Cultivo, Zona, TemporadaCultivo
 from .validators import (
-    formatear_rut,
     formatear_telefono,
     normalizar_comuna,
     normalizar_nombre_completo,
-    normalizar_rut,
     normalizar_telefono,
     partir_nombre,
 )
@@ -41,13 +39,6 @@ class DatosAgricultorMixin(forms.Form):
         label='Comuna',
         widget=forms.TextInput(attrs={'autocomplete': 'address-level2', 'placeholder': 'Por ejemplo: Melipilla'}),
     )
-    rut = forms.CharField(
-        max_length=14,
-        required=False,
-        label='RUT (opcional)',
-        help_text='Solo si quieres registrarlo. Ejemplo: 12.345.678-5.',
-        widget=forms.TextInput(attrs={'autocomplete': 'off', 'inputmode': 'text', 'placeholder': '12.345.678-5'}),
-    )
 
     def clean_nombre_completo(self):
         return normalizar_nombre_completo(self.cleaned_data.get('nombre_completo'))
@@ -58,19 +49,6 @@ class DatosAgricultorMixin(forms.Form):
     def clean_comuna(self):
         return normalizar_comuna(self.cleaned_data.get('comuna'))
 
-    def _rut_a_excluir(self):
-        return None
-
-    def clean_rut(self):
-        rut = normalizar_rut(self.cleaned_data.get('rut'))
-        if rut:
-            repetidos = Agricultor.objects.filter(rut=rut)
-            excluir = self._rut_a_excluir()
-            if excluir is not None:
-                repetidos = repetidos.exclude(pk=excluir)
-            if repetidos.exists():
-                raise ValidationError('Este RUT ya está registrado en otra cuenta.')
-        return rut
 
 
 def _nombre_de_usuario_desde_correo(correo):
@@ -109,7 +87,6 @@ class RegistroForm(DatosAgricultorMixin, UserCreationForm):
         'email',
         'telefono',
         'comuna',
-        'rut',
         'password1',
         'password2',
         'acepta_politicas',
@@ -157,11 +134,12 @@ class RegistroForm(DatosAgricultorMixin, UserCreationForm):
 
 
 def crear_ficha_agricultor(user, datos):
-    """Ficha de agricultor de una cuenta nueva (registro normal o con Google)."""
+    """Ficha de agricultor de una cuenta nueva (registro normal o con Google).
+
+    El nombre no se guarda aquí: vive en la cuenta (``first_name`` y ``last_name``), que el llamador ya completó.
+    """
     return Agricultor.objects.create(
         user=user,
-        nombre=datos['nombre_completo'],
-        rut=datos.get('rut') or None,
         telefono=datos['telefono'],
         comuna=datos['comuna'],
     )
@@ -176,7 +154,7 @@ class RegistroGoogleForm(DatosAgricultorMixin):
 
     acepta_politicas = RegistroForm.base_fields['acepta_politicas']
 
-    field_order = ['nombre_completo', 'rut', 'telefono', 'comuna', 'acepta_politicas']
+    field_order = ['nombre_completo', 'telefono', 'comuna', 'acepta_politicas']
 
     def __init__(self, *args, correo, **kwargs):
         self.correo = correo.strip().lower()
@@ -208,32 +186,26 @@ class RegistroGoogleForm(DatosAgricultorMixin):
 class PerfilForm(DatosAgricultorMixin):
     """Edición de los datos personales de la cuenta (y alta de la ficha para cuentas antiguas)."""
 
-    field_order = ['nombre_completo', 'telefono', 'comuna', 'rut']
+    field_order = ['nombre_completo', 'telefono', 'comuna']
 
     def __init__(self, *args, user, **kwargs):
         self.user = user
         self.ficha = Agricultor.objects.filter(user=user).first()
-        if self.ficha is not None and 'initial' not in kwargs:
-            kwargs['initial'] = {
-                'nombre_completo': self.ficha.nombre,
-                'telefono': formatear_telefono(self.ficha.telefono),
-                'comuna': self.ficha.comuna,
-                'rut': formatear_rut(self.ficha.rut) if self.ficha.rut else '',
-            }
-        elif self.ficha is None and 'initial' not in kwargs:
+        if 'initial' not in kwargs:
+            # El nombre sale de la cuenta (first_name + last_name); teléfono y comuna, de la ficha si ya existe.
             kwargs['initial'] = {'nombre_completo': user.get_full_name()}
+            if self.ficha is not None:
+                kwargs['initial'].update(
+                    telefono=formatear_telefono(self.ficha.telefono),
+                    comuna=self.ficha.comuna,
+                )
         super().__init__(*args, **kwargs)
-
-    def _rut_a_excluir(self):
-        return self.ficha.pk if self.ficha is not None else None
 
     def save(self):
         datos = self.cleaned_data
         ficha = self.ficha or Agricultor(user=self.user)
-        ficha.nombre = datos['nombre_completo']
         ficha.telefono = datos['telefono']
         ficha.comuna = datos['comuna']
-        ficha.rut = datos.get('rut') or None
         ficha.save()
         self.user.first_name, self.user.last_name = partir_nombre(datos['nombre_completo'])
         self.user.save(update_fields=['first_name', 'last_name'])

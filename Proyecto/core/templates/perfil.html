@@ -69,15 +69,6 @@
                             {% if form.nombre_completo.help_text %}<small class="help">{{ form.nombre_completo.help_text }}</small>{% endif %}
                             {% for error in form.nombre_completo.errors %}<small class="error" role="alert">{{ error }}</small>{% endfor %}
                         </div>
-                        <div class="field{% if form.rut.errors %} has-error{% endif %}">
-                            <label for="{{ form.rut.id_for_label }}">{{ form.rut.label }}{% if form.rut.field.required %} <span class="req" aria-hidden="true">*</span>{% endif %}</label>
-                            <div class="perfil-input">
-                                <i class="perfil-input-ico" data-lucide="id-card" aria-hidden="true"></i>
-                                {{ form.rut }}
-                            </div>
-                            {% if form.rut.help_text %}<small class="help">{{ form.rut.help_text }}</small>{% endif %}
-                            {% for error in form.rut.errors %}<small class="error" role="alert">{{ error }}</small>{% endfor %}
-                        </div>
                     </div>
 
                     <div class="perfil-section-head perfil-section-next">
@@ -151,10 +142,10 @@
                         <span class="perfil-ico"><i data-lucide="lightbulb" aria-hidden="true"></i></span>
                         <div>
                             <dt>Consejos de ayuda</dt>
-                            <dd>{% if ayudas_ocultas %}Plegaste {{ ayudas_ocultas|length }} consejo{{ ayudas_ocultas|length|pluralize }}{% else %}Se muestran en cada sección{% endif %}</dd>
+                            <dd data-ayudas-estado>Se muestran en cada sección</dd>
                             <small>Explican cómo usar cada sección. Puedes abrirlos cuando quieras desde la línea «¿Cómo…?».</small>
                         </div>
-                        {% if ayudas_ocultas %}<form method="post" action="{% url 'ayudas_mostrar' %}">{% csrf_token %}<button class="btn-ghost-agro btn-sm" type="submit">Mostrar de nuevo</button></form>{% endif %}
+                        <button class="btn-ghost-agro btn-sm" type="button" data-ayudas-mostrar style="display:none">Mostrar de nuevo</button>
                     </div>
                 </dl>
             </aside>

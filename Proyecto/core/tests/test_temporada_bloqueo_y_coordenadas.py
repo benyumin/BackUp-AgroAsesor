@@ -1,4 +1,4 @@
-"""«Completar planificación» sin el error de PostgreSQL y coordenadas legibles en el historial del predio.
+"""«Completar planificación» sin el error de PostgreSQL y un historial del predio sin coordenadas guardadas.
 
 PostgreSQL rechaza ``SELECT … LEFT JOIN cultivo … FOR UPDATE`` («FOR UPDATE cannot be applied to the nullable side
 of an outer join»). SQLite no emite FOR UPDATE, así que aquí se comprueba CÓMO se piden los bloqueos: ninguno al
@@ -12,7 +12,6 @@ from django.db.models import QuerySet
 from django.test import TestCase
 
 from core.models import Cultivo, Potrero, Predio, PredioHistorial, TemporadaCultivo
-from core.templatetags.agro_assets import vertices_geograficos
 
 User = get_user_model()
 POLIGONO = {
@@ -21,14 +20,6 @@ POLIGONO = {
         [[-71.260527, -33.710116], [-71.258317, -33.710068], [-71.258306, -33.710633], [-71.260462, -33.710651],
          [-71.260527, -33.710116]]
     ],
-}
-POLIGONO_NUEVO = {
-    'type': 'Feature',
-    'properties': {},
-    'geometry': {
-        'type': 'Polygon',
-        'coordinates': [[[-71.26, -33.71], [-71.25, -33.71], [-71.25, -33.72], [-71.26, -33.71]]],
-    },
 }
 
 
@@ -124,49 +115,26 @@ class BloqueosTemporadaTests(Base):
         self.assertEqual(fuente.count("select_for_update(of=('self',)).select_related('predio', 'cultivo')"), 2)
 
 
-class CoordenadasHistorialTests(Base):
-    def test_el_filtro_entrega_latitud_y_longitud_sin_repetir_el_cierre(self):
-        (vertices,) = vertices_geograficos(POLIGONO)
-        self.assertEqual(len(vertices), 4)
-        self.assertEqual(vertices[0], {'numero': 1, 'latitud': '-33.710116', 'longitud': '-71.260527'})
-        self.assertEqual(vertices[3], {'numero': 4, 'latitud': '-33.710651', 'longitud': '-71.260462'})
-        (del_feature,) = vertices_geograficos(POLIGONO_NUEVO)
-        self.assertEqual(len(del_feature), 3)
-        self.assertEqual(vertices_geograficos(None), [])
-        self.assertEqual(vertices_geograficos({}), [])
-        self.assertEqual(vertices_geograficos('texto'), [])
-        multi = {'type': 'MultiPolygon', 'coordinates': [POLIGONO['coordinates'], POLIGONO['coordinates']]}
-        self.assertEqual(len(vertices_geograficos(multi)), 2)
-
-    def test_el_historial_muestra_tablas_de_coordenadas_y_no_la_estructura_geojson(self):
+class HistorialSinCoordenadasTests(Base):
+    def test_el_historial_muestra_el_resumen_y_la_superficie_sin_tablas_de_coordenadas(self):
         PredioHistorial.objects.create(
             predio=self.predio,
             usuario=self.user,
-            accion=PredioHistorial.Accion.choices[0][0],
-            resumen='Se modificó el contorno',
-            geometria_anterior=POLIGONO,
-            geometria_nueva=POLIGONO_NUEVO,
-        )
-        PredioHistorial.objects.create(
-            predio=self.predio,
-            usuario=self.user,
-            accion=PredioHistorial.Accion.choices[0][0],
-            resumen='Se registró el predio',
-            geometria_nueva=POLIGONO,
+            accion=PredioHistorial.Accion.PERIMETRO,
+            resumen='Perímetro actualizado; superficie: 1 ha → 2 ha.',
+            superficie_anterior_ha=1,
+            superficie_nueva_ha=2,
         )
         html = self.client.get(f'/predios/{self.predio.pk}/').content.decode()
         panel = html[html.index('id="predio-history"') : html.index('<script id="maps-config"')]
-        self.assertNotIn('Ver geometría versionada', panel)
-        self.assertEqual(panel.count('Ver coordenadas registradas'), 2)
-        for tecnico in ('coordinates', 'Polygon', 'Feature', 'properties', "'type'", '<pre>'):
-            self.assertNotIn(tecnico, panel)
-        for titulo in ('Coordenadas anteriores', 'Coordenadas nuevas', 'Coordenadas registradas'):
-            self.assertIn(f'<caption>{titulo}</caption>', panel)
-        self.assertIn('<th scope="col">Latitud</th>', panel)
-        self.assertIn('<th scope="col">Longitud</th>', panel)
-        # Valores reales guardados, con latitud y longitud en su columna (GeoJSON guarda longitud primero).
-        fila = '<td>1</td>\n                    <td>-33.710116</td>\n                    <td>-71.260527</td>'
-        self.assertIn(fila, panel)
+        self.assertIn('Perímetro actualizado; superficie: 1 ha → 2 ha.', panel)
+        self.assertIn('Superficie:', panel)
+        for texto in ('Ver coordenadas registradas', 'Coordenadas anteriores', '<table', 'coordinates'):
+            self.assertNotIn(texto, panel)
         self.predio.refresh_from_db()
-        self.assertEqual(self.predio.geojson, POLIGONO)  # los datos originales no cambian
-        self.assertEqual(PredioHistorial.objects.filter(geometria_anterior=POLIGONO).count(), 1)
+        self.assertEqual(self.predio.geojson, POLIGONO)  # el mapa del predio no cambia
+
+    def test_la_bitacora_ya_no_guarda_geometrias(self):
+        nombres = {campo.name for campo in PredioHistorial._meta.get_fields()}
+        self.assertNotIn('geometria_anterior', nombres)
+        self.assertNotIn('geometria_nueva', nombres)

@@ -9,9 +9,13 @@ fi
 # Crea/actualiza las tablas (idempotente).
 python manage.py migrate --noinput
 
+# Borra las sesiones de inicio de sesión ya vencidas (sin esto la tabla django_session solo crece).
+# No es crítico: si falla, la aplicación igual arranca y el aviso queda en el log.
+python manage.py clearsessions || echo "AVISO: no se pudieron limpiar las sesiones vencidas."
+
 # Catálogo inicial desde data/*.csv (cultivos, zona Melipilla e insumos de referencia, con sus categorías).
-# Carga CONTROLADA: solo importa si los CSV cambiaron desde la última carga registrada (tabla CargaCatalogo);
-# un reinicio normal no importa nada. Nunca duplica, sobrescribe ni borra registros existentes.
+# Carga INICIAL: solo importa si la base aún no tiene cultivos; un reinicio normal no importa nada y un registro
+# borrado a propósito no reaparece. Nunca duplica, sobrescribe ni borra registros existentes.
 # Si falla, la aplicación igual arranca y el aviso queda en el log.
 python manage.py cargar_catalogo_inicial data || echo "AVISO: no se pudo cargar el catálogo inicial desde data/ (revisa los CSV)."
 

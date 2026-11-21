@@ -9,7 +9,6 @@ from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils.cache import add_never_cache_headers
 
-from ..ayudas import claves_ocultas
 from ..catalog import (
     catalog_payload,
     crop_picker_data,
@@ -284,7 +283,6 @@ def render_page(request, template, current, extra=None):
         'query': request.GET.get('q', ''),
         'catalog': extra.get('catalog') or catalog_payload(),
         'farm_data': extra.get('farm_data') or farm_payload(request.user),
-        'ayudas_ocultas': claves_ocultas(request.user),
         'pending_activities': ActividadAgricola.objects.filter(
             EN_POTREROS_VIGENTES,
             usuario=request.user,

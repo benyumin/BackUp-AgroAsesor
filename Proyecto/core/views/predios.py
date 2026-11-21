@@ -270,7 +270,6 @@ def predio_form(request, pk=None):
                     usuario=request.user,
                     accion=PredioHistorial.Accion.CREADO,
                     resumen=f'Predio creado con una superficie de {predio.superficie_ha} ha.',
-                    geometria_nueva=predio.geojson,
                     superficie_nueva_ha=predio.superficie_ha,
                 )
             else:
@@ -303,8 +302,6 @@ def predio_form(request, pk=None):
                             f'Perímetro actualizado; superficie: {original["superficie_ha"]} ha '
                             f'→ {predio.superficie_ha} ha.'
                         ),
-                        geometria_anterior=original['geojson'],
-                        geometria_nueva=predio.geojson,
                         superficie_anterior_ha=original['superficie_ha'],
                         superficie_nueva_ha=predio.superficie_ha,
                     )
@@ -325,8 +322,6 @@ def predio_form(request, pk=None):
                         usuario=request.user,
                         accion=PredioHistorial.Accion.ACTUALIZADO,
                         resumen='Se actualizaron los datos del predio: ' + '; '.join(metadata_changes) + '.',
-                        geometria_anterior=original['geojson'] if geometry_changed else None,
-                        geometria_nueva=predio.geojson if geometry_changed else None,
                         superficie_anterior_ha=original['superficie_ha'] if area_changed else None,
                         superficie_nueva_ha=predio.superficie_ha if area_changed else None,
                     )
@@ -394,7 +389,6 @@ def predio_usar_completo(request, pk):
         usuario=request.user,
         accion=PredioHistorial.Accion.POTRERO_CREADO,
         resumen=f'Se creó el potrero «{potrero.nombre}» usando todo el predio ({potrero.superficie_ha} ha).',
-        geometria_nueva=potrero.geojson,
         superficie_nueva_ha=potrero.superficie_ha,
     )
     messages.success(request, f'Listo: «{potrero.nombre}» usa todo tu predio. Ahora indica qué cultivas aquí.')
@@ -495,7 +489,6 @@ def potrero_form(request, predio_pk, pk=None):
                 usuario=request.user,
                 accion=PredioHistorial.Accion.POTRERO_CREADO,
                 resumen=f'Se creó el potrero «{potrero.nombre}» con {potrero.superficie_ha} ha.',
-                geometria_nueva=potrero.geojson,
                 superficie_nueva_ha=potrero.superficie_ha,
             )
         else:
@@ -535,8 +528,6 @@ def potrero_form(request, predio_pk, pk=None):
                     usuario=request.user,
                     accion=PredioHistorial.Accion.POTRERO_ACTUALIZADO,
                     resumen=f'Se modificó el potrero «{original["nombre"]}»: ' + '; '.join(changes) + '.',
-                    geometria_anterior=original['geojson'] if geometry_changed else None,
-                    geometria_nueva=current['geojson'] if geometry_changed else None,
                     superficie_anterior_ha=original['superficie_ha'],
                     superficie_nueva_ha=current['superficie_ha'],
                 )

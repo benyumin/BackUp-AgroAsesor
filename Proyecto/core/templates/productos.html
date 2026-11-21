@@ -40,8 +40,6 @@
         {% if product_filters.categoria == key %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
             <label class="field"><span>Cultivo</span><select name="cultivo"><option value="">Todos</option>{% for crop in product_crops %}<option value="{{ crop.pk }}"
         {% if product_filters.cultivo == crop.pk|stringformat:'s' %} selected{% endif %}>{{ crop.nombre }}</option>{% endfor %}</select></label>
-            <label class="field"><span>Problema agrícola</span><select name="problema"><option value="">Todos</option>{% for problem in product_problems %}<option value="{{ problem.pk }}"
-        {% if product_filters.problema == problem.pk|stringformat:'s' %} selected{% endif %}>{{ problem.get_tipo_display }} · {{ problem.nombre }}</option>{% endfor %}</select></label>
             <label class="field"><span>Estado de verificación</span><select name="estado"><option value="">Todos</option>{% for value, label in product_statuses %}<option value="{{ value }}"
         {% if product_filters.estado == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
             <label class="field">

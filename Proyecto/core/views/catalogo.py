@@ -18,7 +18,6 @@ from ..catalog import (
 from ..models import (
     Cultivo,
     Insumo,
-    ProblemaAgricola,
 )
 from ..pdf import respuesta_pdf
 from ..pdf.informes import informe_producto
@@ -58,9 +57,7 @@ ACTIVITY_TYPE_BY_CATEGORY = {
 
 
 def _product_queryset():
-    return (
-        Insumo.objects.select_related('tipo', 'cultivo', 'zona').prefetch_related('problemas').order_by('nombre', 'pk')
-    )
+    return Insumo.objects.select_related('tipo', 'cultivo', 'zona').order_by('nombre', 'pk')
 
 
 def _decorate_product(product):
@@ -88,7 +85,6 @@ def productos(request):
         'categoria': request.GET.get('categoria', ''),
         'cultivo': request.GET.get('cultivo', ''),
         'estado': request.GET.get('estado', ''),
-        'problema': request.GET.get('problema', ''),
         'solo_calculables': request.GET.get('solo_calculables') == '1',
         'orden': request.GET.get('orden', 'nombre'),
     }
@@ -117,10 +113,6 @@ def productos(request):
         result = [item for item in result if item.cultivo_id is None or str(item.cultivo_id) == filters['cultivo']]
     if filters['estado'] in PRODUCT_STATUS_LABELS:
         result = [item for item in result if item.estado_verificacion == filters['estado']]
-    if filters['problema'].isdigit():
-        result = [
-            item for item in result if any(str(problem.pk) == filters['problema'] for problem in item.problemas.all())
-        ]
     if filters['solo_calculables']:
         result = [item for item in result if item.calculable]
     if filters['orden'] == 'categoria':
@@ -142,7 +134,6 @@ def productos(request):
             'product_filters': filters,
             'product_query': query.urlencode(),
             'product_crops': Cultivo.objects.filter(activo=True).order_by('nombre'),
-            'product_problems': ProblemaAgricola.objects.filter(activo=True).order_by('nombre'),
             'product_statuses': Insumo.ESTADO_VERIFICACION,
             'category_labels': CATEGORY_LABELS,
         },

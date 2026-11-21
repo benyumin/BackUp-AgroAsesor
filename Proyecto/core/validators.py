@@ -1,4 +1,4 @@
-"""Validaciones y normalización de datos personales chilenos (nombre, teléfono, comuna y RUT).
+"""Validaciones y normalización de datos personales chilenos (nombre, teléfono y comuna).
 
 Se usan en el registro y en el perfil del agricultor. Todas lanzan ``ValidationError`` con mensajes
 pensados para el agricultor, y devuelven el valor ya normalizado para guardarlo en la base.
@@ -82,37 +82,3 @@ def formatear_telefono(valor):
     if valor and re.fullmatch(r'\+56\d{9}', valor):
         return f'+56 {valor[3]} {valor[4:8]} {valor[8:]}'
     return valor or ''
-
-
-def digito_verificador(cuerpo):
-    suma, factor = 0, 2
-    for cifra in reversed(str(cuerpo)):
-        suma += int(cifra) * factor
-        factor = 2 if factor == 7 else factor + 1
-    resto = 11 - suma % 11
-    return '0' if resto == 11 else 'K' if resto == 10 else str(resto)
-
-
-def normalizar_rut(valor):
-    """RUT con dígito verificador (módulo 11). Devuelve «12345678-5» sin puntos; acepta «12.345.678-5»."""
-    texto = (valor or '').strip()
-    if not texto:
-        return None
-    if not re.fullmatch(r'[0-9.\-kK ]+', texto):
-        raise ValidationError('El RUT solo puede tener números, puntos, guion y la letra K.')
-    limpio = re.sub(r'[.\s]', '', texto).upper()
-    coincide = re.fullmatch(r'(\d{7,8})-?([0-9K])', limpio)
-    if not coincide:
-        raise ValidationError('Escribe el RUT completo con su dígito verificador, por ejemplo 12.345.678-5.')
-    cuerpo, dv = coincide.groups()
-    if digito_verificador(cuerpo) != dv:
-        raise ValidationError('El RUT no es válido: revisa el dígito verificador.')
-    return f'{cuerpo}-{dv}'
-
-
-def formatear_rut(valor):
-    """12345678-5 → «12.345.678-5» (solo para mostrar)."""
-    if not valor or '-' not in valor:
-        return valor or ''
-    cuerpo, dv = valor.split('-')
-    return f'{int(cuerpo):,}'.replace(',', '.') + f'-{dv}'

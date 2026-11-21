@@ -6,7 +6,6 @@ from .models import (
     TipoInsumo,
     Zona,
     ReferenciaAgronomica,
-    ProblemaAgricola,
     Potrero,
     TemporadaCultivo,
 )
@@ -195,18 +194,6 @@ def _num(value):
     return float(value)
 
 
-def _product_problems(insumo):
-    names = []
-    for problem in insumo.problemas.all():
-        if not problem.activo:
-            continue
-        crop_ids = {crop.pk for crop in problem.cultivos.all()}
-        if crop_ids and insumo.cultivo_id and insumo.cultivo_id not in crop_ids:
-            continue
-        names.append(problem.nombre)
-    return names
-
-
 CATEGORY_KEYS = {
     'semilla': 'seed',
     'semillas': 'seed',
@@ -261,13 +248,8 @@ def crop_varieties():
 
 def catalog_payload():
     cultivos = list(Cultivo.objects.order_by('nombre'))
-    insumos = list(
-        Insumo.objects.select_related('tipo', 'cultivo', 'zona')
-        .prefetch_related('problemas__cultivos')
-        .order_by('nombre')
-    )
+    insumos = list(Insumo.objects.select_related('tipo', 'cultivo', 'zona').order_by('nombre'))
     zonas = list(Zona.objects.order_by('nombre'))
-    problems = list(ProblemaAgricola.objects.filter(activo=True).prefetch_related('cultivos'))
     regional_yields = [
         reference
         for reference in ReferenciaAgronomica.objects.filter(
@@ -297,7 +279,6 @@ def catalog_payload():
             'fertilizers': categories.count('fertilizer'),
             'otherInputs': len(categories) - categories.count('seed') - categories.count('fertilizer'),
             'products': len(insumos),
-            'problems': len(problems),
             'inventoryTracked': False,
         },
         'categoryLabels': CATEGORY_LABELS,
@@ -335,7 +316,6 @@ def catalog_payload():
                 'categoryLabel': CATEGORY_LABELS[category_key(insumo.tipo.nombre)],
                 'cropId': str(insumo.cultivo_id) if insumo.cultivo_id else '',
                 'zoneId': str(insumo.zona_id) if insumo.zona_id else '',
-                'problemIds': [str(problem.pk) for problem in insumo.problemas.all() if problem.activo],
                 'applicationMode': insumo.modo_aplicacion,
                 'crop': insumo.cultivo.nombre if insumo.cultivo else '',
                 'type': insumo.tipo.nombre,
@@ -345,8 +325,6 @@ def catalog_payload():
                 'maxDoseUnit': insumo.unidad_dosis_maxima,
                 'validFrom': insumo.vigencia_desde.isoformat() if insumo.vigencia_desde else '',
                 'validUntil': insumo.vigencia_hasta.isoformat() if insumo.vigencia_hasta else '',
-                'problems': _product_problems(insumo),
-                'problem': next(iter(_product_problems(insumo)), ''),
                 'zone': insumo.zona.nombre if insumo.zona else '',
                 'description': insumo.descripcion,
                 'manufacturer': insumo.fabricante,
@@ -429,20 +407,6 @@ def catalog_payload():
                 'verifiedAt': reference.fecha_consulta_fuente.isoformat(),
             }
             for reference in regional_yields
-        ],
-        'problemas': [
-            {
-                'id': str(problem.pk),
-                'name': problem.nombre,
-                'type': problem.tipo,
-                'typeLabel': problem.get_tipo_display(),
-                'symptoms': problem.sintomas,
-                'sourceName': problem.fuente_nombre,
-                'sourceUrl': problem.fuente_url,
-                'description': problem.descripcion,
-                'cropIds': [str(crop.pk) for crop in problem.cultivos.all()],
-            }
-            for problem in problems
         ],
     }
 

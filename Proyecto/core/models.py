@@ -194,51 +194,8 @@ class ReferenciaAgronomica(models.Model):
         return f'{self.cultivo} · {self.zona}{context}'
 
 
-class ConfiguracionAgronomica(models.Model):
-    margen_ventana_dias = models.PositiveSmallIntegerField(default=15)
-
-    class Meta:
-        verbose_name = 'Configuración agronómica'
-        verbose_name_plural = 'Configuración agronómica'
-
-    def save(self, *args, **kwargs):
-        self.pk = 1
-        return super().save(*args, **kwargs)
-
-    def __str__(self):
-        return f'Margen de referencia: {self.margen_ventana_dias} días'
-
-
 class TipoInsumo(models.Model):
     nombre = models.CharField(max_length=100, unique=True)
-
-    def __str__(self):
-        return self.nombre
-
-
-class ProblemaAgricola(models.Model):
-    class Tipo(models.TextChoices):
-        PLAGA = 'pest', 'Plaga'
-        ENFERMEDAD = 'disease', 'Enfermedad'
-        MALEZA = 'weed', 'Maleza'
-        NUTRICIONAL = 'nutrition', 'Problema nutricional'
-        OTRO = 'other', 'Otro problema agrícola'
-
-    nombre = models.CharField(max_length=150, unique=True)
-    tipo = models.CharField(max_length=12, choices=Tipo.choices, default=Tipo.OTRO)
-    descripcion = models.TextField(blank=True)
-    sintomas = models.TextField(blank=True)
-    fuente_nombre = models.CharField(max_length=255, blank=True)
-    fuente_url = models.URLField(blank=True)
-    cultivos = models.ManyToManyField(
-        Cultivo,
-        blank=True,
-        related_name='problemas_agricolas',
-    )
-    activo = models.BooleanField(default=True)
-
-    class Meta:
-        ordering = ['nombre', 'pk']
 
     def __str__(self):
         return self.nombre
@@ -254,11 +211,6 @@ class Insumo(models.Model):
     tipo = models.ForeignKey(TipoInsumo, on_delete=models.PROTECT, related_name='insumos')
     cultivo = models.ForeignKey(Cultivo, on_delete=models.SET_NULL, null=True, blank=True, related_name='insumos')
     zona = models.ForeignKey(Zona, on_delete=models.SET_NULL, null=True, blank=True, related_name='insumos')
-    problemas = models.ManyToManyField(
-        ProblemaAgricola,
-        blank=True,
-        related_name='insumos',
-    )
     nombre = models.CharField(max_length=150)
     descripcion = models.TextField(blank=True)
     dosis_hectarea = models.DecimalField(max_digits=10, decimal_places=3, null=True, blank=True)
@@ -434,15 +386,13 @@ class Insumo(models.Model):
 
 
 class Agricultor(models.Model):
+    # El nombre no se guarda aquí: vive en la cuenta (first_name y last_name). Aquí solo van los datos que Django no tiene.
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='agricultor')
-    nombre = models.CharField(max_length=150)
-    # Opcional: si se informa, se valida (módulo 11) y es único. NULL permite varias cuentas sin RUT.
-    rut = models.CharField(max_length=12, unique=True, null=True, blank=True)
     telefono = models.CharField(max_length=20)
     comuna = models.CharField(max_length=100)
 
     def __str__(self):
-        return self.nombre
+        return self.user.get_full_name() or self.user.get_username()
 
 
 class AceptacionPoliticas(models.Model):
@@ -589,8 +539,6 @@ class PredioHistorial(models.Model):
     accion = models.CharField(max_length=32, choices=Accion.choices)
     resumen = models.TextField()
     creado = models.DateTimeField(auto_now_add=True)
-    geometria_anterior = models.JSONField(null=True, blank=True)
-    geometria_nueva = models.JSONField(null=True, blank=True)
     superficie_anterior_ha = models.DecimalField(max_digits=12, decimal_places=4, null=True, blank=True)
     superficie_nueva_ha = models.DecimalField(max_digits=12, decimal_places=4, null=True, blank=True)
     objects = PredioHistorialQuerySet.as_manager()
@@ -983,95 +931,3 @@ class ActividadAgricola(models.Model):
 
     def __str__(self):
         return f'{self.nombre} · {self.potrero}'
-
-
-class UsoInsumoCultivo(models.Model):
-    """Registro documentado: «este insumo se usa para este problema en este cultivo».
-
-    Es la única fuente de verdad para recomendar un insumo frente a un problema de un cultivo:
-    no se infiere desde relaciones sueltas entre insumo, problema y cultivo.
-    """
-
-    cultivo = models.ForeignKey(Cultivo, on_delete=models.CASCADE, related_name='usos_insumo')
-    problema = models.ForeignKey(ProblemaAgricola, on_delete=models.CASCADE, related_name='usos_insumo')
-    insumo = models.ForeignKey(Insumo, on_delete=models.CASCADE, related_name='usos_cultivo')
-    fuente_nombre = models.CharField(
-        'fuente',
-        max_length=255,
-        help_text='Documento o institución que respalda este uso (SAG, INIA, ODEPA, etiqueta del fabricante…).',
-    )
-    fuente_url = models.URLField('enlace de la fuente', blank=True)
-    fecha_verificacion = models.DateField('fecha de verificación')
-    activo = models.BooleanField(
-        'vigente', default=True, help_text='Desmárcalo para dejar de recomendar este uso sin borrar el historial.'
-    )
-    creado = models.DateTimeField(auto_now_add=True)
-    actualizado = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        ordering = ['cultivo__nombre', 'problema__nombre', 'insumo__nombre']
-        verbose_name = 'uso de insumo por cultivo y problema'
-        verbose_name_plural = 'usos de insumos por cultivo y problema'
-        constraints = [
-            models.UniqueConstraint(fields=['cultivo', 'problema', 'insumo'], name='uso_insumo_cultivo_problema_unico'),
-        ]
-
-    def clean(self):
-        errors = {}
-        if self.fecha_verificacion and self.fecha_verificacion > timezone.localdate():
-            errors['fecha_verificacion'] = 'La fecha de verificación no puede ser futura.'
-        if self.fuente_nombre is not None and not self.fuente_nombre.strip():
-            errors['fuente_nombre'] = 'Indica la fuente que respalda este uso.'
-        if errors:
-            raise ValidationError(errors)
-
-    @property
-    def recomendable(self):
-        """Solo se recomienda si el uso, el insumo, el cultivo y el problema están vigentes."""
-        return bool(
-            self.activo
-            and self.insumo.vigente_en
-            and self.insumo.estado_verificacion not in {'restricted', 'cancelled'}
-            and self.cultivo.activo
-            and self.problema.activo
-        )
-
-    def __str__(self):
-        return f'{self.insumo} → {self.problema} en {self.cultivo}'
-
-
-class CargaCatalogo(models.Model):
-    """Registro de cada carga controlada del catálogo inicial (data/*.csv).
-
-    Guarda la huella SHA-256 de los CSV cargados: si los archivos no cambian, la carga no se repite al reiniciar.
-    Solo se agrega un registro; nunca borra ni modifica datos del catálogo ni de los agricultores.
-    """
-
-    huella = models.CharField(max_length=64, db_index=True)
-    carpeta = models.CharField(max_length=255)
-    archivos = models.JSONField(default=list)
-    resumen = models.TextField(blank=True)
-    forzada = models.BooleanField(default=False)
-    aplicada = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        ordering = ['-aplicada', '-pk']
-        verbose_name = 'carga del catálogo inicial'
-        verbose_name_plural = 'cargas del catálogo inicial'
-
-    def __str__(self):
-        return f'{self.carpeta} · {self.huella[:12]} · {self.aplicada:%d/%m/%Y %H:%M}'
-
-
-class AyudaOculta(models.Model):
-    """Consejo de ayuda que la persona ya leyó y plegó (core/ayudas.py). Solo guarda la clave del consejo."""
-
-    usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='ayudas_ocultas')
-    clave = models.CharField(max_length=40)
-    creado = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        constraints = [models.UniqueConstraint(fields=['usuario', 'clave'], name='ayuda_oculta_unica')]
-
-    def __str__(self):
-        return f'{self.usuario} · {self.clave}'

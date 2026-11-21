@@ -18,13 +18,12 @@ from django.utils.formats import number_format
 from django.utils.text import slugify
 from django.views.decorators.http import require_POST
 
-from ..agronomy import evaluate_harvest_date, evaluate_sowing_date, find_reference
+from ..agronomy import MARGEN_VENTANA_DIAS, evaluate_harvest_date, evaluate_sowing_date, find_reference
 from ..catalog import (
     default_zone,
 )
 from ..models import (
     ActividadAgricola,
-    ConfiguracionAgronomica,
     Cultivo,
     Potrero,
     Predio,
@@ -415,19 +414,18 @@ def evaluate_calendar_date(request):
         variety,
         year=(sowing_date or proposal).year,
     )
-    configuration = ConfiguracionAgronomica.objects.get_or_create(pk=1)[0]
     if evaluation == 'sowing':
         result = evaluate_sowing_date(
             proposal,
             reference,
-            configuration.margen_ventana_dias,
+            MARGEN_VENTANA_DIAS,
         )
     else:
         result = evaluate_harvest_date(
             sowing_date,
             proposal,
             reference,
-            configuration.margen_ventana_dias,
+            MARGEN_VENTANA_DIAS,
         )
     result.update(
         {
@@ -443,7 +441,7 @@ def evaluate_calendar_date(request):
                 if reference and reference.tiene_fuente_verificada
                 else None
             ),
-            'margin_days': configuration.margen_ventana_dias,
+            'margin_days': MARGEN_VENTANA_DIAS,
             'source': (
                 {
                     'institution': reference.institucion_fuente,

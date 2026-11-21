@@ -16,7 +16,6 @@ from ..models import (
     AceptacionPoliticas,
     ActividadAgricola,
     CalculoAgricola,
-    ConfiguracionAgronomica,
     Cultivo,
     Insumo,
     Predio,
@@ -26,7 +25,6 @@ from ..models import (
     TemporadaCultivo,
     TipoInsumo,
     Zona,
-    ProblemaAgricola,
 )
 
 User = get_user_model()
@@ -45,7 +43,6 @@ class AuthenticationTests(TestCase):
             'email': 'maria@example.com',
             'telefono': '+56 9 1234 5678',
             'comuna': 'melipilla',
-            'rut': '',
             'password1': PASSWORD,
             'password2': PASSWORD,
             'acepta_politicas': 'on',
@@ -60,9 +57,7 @@ class AuthenticationTests(TestCase):
         self.assertEqual(user.first_name, 'María')
         self.assertEqual(user.last_name, 'Soto')
         ficha = user.agricultor
-        self.assertEqual(
-            (ficha.nombre, ficha.telefono, ficha.comuna, ficha.rut), ('María Soto', '+56912345678', 'Melipilla', None)
-        )
+        self.assertEqual((user.get_full_name(), ficha.telefono, ficha.comuna), ('María Soto', '+56912345678', 'Melipilla'))
         self.assertTrue(user.check_password(PASSWORD))
         self.assertNotEqual(user.password, PASSWORD)
         self.assertFalse(user.is_staff)
@@ -743,8 +738,6 @@ class TerrainTests(TestCase):
         )
         self.assertNotEqual(farm.superficie_ha, old_area)
         perimeter_event = farm.historial.get(accion=PredioHistorial.Accion.PERIMETRO)
-        self.assertEqual(perimeter_event.geometria_anterior, old_feature)
-        self.assertEqual(perimeter_event.geometria_nueva, new_feature)
         self.assertEqual(perimeter_event.superficie_anterior_ha, old_area)
         self.assertEqual(perimeter_event.superficie_nueva_ha, farm.superficie_ha)
         with self.assertRaises(ValidationError):
@@ -1948,9 +1941,8 @@ class AgronomicCalendarTests(TestCase):
         self.assertEqual(response.json()['status'], 'insufficient')
         self.assertIsNone(response.json()['source'])
 
-    def test_sowing_window_classifies_inside_near_and_outside_using_configuration(self):
+    def test_sowing_window_classifies_inside_near_and_outside_using_the_default_margin(self):
         self.create_reference()
-        ConfiguracionAgronomica.objects.create(margen_ventana_dias=15)
         cases = [
             ('2026-02-05', 'within'),
             ('2026-01-17', 'near'),
@@ -2944,9 +2936,7 @@ class CatalogCsvAndUsoTests(TestCase):
         return {
             'zonas.csv': 'nombre;descripcion\nZona TEST;solo pruebas\n',
             'cultivos.csv': 'nombre;densidad_siembra;unidad_siembra\nCultivo TEST;1,5;kg\n',
-            'problemas.csv': 'nombre;tipo;cultivos\nProblema TEST;pest;Cultivo TEST\n',
             'insumos.csv': 'nombre;tipo;dosis_hectarea;unidad_dosis\nInsumo TEST;Fungicida;2,5;L/ha\n',
-            'usos.csv': 'cultivo;problema;insumo;fuente_nombre;fecha_verificacion\nCultivo TEST;Problema TEST;Insumo TEST;Fuente TEST;2026-01-15\n',
             'calendario.csv': 'cultivo;zona;siembra_inicio_mes;siembra_inicio_dia;siembra_fin_mes;siembra_fin_dia\nCultivo TEST;Zona TEST;9;1;11;30\n',
             'rendimientos.csv': 'cultivo;zona;rendimiento_ton_ha\nCultivo TEST;Zona TEST;12,5\n',
         }
@@ -2966,16 +2956,12 @@ class CatalogCsvAndUsoTests(TestCase):
         self.run_import(folder, '--aplicar')
         self.run_import(folder, '--aplicar')
         self.run_import(folder, '--aplicar', '--actualizar')
-        from ..models import UsoInsumoCultivo
-
         crop = Cultivo.objects.get(nombre='Cultivo TEST')
         self.assertEqual(crop.densidad_siembra, Decimal('1.5'))
         self.assertEqual(ReferenciaAgronomica.objects.count(), 1)
         ref = ReferenciaAgronomica.objects.get()
         self.assertEqual((ref.siembra_inicio_mes, ref.rendimiento_ton_ha), (9, Decimal('12.5')))
         self.assertEqual(Insumo.objects.get().dosis_hectarea, Decimal('2.5'))
-        self.assertEqual(UsoInsumoCultivo.objects.count(), 1)
-        self.assertTrue(UsoInsumoCultivo.objects.get().recomendable)
 
     def test_initial_csv_loads_only_crop_names_and_zone_without_invented_technical_data(self):
         """data/ carga cultivos, la zona y los 5 insumos de referencia (con su categoría y cultivo) sin inventar datos."""
@@ -3022,28 +3008,6 @@ class CatalogCsvAndUsoTests(TestCase):
         with self.assertRaises(CommandError):
             self.run_import(self.folder(files), '--aplicar')
         self.assertFalse(Zona.objects.filter(nombre='Zona TEST').exists())
-
-    def test_uso_requires_source_and_stops_being_recommended_when_inactive(self):
-        from datetime import date
-        from django.core.exceptions import ValidationError
-        from ..models import UsoInsumoCultivo
-
-        self.run_import('--categorias')
-        self.run_import(self.folder(self.files()), '--aplicar')
-        uso = UsoInsumoCultivo.objects.get()
-        uso.fuente_nombre = ' '
-        with self.assertRaises(ValidationError):
-            uso.full_clean()
-        uso.refresh_from_db()
-        uso.fecha_verificacion = date(2999, 1, 1)
-        with self.assertRaises(ValidationError):
-            uso.full_clean()
-        uso.refresh_from_db()
-        uso.insumo.vigente = False
-        self.assertFalse(uso.recomendable)
-        uso.insumo.vigente = True
-        uso.activo = False
-        self.assertFalse(uso.recomendable)
 
 
 class PredioPotreroFlowAndPrivacyTests(TestCase):
@@ -3423,15 +3387,13 @@ class DemoCatalogEndToEndTests(TestCase):
         )
 
     def test_import_counts_and_demo_labels(self):
-        from ..models import ProblemaAgricola, UsoInsumoCultivo, Zona
+        from ..models import Zona
 
         self.assertEqual(Zona.objects.filter(activo=True).count(), 2)
         self.assertEqual(Cultivo.objects.count(), 3)
-        self.assertEqual(ProblemaAgricola.objects.count(), 3)
         self.assertEqual(ReferenciaAgronomica.objects.count(), 3)
         self.assertEqual(Insumo.objects.count(), 4)
-        self.assertEqual(UsoInsumoCultivo.objects.count(), 3)
-        for model in (Zona, Cultivo, ProblemaAgricola, Insumo):
+        for model in (Zona, Cultivo, Insumo):
             self.assertFalse(model.objects.exclude(nombre__contains='DEMO').exists(), model)
         for reference in ReferenciaAgronomica.objects.all():  # calendario + rendimientos se fusionaron
             self.assertEqual(reference.estado, 'verified')
@@ -3451,9 +3413,8 @@ class DemoCatalogEndToEndTests(TestCase):
 
         stats = catalog_payload()['stats']
         self.assertEqual((stats['crops'], stats['zones'], stats['seeds'], stats['cropsWithDensity']), (3, 2, 1, 3))
-        self.assertEqual(
-            (stats['fertilizers'], stats['otherInputs'], stats['products'], stats['problems']), (1, 2, 4, 3)
-        )
+        self.assertEqual((stats['fertilizers'], stats['otherInputs'], stats['products']), (1, 2, 4))
+        self.assertNotIn('problems', stats)
 
     def test_seed_calculation_two_ha_by_2500(self):
         data = self.calc(operation='dose', calculation_type='semillas', dose='2500', unit='kg').json()
@@ -3507,12 +3468,12 @@ class DemoCatalogEndToEndTests(TestCase):
         from ..catalog import catalog_payload
 
         catalog = catalog_payload()
-        problem = next(item for item in catalog['problemas'] if item['name'] == 'PLAGA DEMO A')
+        self.assertNotIn('problemas', catalog)  # el catálogo ya no tiene una lista aparte de problemas agrícolas
         matches = [
             item['name']
             for item in catalog['insumos']
             if item['cropId'] == str(self.papa.pk)
-            and str(problem['id']) in item['problemIds']
+            and 'PLAGA DEMO A' in item['controlTargets']
             and item['type'] == 'Insecticida'
         ]
         self.assertEqual(matches, ['INSUMO DEMO INSECTICIDA'])
@@ -4465,7 +4426,7 @@ class MelipillaDefaultZoneTests(IntegrationBase):
 
     def test_entrypoint_loads_base_crops_and_zone_on_start(self):
         source = (Path(__file__).resolve().parent.parent.parent / 'docker-entrypoint.sh').read_text(encoding='utf-8')
-        # El arranque usa la carga CONTROLADA (solo importa si los CSV cambiaron), después de migrate.
+        # El arranque usa la carga INICIAL (solo importa si la base aún no tiene cultivos), después de migrate.
         self.assertIn('python manage.py cargar_catalogo_inicial data', source)
         self.assertLess(source.index('migrate'), source.index('cargar_catalogo_inicial data'))
         # Ya no hay importaciones incondicionales en cada arranque.
@@ -4473,9 +4434,19 @@ class MelipillaDefaultZoneTests(IntegrationBase):
         self.assertNotIn('--actualizar', source)
         self.assertNotIn('\r', source)  # el script debe tener saltos de línea LF para ejecutarse en Linux
 
+    def test_entrypoint_limpia_las_sesiones_vencidas_despues_de_migrar(self):
+        source = (Path(__file__).resolve().parent.parent.parent / 'docker-entrypoint.sh').read_text(encoding='utf-8')
+        self.assertIn('python manage.py clearsessions', source)
+        self.assertLess(source.index('migrate'), source.index('clearsessions'))
+        # No es crítico: el script usa «set -e», así que un fallo aquí no debe impedir que arranque la aplicación.
+        linea = next(
+            texto for texto in source.splitlines() if 'clearsessions' in texto and not texto.lstrip().startswith('#')
+        )
+        self.assertIn('||', linea)
+
 
 class CargaCatalogoInicialTests(TestCase):
-    """cargar_catalogo_inicial: carga data/*.csv una sola vez por versión de los CSV, sin duplicar ni pisar nada."""
+    """cargar_catalogo_inicial: carga data/*.csv solo si la base aún no tiene cultivos, sin duplicar ni pisar nada."""
 
     NOMBRES = {
         'Semilla de trigo',
@@ -4500,53 +4471,43 @@ class CargaCatalogoInicialTests(TestCase):
         self.addCleanup(shutil.rmtree, destino.parent, True)
         return destino
 
-    def test_primera_carga_crea_insumos_y_registra_la_carga(self):
-        from ..models import CargaCatalogo
-
+    def test_primera_carga_crea_insumos(self):
         salida = self.cargar()
         self.assertIn('Catálogo inicial cargado', salida)
+        self.assertIn('Insumos: 5 nuevos', salida)
         self.assertEqual(set(Insumo.objects.values_list('nombre', flat=True)), self.NOMBRES)
-        carga = CargaCatalogo.objects.get()
-        self.assertEqual(len(carga.huella), 64)
-        self.assertIn('insumos.csv', carga.archivos)
-        self.assertIn('Insumos: 5 nuevos', carga.resumen)
-        self.assertFalse(carga.forzada)
 
     def test_segunda_ejecucion_no_importa_ni_duplica(self):
-        from ..models import CargaCatalogo
-
         self.cargar()
         totales = (Insumo.objects.count(), Cultivo.objects.count(), Zona.objects.count(), TipoInsumo.objects.count())
         salida = self.cargar()  # como un reinicio del contenedor
-        self.assertIn('sin cambios', salida)
+        self.assertIn('ya tiene datos', salida)
         self.assertNotIn('Insumos:', salida)
         self.assertEqual(
             (Insumo.objects.count(), Cultivo.objects.count(), Zona.objects.count(), TipoInsumo.objects.count()),
             totales,
         )
-        self.assertEqual(CargaCatalogo.objects.count(), 1)
+
+    def test_un_registro_borrado_a_proposito_no_reaparece_al_reiniciar(self):
+        self.cargar()
+        Insumo.objects.filter(nombre='Papa semilla').delete()
+        self.cargar()  # como un reinicio del contenedor
+        self.assertFalse(Insumo.objects.filter(nombre='Papa semilla').exists())
 
     def test_forzar_no_duplica(self):
-        from ..models import CargaCatalogo
-
         self.cargar()
         salida = self.cargar('--forzar')
         self.assertIn('Insumos: 0 nuevos, 0 actualizados, 5 sin cambios', salida)
         self.assertEqual(Insumo.objects.count(), 5)
         for nombre in self.NOMBRES:
             self.assertEqual(Insumo.objects.filter(nombre=nombre).count(), 1)
-        self.assertEqual(CargaCatalogo.objects.count(), 2)
-        self.assertTrue(CargaCatalogo.objects.first().forzada)
 
     def test_simular_no_guarda_nada(self):
-        from ..models import CargaCatalogo
-
         salida = self.cargar('--simular')
         self.assertIn('Insumos: 5 nuevos', salida)
         self.assertIn('no se guardó nada', salida)
         self.assertFalse(Insumo.objects.exists())
         self.assertFalse(Cultivo.objects.exists())
-        self.assertFalse(CargaCatalogo.objects.exists())
 
     def test_no_sobrescribe_ni_elimina_registros_personalizados(self):
         # Un administrador ya corrigió un insumo del CSV y creó uno propio; un agricultor lo usa en su cuaderno.
@@ -4566,7 +4527,7 @@ class CargaCatalogoInicialTests(TestCase):
             fecha_programada=timezone.localdate(), insumo=editado,
         )
 
-        self.cargar()
+        self.cargar('--forzar')  # la base ya tiene un cultivo: sin --forzar no importaría nada
         self.cargar('--forzar')
 
         editado.refresh_from_db()
@@ -4580,8 +4541,6 @@ class CargaCatalogoInicialTests(TestCase):
         self.assertEqual(Cultivo.objects.filter(nombre='Trigo').count(), 1)
 
     def test_csv_modificado_solo_agrega_lo_nuevo(self):
-        from ..models import CargaCatalogo
-
         carpeta = self.copia_de_data()
         self.cargar(str(carpeta))
         insumo = Insumo.objects.get(nombre='Papa semilla')
@@ -4593,16 +4552,14 @@ class CargaCatalogoInicialTests(TestCase):
             fila = {c: '' for c in columnas.split(sep)}
             fila.update(nombre='Semilla de maíz TEST', tipo='Semilla', cultivo='Maíz')
             archivo.write(sep.join(fila[c] for c in columnas.split(sep)) + '\n')
-        salida = self.cargar(str(carpeta))
+        salida = self.cargar(str(carpeta), '--forzar')  # con datos ya cargados, revisar los CSV exige --forzar
         self.assertIn('Insumos: 1 nuevos, 0 actualizados, 5 sin cambios', salida)
         self.assertEqual(Insumo.objects.count(), 6)
         self.assertEqual(Insumo.objects.get(nombre='Semilla de maíz TEST').cultivo.nombre, 'Maíz')
         self.assertEqual(Insumo.objects.get(nombre='Papa semilla').descripcion, 'Editado en /admin/')
-        self.assertEqual(CargaCatalogo.objects.count(), 2)
 
     def test_error_en_csv_no_deja_carga_a_medias(self):
         from django.core.management.base import CommandError
-        from ..models import CargaCatalogo
 
         carpeta = self.copia_de_data()
         with open(carpeta / 'insumos.csv', 'a', encoding='utf-8') as archivo:
@@ -4615,7 +4572,6 @@ class CargaCatalogoInicialTests(TestCase):
             self.cargar(str(carpeta))
         self.assertFalse(Insumo.objects.exists())
         self.assertFalse(Cultivo.objects.exists())
-        self.assertFalse(CargaCatalogo.objects.exists())
 
     def test_insumos_disponibles_en_catalogo_decisiones_y_cuaderno(self):
         self.cargar()

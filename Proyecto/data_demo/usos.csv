@@ -1,4 +1,0 @@
-cultivo;problema;insumo;tipo;fuente_nombre;fuente_url;fecha_verificacion;activo
-PAPA DEMO;PLAGA DEMO A;INSUMO DEMO INSECTICIDA;Insecticida;FUENTE DEMO AGROASESOR;https://example.invalid/agroasesor-demo;2026-10-18;si
-LECHUGA DEMO;ENFERMEDAD DEMO B;INSUMO DEMO FUNGICIDA;Fungicida;FUENTE DEMO AGROASESOR;https://example.invalid/agroasesor-demo;2026-10-18;si
-PAPA DEMO;DEFICIENCIA DEMO C;FERTILIZANTE DEMO NPK;Fertilizante;FUENTE DEMO AGROASESOR;https://example.invalid/agroasesor-demo;2026-10-18;si

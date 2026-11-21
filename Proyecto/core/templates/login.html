@@ -29,19 +29,11 @@
                                 {{ registration_form.nombre_completo }}
                                 {{ registration_form.nombre_completo.errors }}
                             </label>
-                            <div class="row-2">
-                                <label class="field" for="{{ registration_form.rut.id_for_label }}">
-                                    <span>{{ registration_form.rut.label }}</span>
-                                    {{ registration_form.rut }}
-                                    <small class="pass-help">{{ registration_form.rut.help_text }}</small>
-                                    {{ registration_form.rut.errors }}
-                                </label>
-                                <label class="field" for="{{ registration_form.telefono.id_for_label }}">
-                                    <span>{{ registration_form.telefono.label }}</span>
-                                    {{ registration_form.telefono }}
-                                    {{ registration_form.telefono.errors }}
-                                </label>
-                            </div>
+                            <label class="field" for="{{ registration_form.telefono.id_for_label }}">
+                                <span>{{ registration_form.telefono.label }}</span>
+                                {{ registration_form.telefono }}
+                                {{ registration_form.telefono.errors }}
+                            </label>
                             <label class="field" for="{{ registration_form.email.id_for_label }}">
                                 <span>{{ registration_form.email.label }}</span>
                                 {{ registration_form.email }}

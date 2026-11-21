@@ -103,7 +103,7 @@ def logout_view(request):
 
 @login_required
 def perfil(request):
-    """Datos personales del agricultor: nombre, teléfono, comuna y RUT opcional."""
+    """Datos personales del agricultor: nombre, teléfono y comuna."""
     form = PerfilForm(request.POST or None, user=request.user)
     if request.method == 'POST' and form.is_valid():
         form.save()

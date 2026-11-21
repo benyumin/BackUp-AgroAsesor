@@ -10,7 +10,6 @@ from django.core.management import call_command
 from django.test import TestCase
 
 from core import dbutils
-from core.models import Agricultor
 
 
 class EstadoYRespaldoTests(TestCase):
@@ -49,7 +48,6 @@ class CicloDeCuentaTests(TestCase):
         'email': 'Rosa@Correo.cl',
         'telefono': '+56 9 1111 2222',
         'comuna': 'Melipilla',
-        'rut': '',
         'password1': 'Cultivo-Seguro-2026',
         'password2': 'Cultivo-Seguro-2026',
         'acepta_politicas': 'on',
@@ -97,7 +95,7 @@ class CicloDeCuentaTests(TestCase):
 
 
 class RegistroAgricultorTests(TestCase):
-    """RF-01: nombre completo, correo, contraseña, teléfono, comuna y RUT opcional (validado)."""
+    """RF-01: nombre completo, correo, contraseña, teléfono y comuna (validados)."""
 
     CLAVE = 'Campo-Seguro-2026!'
 
@@ -108,7 +106,6 @@ class RegistroAgricultorTests(TestCase):
             'email': 'ana@correo.cl',
             'telefono': '9 8765 4321',
             'comuna': 'san josé de maipo',
-            'rut': '',
             'password1': self.CLAVE,
             'password2': self.CLAVE,
             'acepta_politicas': 'on',
@@ -117,29 +114,21 @@ class RegistroAgricultorTests(TestCase):
         return base
 
     def test_registro_guarda_la_ficha_completa_y_nunca_crea_administradores(self):
-        r = self.client.post('/login/', self.datos(is_staff='on', is_superuser='on', rut='12.345.678-5'))
+        r = self.client.post('/login/', self.datos(is_staff='on', is_superuser='on'))
         self.assertRedirects(r, '/', fetch_redirect_response=False)
         usuario = get_user_model().objects.get(email='ana@correo.cl')
         self.assertFalse(usuario.is_staff or usuario.is_superuser)
         self.assertEqual((usuario.first_name, usuario.last_name), ('Ana María', 'Pérez Soto'))
         ficha = usuario.agricultor
-        self.assertEqual(ficha.nombre, 'Ana María Pérez Soto')
+        self.assertEqual(usuario.get_full_name(), 'Ana María Pérez Soto')
         self.assertEqual(ficha.telefono, '+56987654321')
         self.assertEqual(ficha.comuna, 'San José de Maipo')
-        self.assertEqual(ficha.rut, '12345678-5')
-
-    def test_rut_es_opcional_y_varias_cuentas_pueden_no_tenerlo(self):
-        self.client.post('/login/', self.datos())
-        self.client.post('/logout/')
-        self.client.post('/login/', self.datos(email='otra@correo.cl', nombre_completo='Luis Rojas'))
-        self.assertEqual(Agricultor.objects.filter(rut__isnull=True).count(), 2)
 
     def test_campos_obligatorios_y_caracteres_invalidos(self):
         casos = {
             'nombre_completo': ['', 'Madonna', 'Ana 123 Pérez', 'Ana <b>Pérez</b>'],
             'telefono': ['', '12345', 'abc', '+1 555 123 4567', '+56 9 1234 56789'],
             'comuna': ['', 'Mel1pilla', '<script>'],
-            'rut': ['12.345.678-9', '1234', 'abcdefgh-k', '12345678-5; DROP'],
         }
         for campo, valores in casos.items():
             for valor in valores:
@@ -148,22 +137,9 @@ class RegistroAgricultorTests(TestCase):
                     self.assertEqual(r.status_code, 200)
                     self.assertFalse(get_user_model().objects.filter(email='ana@correo.cl').exists())
 
-    def test_rut_repetido_es_rechazado(self):
-        self.client.post('/login/', self.datos(rut='12.345.678-5'))
-        self.client.post('/logout/')
-        r = self.client.post('/login/', self.datos(email='otra@correo.cl', rut='12345678-5'))
-        self.assertContains(r, 'Este RUT ya está registrado')
+    def test_validador_de_telefono(self):
+        from core.validators import normalizar_telefono
 
-    def test_validadores_de_rut_y_telefono(self):
-        from django.core.exceptions import ValidationError
-        from core.validators import normalizar_rut, normalizar_telefono
-
-        self.assertEqual(normalizar_rut('76.086.428-5'), '76086428-5')
-        self.assertEqual(normalizar_rut('11.111.111-1'), '11111111-1')
-        self.assertIsNone(normalizar_rut(''))
-        for malo in ('11.111.111-2', '12345678', 'hola'):
-            with self.assertRaises(ValidationError):
-                normalizar_rut(malo)
         for bueno in ('+56 9 1234 5678', '912345678', '56912345678', '(22) 123 4567', '09 1234 5678'):
             self.assertRegex(normalizar_telefono(bueno), r'^\+56\d{9}$')
 
@@ -177,24 +153,35 @@ class RegistroAgricultorTests(TestCase):
                 'nombre_completo': 'Rosa Vieja',
                 'telefono': '+56 2 2123 4567',
                 'comuna': 'Melipilla',
-                'rut': '',
             },
         )
         self.assertRedirects(r, '/cuenta/perfil/', fetch_redirect_response=False)
         self.assertEqual(antigua.agricultor.telefono, '+56221234567')
         self.assertNotContains(self.client.get('/'), 'Completa tu perfil')
 
-    def test_perfil_exige_sesion_y_no_deja_usar_el_rut_de_otro(self):
+    def test_perfil_exige_sesion_y_ya_no_tiene_campo_rut(self):
         self.assertEqual(self.client.get('/cuenta/perfil/').status_code, 302)
-        self.client.post('/login/', self.datos(rut='11.111.111-1'))
-        self.client.post('/logout/')
         otra = get_user_model().objects.create_user('b@correo.cl', email='b@correo.cl', password=self.CLAVE)
         self.client.force_login(otra)
+        self.assertNotContains(self.client.get('/cuenta/perfil/'), 'name="rut"')
+
+    def test_el_nombre_vive_solo_en_la_cuenta_y_el_perfil_lo_lee_y_lo_edita_ahi(self):
+        from core.forms import PerfilForm
+
+        self.client.post('/login/', self.datos())
+        usuario = get_user_model().objects.get(email='ana@correo.cl')
+        self.assertNotIn('nombre', [campo.name for campo in usuario.agricultor._meta.get_fields()])
+        self.assertEqual(str(usuario.agricultor), 'Ana María Pérez Soto')
+        self.assertEqual(PerfilForm(user=usuario).initial['nombre_completo'], 'Ana María Pérez Soto')
         r = self.client.post(
             '/cuenta/perfil/',
-            {'nombre_completo': 'Beto Pérez', 'telefono': '912345678', 'comuna': 'Melipilla', 'rut': '11111111-1'},
+            {'nombre_completo': 'Rosa Vieja Díaz', 'telefono': '+56 9 8765 4321', 'comuna': 'Melipilla'},
         )
-        self.assertContains(r, 'ya está registrado en otra cuenta')
+        self.assertRedirects(r, '/cuenta/perfil/', fetch_redirect_response=False)
+        usuario.refresh_from_db()
+        self.assertEqual((usuario.first_name, usuario.last_name), ('Rosa', 'Vieja Díaz'))
+        self.assertEqual(usuario.get_full_name(), 'Rosa Vieja Díaz')
+        self.assertEqual(PerfilForm(user=usuario).initial['nombre_completo'], 'Rosa Vieja Díaz')
 
 
 class UnicaBaseConfiguradaTests(TestCase):

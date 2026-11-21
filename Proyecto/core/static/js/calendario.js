@@ -198,16 +198,8 @@
       });
   }
 
-  function cropProblems(row, products) {
+  function cropProblems(row) {
     const names = [];
-    (catalog.problemas || []).forEach(function (problem) {
-      if ((problem.cropIds || []).map(String).indexOf(String(row.cropId)) !== -1) names.push(problem.name);
-    });
-    products.forEach(function (item) {
-      (item.problems || []).forEach(function (name) {
-        names.push(name);
-      });
-    });
     [row.ref.pests, row.ref.diseases, row.ref.weeds].forEach(function (text) {
       splitList(text).forEach(function (name) {
         names.push(name);
@@ -266,7 +258,7 @@
     const ref = row.ref;
     const crop = cropInfo(row);
     const products = cropProducts(row);
-    const problems = cropProblems(row, products);
+    const problems = cropProblems(row);
     const density =
       crop && crop.density != null ? fmt(crop.density) + ' ' + (crop.unit || 'kg') + '/ha de semilla' : '';
     const cycle = ref.cycleDays ? 'Ciclo de referencia: ' + ref.cycleDays + ' días' : '';

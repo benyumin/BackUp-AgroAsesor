@@ -150,10 +150,12 @@ class PuertaDeEnlaceConFlaskTests(TestCase):
 
     def setUp(self):
         User = get_user_model()
-        self.ana = User.objects.create_user("ana_api", "ana_api@example.com", "Clave-segura-123")
+        self.ana = User.objects.create_user(
+            "ana_api", "ana_api@example.com", "Clave-segura-123", first_name="Ana", last_name="Pérez"
+        )
         self.luis = User.objects.create_user("luis_api", "luis_api@example.com", "Clave-segura-123")
         self.admin = User.objects.create_user("admin_api", "admin_api@example.com", "Clave-segura-123", is_staff=True)
-        Agricultor.objects.create(user=self.ana, nombre="Ana", telefono="", comuna="Melipilla")
+        Agricultor.objects.create(user=self.ana, telefono="", comuna="Melipilla")
         p_ana = Predio.objects.create(
             propietario=self.ana, nombre="Predio Ana", ubicacion="Melipilla", superficie_ha="10.5"
         )
@@ -196,6 +198,7 @@ class PuertaDeEnlaceConFlaskTests(TestCase):
             perfil = self._cliente(self.ana).get("/api/v1/usuarios/me").json()
             self.assertEqual(perfil["usuario"], "ana_api")
             self.assertTrue(perfil["perfil_completo"])
+            self.assertEqual(perfil["nombre"], "Ana Pérez")  # first_name + last_name de la cuenta de Django
             self.assertFalse(perfil["es_admin"])
             self.assertTrue(self._cliente(self.admin).get("/api/v1/usuarios/me").json()["es_admin"])
             self.assertNotIn("password", str(perfil))

@@ -34,7 +34,8 @@ def _fecha(valor):
 def perfil_usuario(usuario_id):
     con = abrir_bd()
     fila = con.execute(
-        "SELECT u.id, u.username, u.email, u.is_staff, u.is_active, a.nombre, a.telefono, a.comuna, a.rut "
+        "SELECT u.id, u.username, u.email, u.first_name, u.last_name, u.is_staff, u.is_active, "
+        "a.id AS ficha_id, a.telefono, a.comuna "
         "FROM auth_user u LEFT JOIN core_agricultor a ON a.user_id = u.id WHERE u.id = %s",
         (usuario_id,),
     ).fetchone()
@@ -45,11 +46,11 @@ def perfil_usuario(usuario_id):
         "usuario": fila["username"],
         "correo": fila["email"],
         "es_admin": bool(fila["is_staff"]),
-        "perfil_completo": fila["nombre"] is not None,
-        "nombre": fila["nombre"] or "",
+        "perfil_completo": fila["ficha_id"] is not None,
+        # El nombre vive en la cuenta de Django (first_name + last_name), igual que get_full_name().
+        "nombre": f"{fila['first_name'] or ''} {fila['last_name'] or ''}".strip(),
         "telefono": fila["telefono"] or "",
         "comuna": fila["comuna"] or "",
-        "rut": fila["rut"] or "",
     }
 
 

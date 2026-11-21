@@ -1,8 +1,9 @@
 """Consejos breves que enseñan a usar cada sección de AgroAsesor sin instrucciones externas.
 
 Cada consejo se muestra abierto la primera vez que la persona entra a la sección. Al presionar «Entendido» (o
-plegarlo) queda guardado en ``AyudaOculta`` y desde entonces se ve solo como una línea «¿Cómo funciona…?» que se
-puede abrir cuando se quiera. En «Mi perfil» se pueden volver a mostrar todos.
+plegarlo) el navegador lo recuerda (``localStorage``, por usuario; ver ``static/js/ayudas.js``) y desde entonces se
+ve solo como una línea «¿Cómo funciona…?» que se puede abrir cuando se quiera. En «Mi perfil» se pueden volver a
+mostrar todos. No se guarda nada en la base de datos.
 
 Para agregar uno: sumar la clave aquí y poner ``{% ayuda 'clave' %}`` en la plantilla.
 """
@@ -74,12 +75,3 @@ AYUDAS = {
         ],
     },
 }
-
-
-def claves_ocultas(usuario):
-    """Claves de los consejos que la persona ya plegó."""
-    if not getattr(usuario, 'is_authenticated', False):
-        return set()
-    from .models import AyudaOculta
-
-    return set(AyudaOculta.objects.filter(usuario=usuario).values_list('clave', flat=True))

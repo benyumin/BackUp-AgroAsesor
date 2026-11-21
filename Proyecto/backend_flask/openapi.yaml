@@ -165,7 +165,6 @@ paths:
                 nombre: Ana Pérez
                 telefono: ''
                 comuna: Melipilla
-                rut: ''
         '401':
           description: Sin autenticación válida o firma vencida
           content:

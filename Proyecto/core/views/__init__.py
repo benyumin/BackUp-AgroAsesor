@@ -29,10 +29,6 @@ from .administracion import (  # noqa: F401
     admin_panel,
     cultivos_base_cargar,
 )
-from .ayudas import (  # noqa: F401
-    ayuda_ocultar,
-    ayudas_mostrar,
-)
 from .base import (  # noqa: F401
     JOURNEY_HERE,
     JOURNEY_NOTES,

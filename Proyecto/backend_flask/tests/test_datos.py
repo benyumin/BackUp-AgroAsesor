@@ -6,6 +6,7 @@ from tests.helpers import pedir
 def test_perfil_propio(client_bd):
     cuerpo = pedir(client_bd, "/api/v1/usuarios/me", usuario=1).get_json()
     assert cuerpo["usuario"] == "ana" and cuerpo["perfil_completo"] is True and cuerpo["es_admin"] is False
+    assert cuerpo["nombre"] == "Ana Pérez"  # sale de first_name + last_name de la cuenta, no de la ficha
     assert "password" not in cuerpo and "contraseña" not in str(cuerpo).lower()
 
 

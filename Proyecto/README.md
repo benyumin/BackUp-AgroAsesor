@@ -17,7 +17,7 @@ Proyecto/
 │   ├── models.py        tablas: predios, potreros, temporadas, actividades, catálogo, cálculos
 │   ├── views/           páginas y respuestas JSON (un módulo por área)
 │   ├── forms.py         formularios y validaciones
-│   ├── validators.py    RUT, teléfono y otros datos de entrada
+│   ├── validators.py    nombre, teléfono, comuna y otros datos de entrada
 │   ├── agronomy.py      ventanas de siembra/cosecha y evaluación de fechas del calendario
 │   ├── catalog.py       catálogo de cultivos e insumos para las páginas
 │   ├── seasons.py       temporadas de cultivo de cada potrero
@@ -48,7 +48,7 @@ Luego abre http://localhost:8000/.
 La base de datos oficial es `/data/db.sqlite3`, dentro del volumen `agroasesor_hugo_agroasesor_data`.
 Sobrevive a `docker compose down`, a reconstruir la imagen y a reiniciar el PC. **Nunca** uses
 `docker compose down -v` ni borres ese volumen: se pierde la base. Cada vez que el contenedor arranca
-hace un respaldo en `backups/` (guarda los últimos 20), aplica las migraciones y carga el catálogo de `data/`.
+hace un respaldo en `backups/` (guarda los últimos 20), aplica las migraciones, borra las sesiones vencidas y carga el catálogo de `data/`.
 
 | Para qué | Comando |
 |---|---|
@@ -56,6 +56,10 @@ hace un respaldo en `backups/` (guarda los últimos 20), aplica las migraciones 
 | Hacer un respaldo ahora | `docker exec agroasesor_hugo python manage.py respaldar_bd` |
 | Crear una cuenta de administrador | `docker exec -it agroasesor_hugo python manage.py createsuperuser` |
 | Dar o quitar el rol de administrador | `docker exec agroasesor_hugo python manage.py administradores` |
+
+Las migraciones `0021_remove_agricultor_rut` y `0022_limpieza_base_de_datos` borran columnas y tablas que ya no
+se usan. Antes de aplicarlas en una base con datos reales haz un respaldo: `respaldar_bd` si usas SQLite; si usas
+Supabase, el respaldo del panel (Database → Backups) o `pg_dump`.
 
 Para levantar también la API Flask, define `AGROASESOR_INTERNAL_SECRET` en `.env` y usa:
 
@@ -109,22 +113,22 @@ OpenID Connect con PKCE, sin dependencias nuevas). Para activarlo:
 4. Copia el ID y el secreto en `Proyecto/.env` (`GOOGLE_CLIENT_ID=...`, `GOOGLE_CLIENT_SECRET=...`) y reinicia Django.
 
 Reglas: si el correo de Google ya tiene cuenta, entra a esa cuenta (no se duplica ni cambia su rol);
-si no, se pide completar el registro de agricultor (nombre, teléfono, comuna, RUT opcional y política).
+si no, se pide completar el registro de agricultor (nombre, teléfono, comuna y política).
 
 ## Catálogo agrícola
 
-Zonas, cultivos, problemas, insumos y referencias se cargan desde los CSV de `data/` o desde `/admin/`.
+Zonas, cultivos, insumos y referencias se cargan desde los CSV de `data/` o desde `/admin/`.
 Ningún dato técnico se inventa: completa cada fila solo con valores de una fuente oficial
 (SAG, ODEPA, INIA o la etiqueta del fabricante).
 
 **Carga inicial controlada (recomendada).** Al arrancar el contenedor se ejecuta
 `cargar_catalogo_inicial`, que importa `data/*.csv` (cultivos, zona Melipilla e insumos de referencia
-con sus categorías) **solo si los CSV cambiaron** desde la última carga registrada (tabla `CargaCatalogo`,
-visible en `/admin/`). Un reinicio normal no importa nada. Nunca duplica, sobrescribe ni borra registros:
+con sus categorías) **solo si la base aún no tiene cultivos**. Un reinicio normal no importa nada y un
+registro borrado a propósito no reaparece. Nunca duplica, sobrescribe ni borra registros:
 lo que ya existe (por ejemplo, un insumo corregido en `/admin/`) se deja tal cual.
 
 ```powershell
-python manage.py cargar_catalogo_inicial            # carga data/ si es nueva o cambió
+python manage.py cargar_catalogo_inicial            # carga data/ si la base aún no tiene cultivos
 python manage.py cargar_catalogo_inicial --simular  # muestra qué haría, sin guardar
 python manage.py cargar_catalogo_inicial --forzar   # revisa de nuevo los CSV (solo agrega lo que falte)
 ```
@@ -139,7 +143,7 @@ python manage.py importar_catalogo data --aplicar --actualizar    # además corr
 ```
 
 - Separador `;` o `,`, UTF-8, decimales con coma o punto y fechas `AAAA-MM-DD`.
-- Las listas (problemas, cultivos, objetivos de control) van separadas por `|`. Una celda vacía significa «sin dato».
-- El orden de carga es zonas → cultivos → problemas → insumos → usos → calendario y rendimientos.
+- Las listas (cultivos autorizados, objetivos de control) van separadas por `|`. Una celda vacía significa «sin dato».
+- El orden de carga es zonas → cultivos → insumos → calendario y rendimientos.
 - Es seguro repetirlo: no duplica registros ni borra valores guardados.
 

@@ -19,14 +19,14 @@ def crear_bd(ruta):
         "INSERT INTO auth_user (id,password,is_superuser,username,last_name,email,is_staff,is_active,date_joined,first_name)"
         " VALUES (?,?,?,?,?,?,?,?,?,?)",
         [
-            (1, "x", 0, "ana", "", "ana@example.com", 0, 1, ahora, ""),
+            (1, "x", 0, "ana", "Pérez", "ana@example.com", 0, 1, ahora, "Ana"),
             (2, "x", 0, "luis", "", "luis@example.com", 0, 1, ahora, ""),
             (3, "x", 1, "admin", "", "admin@example.com", 1, 1, ahora, ""),
             (4, "x", 0, "baja", "", "baja@example.com", 0, 0, ahora, ""),
         ],
     )
     con.execute(
-        "INSERT INTO core_agricultor (nombre,telefono,comuna,user_id,rut) VALUES ('Ana Pérez','','Melipilla',1,NULL)"
+        "INSERT INTO core_agricultor (telefono,comuna,user_id) VALUES ('','Melipilla',1)"
     )
     con.execute(
         "INSERT INTO core_zona (id,nombre,descripcion,activo) VALUES (1,'Melipilla','Zona central',1),(2,'Inactiva','',0)"
