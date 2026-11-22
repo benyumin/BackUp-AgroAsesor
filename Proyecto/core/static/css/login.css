@@ -665,3 +665,275 @@
         gap: 0;
     }
 }
+
+/* ==========================================================================
+   Recuperación de acceso: experiencia visual propia, coherente con el login.
+   Deliberadamente limitada a access-shell--recuperar para no afectar
+   el inicio de sesión, el registro ni las pantallas agrícolas.
+   ========================================================================== */
+
+.access-shell--recuperar {
+    max-width: 1140px;
+    min-height: min(760px, calc(100vh - 2 * var(--acc-pad)));
+    grid-template-columns: minmax(0, 43fr) minmax(0, 57fr);
+    border-radius: 24px;
+    box-shadow: 0 30px 100px -45px rgba(13, 55, 36, 0.26), 0 4px 24px -14px rgba(20, 44, 31, 0.13);
+}
+
+.access-shell--recuperar .access-visual {
+    isolation: isolate;
+    overflow: hidden;
+    background:
+        linear-gradient(155deg, rgba(9, 48, 32, 0.68), rgba(8, 39, 27, 0.84)),
+        url("../img/login-campo.png") center / cover no-repeat,
+        #113e2d;
+}
+
+.access-shell--recuperar .access-visual::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    width: 330px;
+    height: 330px;
+    right: -146px;
+    top: 25%;
+    border: 1px solid rgba(215, 249, 224, 0.16);
+    border-radius: 50%;
+    box-shadow: 0 0 0 42px rgba(193, 240, 210, 0.045), 0 0 0 88px rgba(193, 240, 210, 0.035);
+    pointer-events: none;
+}
+
+.access-shell--recuperar .access-copy h2 {
+    font-size: clamp(29px, 2.8vw, 40px);
+    line-height: 1.18;
+    letter-spacing: -0.035em;
+    max-width: 13.5em;
+    text-wrap: balance;
+}
+
+.access-shell--recuperar .access-panel {
+    background: radial-gradient(ellipse at 100% 0%, #eff9f1 0%, rgba(255, 255, 255, 0) 52%), #fff;
+}
+
+.access-shell--recuperar .access-content {
+    max-width: 476px;
+}
+
+.recovery-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    margin: 0 0 24px;
+    padding: 8px 12px;
+    border: 1px solid #d7ebdf;
+    border-radius: 999px;
+    background: #f0faf4;
+    color: #1d7350;
+    font-size: 11px;
+    line-height: 1.3;
+    font-weight: 700;
+    letter-spacing: 0.045em;
+    text-transform: uppercase;
+}
+
+.recovery-kicker-dot {
+    display: inline-block;
+    flex: 0 0 auto;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #27a96a;
+    box-shadow: 0 0 0 3px rgba(39, 169, 106, 0.13);
+}
+
+.recovery-steps {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin: 0 0 32px;
+}
+
+.recovery-step {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    min-height: 29px;
+    box-sizing: border-box;
+    padding: 7px 10px;
+    border: 1px solid #e6ece8;
+    border-radius: 9px;
+    background: #f9fbf9;
+    color: #81928a;
+    font-size: 11px;
+    line-height: 1.2;
+    font-weight: 600;
+}
+
+.recovery-step b {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+}
+
+.recovery-step.is-current {
+    background: #e6f6eb;
+    border-color: #b5dfc5;
+    color: #116b42;
+}
+
+.recovery-step.is-done {
+    background: #f4faf6;
+    border-color: #d8eade;
+    color: #4e8165;
+}
+
+.access-shell--recuperar .access-panel h1 {
+    font-size: clamp(29px, 3vw, 38px);
+    letter-spacing: -0.035em;
+    text-wrap: balance;
+}
+
+.access-shell--recuperar .lead {
+    max-width: 43ch;
+    margin: 15px 0 30px;
+    font-size: 15px;
+    line-height: 1.7;
+}
+
+.access-shell--recuperar .field {
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.access-shell--recuperar .field > span:not(.pass-box) {
+    font-size: 13px;
+}
+
+.access-shell--recuperar .field input {
+    height: 52px;
+    border-color: #dbe7df;
+    border-radius: 12px;
+    background: #fcfefd;
+    font-size: 15px;
+}
+
+.access-shell--recuperar .submit {
+    min-height: 52px;
+    height: auto;
+    padding: 14px 18px;
+    border-radius: 12px;
+    box-shadow: 0 14px 26px -13px rgba(9, 91, 58, 0.48);
+    transition: transform 160ms ease, background-color 160ms ease, box-shadow 160ms ease;
+}
+
+.access-shell--recuperar .submit:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 17px 30px -13px rgba(9, 91, 58, 0.55);
+}
+
+.access-shell--recuperar .access-status {
+    width: 66px;
+    height: 66px;
+    margin-bottom: 23px;
+    background: #e7f8ee;
+    color: #12744d;
+    border: 1px solid #c9e9d6;
+    box-shadow: 0 0 0 7px #f6fbf7;
+}
+
+.recovery-help {
+    margin: -7px 0 28px;
+    padding: 17px 18px;
+    border: 1px solid #d9eade;
+    border-radius: 14px;
+    background: #f5faf6;
+}
+
+.recovery-help strong {
+    color: #204936;
+    font-size: 13px;
+}
+
+.recovery-help p {
+    margin: 7px 0 0;
+    color: #61776b;
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.recovery-footnote {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin: 15px 0 0;
+    color: #71857a;
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+.recovery-footnote > span {
+    flex-shrink: 0;
+    color: #31875e;
+    font-size: 16px;
+    line-height: 1.25;
+}
+
+.access-shell--recuperar .switch {
+    margin-top: 24px;
+}
+
+@media (max-width: 960px) {
+    .access-shell--recuperar {
+        min-height: 0;
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: auto minmax(0, 1fr);
+        border-radius: 18px;
+    }
+    .access-shell--recuperar .access-copy h2 {
+        max-width: 25em;
+        font-size: 26px;
+        margin-bottom: 13px;
+    }
+    .access-shell--recuperar .access-panel {
+        padding: 40px 32px 46px;
+    }
+}
+
+@media (max-width: 560px) {
+    .access-shell--recuperar {
+        border-radius: 16px;
+    }
+    .access-shell--recuperar .access-visual {
+        padding: 22px 22px 24px;
+    }
+    .access-shell--recuperar .access-panel {
+        padding: 34px 22px 38px;
+    }
+    .recovery-kicker {
+        margin-bottom: 19px;
+        font-size: 10px;
+    }
+    .recovery-steps {
+        gap: 5px;
+        margin-bottom: 27px;
+    }
+    .recovery-step {
+        padding: 7px;
+        font-size: 10px;
+    }
+    .access-shell--recuperar .access-panel h1 {
+        font-size: 30px;
+    }
+    .access-shell--recuperar .lead {
+        font-size: 14px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .access-shell--recuperar .submit {
+        transition: none;
+    }
+    .access-shell--recuperar .submit:hover {
+        transform: none;
+    }
+}
