@@ -15,11 +15,19 @@
             {% endif %}
             <section class="access-panel">
                 <div class="access-content">
+                    <span class="recovery-kicker"><span class="recovery-kicker-dot" aria-hidden="true"></span>{% if validlink %}Último paso · Nueva contraseña{% elif form %}Seguridad de tu cuenta{% else %}Revisa tu enlace{% endif %}</span>
+                    {% if form %}
+                        <div class="recovery-steps" aria-label="Proceso de recuperación">
+                            <span class="recovery-step {% if validlink %}is-done{% else %}is-current{% endif %}"><b>01</b> Solicitar</span>
+                            <span class="recovery-step {% if validlink %}is-done{% endif %}"><b>02</b> Correo</span>
+                            <span class="recovery-step {% if validlink %}is-current{% endif %}"><b>03</b> Nueva clave</span>
+                        </div>
+                    {% endif %}
                     {% if validlink %}
-                        <h1>Restablecer Contraseña</h1>
+                        <h1>Elige una nueva contraseña</h1>
                         <p class="lead">Por favor, escribe una nueva contraseña que sea segura y difícil de adivinar para proteger tu cuenta de AgroAsesor.</p>
                     {% elif form %}
-                        <h1>Recuperar Contraseña</h1>
+                        <h1>Recupera tu acceso</h1>
                         <p class="lead">Ingresa tu correo electrónico y te enviaremos las instrucciones para restablecer tu contraseña.</p>
                     {% else %}
                         <h1>Enlace No Disponible</h1>
@@ -39,7 +47,7 @@
                                                autocomplete="email"
                                                maxlength="254"
                                                required
-                                               placeholder="ejemplo@agroasesor.cl"
+                                               placeholder="tu-correo@ejemplo.com"
                                                value="{{ field.value|default_if_none:'' }}">
                                     {% elif field.name == "new_password1" or field.name == "new_password2" %}
                                         <span class="pass-box">
@@ -59,6 +67,11 @@
                             <button class="submit"
                                     type="submit">{% if validlink %}Guardar nueva contraseña{% else %}Enviar instrucciones{% endif %}</button>
                         </form>
+                        {% if not validlink %}
+                            <p class="recovery-footnote"><span aria-hidden="true">✦</span> Si existe una cuenta activa con ese correo, recibirás las instrucciones. Nunca te pediremos tu contraseña por email.</p>
+                        {% endif %}
+                    {% else %}
+                        <a class="submit" href="{% url 'password_reset' %}">Solicitar un nuevo enlace</a>
                     {% endif %}
                     <p class="switch">
                         <a href="{% url 'login' %}">
