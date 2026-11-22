@@ -540,6 +540,38 @@
     line-height: 1.45;
 }
 
+/* Recuperación de contraseña: ícono de alerta (enlace no disponible) y recuadro de ayuda.
+   Reutilizan los mismos colores del aviso verde y del error rojo de arriba. */
+.access-status--alerta {
+    background: #fef3f2;
+    color: var(--acc-danger);
+}
+
+.access-tip {
+    margin: 0 0 24px;
+    padding: 14px 16px;
+    border: 1px solid #cfe9dc;
+    border-radius: 10px;
+    background: var(--acc-green-soft);
+    color: #14532d;
+    font-size: 13.5px;
+    line-height: 1.5;
+}
+
+.access-tip strong {
+    display: block;
+    margin-bottom: 2px;
+    font-weight: var(--fw-semibold);
+}
+
+.access-tip p {
+    margin: 0;
+}
+
+.lead + .access-tip {
+    margin-top: -12px;
+}
+
 /* Política de privacidad */
 .policy-content {
     max-width: 75ch;
