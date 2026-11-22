@@ -48,7 +48,7 @@ class PantallasTests(TestCase):
     def test_ficha_del_predio_muestra_cifras_limpias(self):
         r = self.client.get(f'/predios/{self.predio.pk}/')
         self.assertContains(r, '12,5 ha')
-        self.assertContains(r, '3,2 ha (32.000 m²)')
+        self.assertContains(r, '3,2 ha')
         for feo in ('12,5000', '3,2000', '32000,00'):
             self.assertNotContains(r, feo)
 
@@ -68,16 +68,14 @@ class PantallasTests(TestCase):
         self.assertContains(r, 'Distribución de superficie')  # las superficies siguen, una sola vez
         self.assertContains(r, 'Sin asignar')
 
-    def test_inicio_sin_texto_de_prueba_ni_administracion_en_el_menu(self):
-        html = self.client.get('/').content.decode()
+    def test_inicio_sin_texto_de_prueba_y_sin_enlaces_de_administracion(self):
+        respuesta = self.client.get('/')
+        html = respuesta.content.decode()
         self.assertNotIn('dash-texto-prueba', html)  # el texto «AgroAsesor» suelto sobre el banner ya no existe
         self.assertEqual(html.count('<h1'), 1)
-        self.user.is_staff = True
-        self.user.save()
-        respuesta = self.client.get('/')
-        self.assertNotIn('Administración', [item.get('label') for item in respuesta.context['menu']])
-        self.assertNotContains(respuesta, 'href="/panel-admin/"')  # sin enlace en el menú lateral
-        self.assertEqual(self.client.get('/panel-admin/').status_code, 200)  # la vista y sus permisos siguen
+        self.assertNotIn('Centro de administración', [item.get('label') for item in respuesta.context['menu']])
+        self.assertNotContains(respuesta, 'href="/panel-admin/"')  # el agricultor no ve entradas de administración
+        self.assertEqual(self.client.get('/panel-admin/').status_code, 403)  # y el panel le está vedado
 
     def test_calculadora_avisa_el_limite_de_superficie_sin_ceros_de_relleno(self):
         r = self.client.post(

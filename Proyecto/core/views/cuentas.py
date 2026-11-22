@@ -6,13 +6,12 @@ El registro y la recuperación de contraseña están en ``core.auth`` y el acces
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
-from django.core.exceptions import PermissionDenied
 from django.db import IntegrityError, transaction
 from django.shortcuts import redirect, render
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
 
-from ..auth import MENSAJE_VENCIDA
+from ..auth import MENSAJE_VENCIDA, administrador_requerido, destino_inicial
 from ..forms import (
     PerfilForm,
     RegistroForm,
@@ -37,7 +36,7 @@ def politica_privacidad(request):
 @never_cache
 def login_view(request):
     if request.user.is_authenticated:
-        return redirect('dashboard')
+        return redirect(destino_inicial(request.user))
     mode = request.POST.get('mode') or request.GET.get('mode') or 'login'
     if mode in {'recover', 'reset'}:
         return redirect('password_reset')
@@ -64,7 +63,7 @@ def login_view(request):
                 else:
                     login(request, user, backend='core.auth.EmailBackend')
                     messages.success(request, 'Tu cuenta se creó correctamente. Ya iniciaste sesión.')
-                    return redirect('dashboard')
+                    return redirect(destino_inicial(user))
         else:
             user = authenticate(
                 request,
@@ -75,7 +74,7 @@ def login_view(request):
                 error = 'Usuario, correo electrónico o contraseña incorrectos.'
             else:
                 login(request, user)
-                return redirect('dashboard')
+                return redirect(destino_inicial(user))  # el rol lo decide el servidor, no el formulario
     return render(
         request,
         'login.html',
@@ -112,9 +111,7 @@ def perfil(request):
     return render_page(request, 'perfil.html', 'perfil', {'form': form, 'tiene_ficha': form.ficha is not None})
 
 
-@login_required
+@administrador_requerido
 @require_POST
 def enter_as_admin(request):
-    if not request.user.is_staff:
-        raise PermissionDenied
     return redirect('admin_panel')

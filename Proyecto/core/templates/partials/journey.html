@@ -1,30 +1,32 @@
-{% comment %}Ruta de trabajo: dónde está el usuario y cuál es el siguiente paso (solo presentación).{% endcomment %}
-<nav class="journey no-print" aria-label="Ruta de trabajo">
-    <ol class="journey-steps">
-        {% for step in journey.steps %}
-            <li class="journey-step is-{{ step.state }}{% if step.here %} is-here{% endif %}">
-                <a href="{{ step.url }}"
-                   {% if step.here %} aria-current="step"{% endif %}>
-                    <span class="journey-dot"
-                          aria-hidden="true">{% if step.state == "done" %}✓{% else %}{{ forloop.counter }}{% endif %}</span>
-                    <span class="journey-label">{{ step.label }}{% if step.state == "done" %}<span class="sr-only"> (hecho)</span>{% endif %}</span>
-                </a>
-            </li>
-        {% endfor %}
-    </ol>
+{% comment %}Progreso de planificación (solo presentación): etapa actual, avance real y siguiente acción.
+Todo sale de journey_payload (core/views/base.py); aquí no se calcula nada.{% endcomment %}
+<nav class="journey no-print" aria-label="Progreso de planificación">
+    <div class="journey-head">
+        <p class="journey-kicker"><span class="journey-long">Progreso de planificación</span><span class="journey-short">Planificación pendiente</span></p>
+        <p class="journey-state">Paso {{ journey.position }} de {{ journey.steps_total }} · {{ journey.current_label }}<span class="journey-pending"> pendiente</span></p>
+    </div>
+    <div class="journey-bar">
+        <progress class="journey-meter"
+                  max="{{ journey.steps_total }}"
+                  value="{{ journey.done_count }}"
+                  aria-label="Etapas completadas: {{ journey.done_count }} de {{ journey.steps_total }}">{{ journey.percent }} %</progress>
+        <span class="journey-percent" aria-hidden="true">{{ journey.percent }} %</span>
+    </div>
     {% if journey.next %}
-        <div class="journey-next">
-            {% if journey.next.status %}<p class="journey-status"><span aria-hidden="true">✓</span> {{ journey.next.status }}</p>{% endif %}
-            <div class="journey-row">
-                <span class="journey-kicker">Siguiente paso</span>
-                <span class="journey-copy"><strong>{{ journey.next.title }}</strong> <small>{{ journey.next.text }}</small></span>
-                <span class="journey-actions">
-                    {% for item in journey.next.actions %}{% if item.post %}<form method="post" action="{{ item.url }}" class="journey-form">{% csrf_token %}<button type="submit"
-        class="journey-btn{% if item.primary %} is-primary{% endif %}">{{ item.label }}</button></form>{% else %}<a class="journey-btn{% if item.primary %} is-primary{% endif %}"
-   href="{{ item.url }}">{{ item.label }}{% if forloop.last and forloop.counter == 1 %} →{% endif %}</a>{% endif %}{% endfor %}
-                </span>
-            </div>
+        <p class="journey-text">{% if journey.next.status %}<strong class="journey-status">{{ journey.next.status }}.</strong> {% endif %}{{ journey.next.text }}</p>
+        <div class="journey-actions">
+            {% with first=journey.next.actions.0 %}{% if first.post %}<form method="post" action="{{ first.url }}" class="journey-form">{% csrf_token %}<button type="submit" class="journey-btn is-primary">{{ first.label }} →</button></form>{% else %}<a class="journey-btn is-primary" href="{{ first.url }}">{{ first.label }} →</a>{% endif %}{% endwith %}
         </div>
+        {% if journey.next.actions|length > 1 %}
+            <details class="journey-more">
+                <summary>Más opciones</summary>
+                <div class="journey-more-list">
+                    {% for item in journey.next.actions|slice:"1:" %}{% if item.post %}<form method="post" action="{{ item.url }}" class="journey-form">{% csrf_token %}<button type="submit" class="journey-btn">{{ item.label }}</button></form>{% else %}<a class="journey-btn" href="{{ item.url }}">{{ item.label }}</a>{% endif %}{% endfor %}
+                </div>
+            </details>
+        {% endif %}
     {% endif %}
-    {% if journey.note %}<p class="journey-note">{{ journey.note }}</p>{% endif %}
+    <ol class="sr-only">
+        {% for step in journey.steps %}<li>{{ step.label }}: {% if step.state == "done" %}hecho{% elif step.state == "current" %}etapa actual, pendiente{% else %}pendiente{% endif %}</li>{% endfor %}
+    </ol>
 </nav>

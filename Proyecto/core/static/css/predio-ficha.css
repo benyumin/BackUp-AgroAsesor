@@ -1061,3 +1061,28 @@
     color: #0f1b2d;
     font-weight: var(--fw-medium);
 }
+
+/* «← Mis predios»: botón de volver bien visible (en vez de un enlace gris diminuto). */
+.app-body:has(.pf) .crumbs a.crumbs-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px 6px 10px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: #fff;
+    box-shadow: var(--shadow);
+    color: var(--green);
+    font-weight: var(--fw-medium);
+    text-decoration: none;
+}
+
+.app-body:has(.pf) .crumbs a.crumbs-back:hover {
+    background: var(--green-soft);
+    text-decoration: none;
+}
+
+.app-body:has(.pf) .crumbs a.crumbs-back svg {
+    width: 16px;
+    height: 16px;
+}

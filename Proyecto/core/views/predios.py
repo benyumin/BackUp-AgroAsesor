@@ -16,7 +16,6 @@ from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied, ValidationError
-from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Count, Sum
 from django.http import JsonResponse
@@ -26,6 +25,7 @@ from django.utils import timezone
 from django.utils.cache import add_never_cache_headers
 from django.views.decorators.http import require_POST
 
+from ..auth import es_administrador
 from ..forms import (
     PotreroForm,
     PredioForm,
@@ -80,37 +80,6 @@ def predios(request):
         selected_predio = selected_potrero.predio
         selected_potrero_id = str(selected_potrero.pk)
 
-    potrero_queryset = Potrero.objects.filter(
-        predio__propietario=request.user,
-    ).select_related('predio', 'cultivo')
-    search_term = request.GET.get('q', '').strip()
-    filter_predio = request.GET.get('filtro_predio', '').strip()
-    filter_cultivo = request.GET.get('cultivo', '').strip()
-    sort_by = request.GET.get('orden', '-creado')
-    if search_term:
-        potrero_queryset = potrero_queryset.filter(nombre__icontains=search_term)
-    if filter_predio:
-        potrero_queryset = potrero_queryset.filter(predio_id=filter_predio)
-    if filter_cultivo:
-        potrero_queryset = potrero_queryset.filter(cultivo_id=filter_cultivo)
-    ordering = {
-        'creado': 'creado',
-        '-creado': '-creado',
-        'actualizado': 'actualizado',
-        '-actualizado': '-actualizado',
-        'nombre': 'nombre',
-        '-nombre': '-nombre',
-    }
-    potrero_queryset = potrero_queryset.order_by(ordering.get(sort_by, '-creado'), 'pk')
-    history_page = Paginator(potrero_queryset, 25).get_page(request.GET.get('pagina'))
-    crop_options = (
-        Cultivo.objects.filter(
-            potreros__predio__propietario=request.user,
-            potreros__archivado_en__isnull=True,
-        )
-        .distinct()
-        .order_by('nombre')
-    )
     return render_page(
         request,
         'predios.html',
@@ -121,14 +90,6 @@ def predios(request):
             'selected_predio': selected_predio,
             'selected_predio_id': str(selected_predio.pk) if selected_predio else '',
             'selected_potrero_id': selected_potrero_id,
-            'potrero_history_page': history_page,
-            'crop_options': crop_options,
-            'terrain_filters': {
-                'q': search_term,
-                'predio': filter_predio,
-                'cultivo': filter_cultivo,
-                'orden': sort_by,
-            },
             'maps_config': map_config(),
             'archived_count': Predio.todos.filter(propietario=request.user, archivado_en__isnull=False).count()
             + Potrero.todos.filter(
@@ -747,6 +708,6 @@ def mapa_prueba(request):
     """Laboratorio temporal de la migración a Google Maps (fase 0): solo administradores, sin Leaflet."""
     if not request.user.is_authenticated:
         return redirect('login')
-    if not request.user.is_staff:
+    if not es_administrador(request.user):
         raise PermissionDenied
     return render_page(request, 'mapa_prueba.html', 'mapa_prueba', {'maps_config': map_config()})

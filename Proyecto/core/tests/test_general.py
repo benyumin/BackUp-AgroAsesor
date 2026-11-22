@@ -479,10 +479,16 @@ class TerrainTests(TestCase):
         self.assertGreater(html.index('id="perimeter-confirmation"'), form_card)
         self.assertLess(html.index('id="registration-prompt"'), html.index('id="perimeter-confirmation"'))
         self.assertLess(html.index('id="perimeter-confirmation"'), html.index('id="terrain-form"'))
-        self.assertContains(self.client.get('/predios/nuevo/'), 'Tu predio mide')
+        self.assertContains(self.client.get('/predios/nuevo/'), 'Superficie del predio')
         self.assertContains(self.client.get('/predios/nuevo/'), 'Primero dibuja tu campo')
-        # Vértices, perímetro y m² existen, pero plegados bajo «Ver detalles técnicos».
-        self.assertEqual(html.count('Ver detalles técnicos'), 2)
+        # Paso 2: m², perímetro y puntos del contorno quedan siempre visibles bajo «Detalles técnicos».
+        # Solo el resumen del paso 3 mantiene el desplegable «Ver detalles técnicos».
+        self.assertEqual(html.count('Detalles técnicos'), 1)
+        self.assertEqual(html.count('Ver detalles técnicos'), 1)
+        confirmation = html[html.index('id="perimeter-confirmation"') : html.index('id="terrain-form"')]
+        self.assertNotIn('<details', confirmation)
+        for label in ('Superficie en m²', 'Perímetro del predio', 'Puntos del contorno'):
+            self.assertIn(label, confirmation)
 
     def test_predio_panel_separates_user_data_from_calculated_measurement(self):
         Zona.objects.create(nombre='Zona panel')
@@ -490,11 +496,11 @@ class TerrainTests(TestCase):
         self.assertIn('Ej: Fundo Santa Rosa', html)
         self.assertIn('Ej: Camino a Bollenar, parcela 12', html)
         self.assertIn('Selecciona una zona', html)
-        self.assertIn('Notas del predio (opcional)', html)
-        self.assertIn('Agregar más detalles', html)
-        # La referencia de ubicación es obligatoria: queda visible, nunca dentro del bloque plegado.
-        self.assertLess(html.index('Referencia de ubicación'), html.index('Agregar más detalles'))
-        self.assertLess(html.index('Agregar más detalles'), html.index('Notas del predio (opcional)'))
+        # Al registrar ya no hay «Agregar más detalles» ni notas; la referencia de ubicación sigue visible y obligatoria.
+        self.assertNotIn('Notas del predio (opcional)', html)
+        self.assertNotIn('Agregar más detalles', html)
+        self.assertNotIn('id="id_notas"', html)
+        self.assertIn('Referencia de ubicación', html)
         for hidden in ('superficie_ha', 'latitud', 'longitud'):
             self.assertIn(f'type="hidden" name="{hidden}"', html)
         for gone in (
@@ -797,12 +803,12 @@ class TerrainTests(TestCase):
         self.assertEqual(event.potrero, plot)
         self.assertContains(response, 'MIS PREDIOS REGISTRADOS')
         self.assertContains(response, 'POTREROS DE ESTE PREDIO')
-        self.assertContains(response, 'HISTORIAL DE POTREROS')
+        self.assertNotContains(response, 'HISTORIAL DE POTREROS')
         self.assertContains(response, f'data-select-plot="{plot.pk}"')
         selected_response = self.client.get('/predios/', {'predio': str(self.predio.pk)})
         self.assertContains(selected_response, f'data-initial-farm="{self.predio.pk}"')
 
-    def test_predios_page_lists_all_owned_farms_and_filters_potrero_history(self):
+    def test_predios_page_lists_all_owned_farms(self):
         other_farm = Predio.objects.create(
             propietario=self.user,
             nombre='Campo sur',
@@ -852,7 +858,6 @@ class TerrainTests(TestCase):
         self.assertContains(response, 'Ladera norte')
         self.assertContains(response, 'Bajo sur')
         self.assertNotContains(response, 'Potrero ajeno')
-        self.assertEqual(response.context['potrero_history_page'].paginator.count, 2)
 
         selected = self.client.get('/predios/', {'predio': str(self.predio.pk)})
         self.assertEqual(selected.context['selected_predio'], self.predio)
@@ -860,42 +865,13 @@ class TerrainTests(TestCase):
         self.assertContains(selected, f'?potrero={first_plot.pk}#predio-history')
         self.assertContains(selected, 'data-select-plot="' + str(first_plot.pk) + '"')
 
-        filtered = self.client.get(
-            '/predios/',
-            {
-                'q': 'norte',
-                'filtro_predio': str(self.predio.pk),
-                'cultivo': str(self.crop.pk),
-                'orden': 'nombre',
-            },
-        )
-        self.assertEqual(filtered.context['potrero_history_page'].paginator.count, 1)
-        self.assertEqual(filtered.context['potrero_history_page'].object_list[0], first_plot)
 
-    def test_potrero_history_list_paginates_and_keeps_filters(self):
-        for number in range(26):
-            Potrero.objects.create(
-                predio=self.predio,
-                nombre=f'Potrero {number:02}',
-                superficie_ha=Decimal('0.1'),
-            )
-        response = self.client.get(
-            '/predios/',
-            {
-                'q': 'Potrero',
-                'filtro_predio': str(self.predio.pk),
-                'orden': 'nombre',
-            },
-        )
-        page = response.context['potrero_history_page']
-        self.assertEqual(page.paginator.count, 26)
-        self.assertEqual(page.paginator.num_pages, 2)
-        self.assertEqual(len(page.object_list), 25)
-        self.assertContains(response, 'Página 1 de 2')
-        self.assertContains(
-            response,
-            f'?q=Potrero&filtro_predio={self.predio.pk}&cultivo=&orden=nombre&pagina=2',
-        )
+    def test_parametros_del_antiguo_historial_no_rompen_la_pagina(self):
+        # El historial de potreros ya no existe en /predios/; enlaces viejos con filtros o página siguen abriendo.
+        response = self.client.get('/predios/', {'q': 'norte', 'filtro_predio': '1', 'orden': 'nombre', 'pagina': '2'})
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, 'HISTORIAL DE POTREROS')
+        self.assertNotIn('potrero_history_page', response.context)
 
     def test_predios_empty_state_distinguishes_no_farms_and_farm_without_plots(self):
         response = self.client.get('/predios/')
@@ -1151,7 +1127,7 @@ class TerrainTests(TestCase):
                     '/',
                     '/predios/',
                     '/calendario/',
-                    '/decisiones/?herramienta=llevar&amp;tipo=semillas',
+                    '/calculadoras/',  # «Calculadoras» es un enlace directo; sus tres herramientas viven en esa página
                     '/reportes/',
                     '/actividades/',
                     '/productos/',
@@ -1693,7 +1669,10 @@ class ActividadAgricolaTests(TestCase):
         self.assertIn('Explorar el catálogo agrícola', visible)
         for removed in ('Superficie asignada a potreros', 'Potreros activos', 'Distribución de superficie', 'Actividades pendientes'):
             self.assertNotIn(removed, visible)
-        self.assertNotIn('class="journey no-print"', visible)  # la ruta de trabajo no repite el mismo CTA
+        # El progreso compacto muestra el primer paso pendiente; su botón es del propio componente (class «journey-btn»),
+        # no una segunda tarjeta de arranque, y por eso el conteo de arriba sigue en 1.
+        self.assertIn('class="journey no-print"', visible)
+        self.assertIn('Paso 1 de 6 · Predio', visible)
 
     def test_edit_and_status_updates_are_persistent_and_dashboard_count_is_real(self):
         activity = ActividadAgricola.objects.create(
@@ -3044,13 +3023,13 @@ class PredioPotreroFlowAndPrivacyTests(TestCase):
         self.assertNotIn('consent-box', html)
         self.assertNotIn('type="checkbox"', html)
         self.assertIn('Tus datos se guardan de forma privada en tu cuenta.', html)
-        self.assertIn(
-            'Registra únicamente predios que administras o tienes autorización para gestionar. Este trazado no acredita propiedad legal.',
-            html,
-        )
+        # «Sobre este registro» y su texto ya no se muestran; el aviso de privacidad se mantiene.
+        self.assertNotIn('Sobre este registro', html)
+        self.assertNotIn('Registra únicamente predios', html)
+        self.assertNotIn('no acredita propiedad legal', html)
         self.assertNotIn('Propiedad verificada', html)
         self.assertLess(html.index('id="map-form-summary"'), html.index('Guardar predio'))
-        self.assertLess(html.index('Guardar predio'), html.index('Registra únicamente predios'))
+        self.assertLess(html.index('Guardar predio'), html.index('Tus datos se guardan de forma privada'))
 
     def test_predio_saves_without_ownership_checkbox_and_keeps_geometry(self):
         farm, response = self.create_predio()
@@ -3098,7 +3077,6 @@ class PredioPotreroFlowAndPrivacyTests(TestCase):
             for x in (
                 'Nombre del predio',
                 'Referencia de ubicación',
-                'Notas del predio (opcional)',
                 'id="map-form-summary"',
                 'Guardar predio',
             )
@@ -3609,7 +3587,7 @@ class ButtonHierarchyAndNextStepTests(TestCase):
         self.assertNotIn('Utilizar todo el predio', html)
         self.assertNotIn('Predio registrado correctamente', html)
         self.assertNotIn('use-card', html)
-        self.assertIn('Gestión agrícola', html)
+        self.assertIn('Potreros asociados', html)
 
     def test_selected_panel_is_informative_and_script_has_no_duplicate_actions(self):
         from pathlib import Path
@@ -3755,23 +3733,14 @@ class VisualVarietyTests(TestCase):
         self.assertEqual(_farm_next_step(farm, [plot], pending=2)['key'], 'decisiones')
         self.assertEqual(_farm_next_step(farm, [plot])['url'], f'/decisiones/?tipo=semillas&potrero={plot.pk}')
 
-    def test_view_switch_is_front_end_only_and_remembered_in_local_storage(self):
+    def test_los_predios_se_muestran_solo_como_tarjetas(self):
         html = self.html('/predios/')
-        for marker in (
-            'data-view-mode="list"',
-            'data-view-mode="cards"',
-            'data-view-focus="map"',
-            'id="farm-picker-list"',
-        ):
-            self.assertIn(marker, html)
+        self.assertIn('id="farm-picker-list"', html)
+        for ausente in ('data-view-mode', 'data-view-focus', 'view-switch', 'predios-view.js', 'data-view="'):
+            self.assertNotIn(ausente, html)
         from pathlib import Path
 
-        source = (Path(__file__).resolve().parent.parent / 'static' / 'js' / 'predios-view.js').read_text(
-            encoding='utf-8'
-        )
-        self.assertIn('localStorage', source)
-        self.assertNotIn('fetch(', source)
-        self.assertNotIn('XMLHttpRequest', source)
+        self.assertFalse((Path(__file__).resolve().parent.parent / 'static' / 'js' / 'predios-view.js').exists())
 
     def test_context_menu_script_handles_keyboard_and_aria(self):
         from pathlib import Path
@@ -3948,7 +3917,7 @@ class CropPickerTests(TestCase):
 
 
 class PrediosSideLayoutTests(TestCase):
-    """/predios/: mapa a la izquierda; Información seleccionada e Historial de potreros apilados a la derecha."""
+    """/predios/: mapa a la izquierda; Información seleccionada y Clima apilados a la derecha."""
 
     def setUp(self):
         self.user = User.objects.create_user('lateral', email='lateral@example.com', password=PASSWORD)
@@ -3962,71 +3931,30 @@ class PrediosSideLayoutTests(TestCase):
     def page(self, url='/predios/'):
         return re.sub(r'<script.*?</script>', '', self.client.get(url).content.decode(), flags=re.S)
 
-    def test_history_lives_in_the_right_column_under_selected_info(self):
+    def test_weather_lives_in_the_right_column_under_selected_info_and_history_is_gone(self):
         html = self.page()
         workspace = html.index('terrain-workspace')
         map_card = html.index('class="card map-card"')
         side = html.index('terrain-side')
         selected = html.index('id="selected-terrain"')
-        history = html.index('id="potrero-history"')
+        weather = html.index('id="weather-card"')
         dialog = html.index('id="crop-dialog"')
-        self.assertTrue(
-            workspace < map_card < side < selected < history < dialog
-        )  # mapa primero; historial dentro del lateral
-        self.assertEqual(html.count('class="card potrero-history"'), 1)
-        self.assertEqual(html.count('HISTORIAL DE POTREROS'), 1)
-
-    def test_history_keeps_search_filters_order_pagination_and_actions(self):
-        html = self.page()
-        section = html[html.index('id="potrero-history"') : html.index('id="crop-dialog"')]
-        for text in (
-            'name="q"',
-            'name="filtro_predio"',
-            'name="cultivo"',
-            'name="orden"',
-            'Filtrar',
-            'Ver en mapa',
-            'Ficha e historial',
-            'Editar',
-            'Potrero Norte',
-            'Potrero Sur',
-            'Paginación del historial de potreros',
-            'Página 1 de 1',
-            '2 registrados',
-        ):
-            self.assertIn(text, section)
-        # Las acciones pasaron a un menú ⋯ (una por potrero) y ya no son botones permanentes del listado.
-        self.assertEqual(section.count('class="row-menu-trigger"'), 2)
-        self.assertNotIn('btn-compact', section)
-        self.assertIn(f'data-select-plot="{self.north.pk}"', section)
-        self.assertIn(f'/predios/{self.farm.pk}/potreros/{self.north.pk}/editar/', section)
-        # Fechas completas, una por línea para que no se corten en el ancho lateral.
-        self.assertRegex(
-            section,
-            r'<small>Creado \d\d/\d\d/\d{4} \d\d:\d\d</small>\s*<small>Actualizado \d\d/\d\d/\d{4} \d\d:\d\d</small>',
-        )
-
-    def test_filters_still_work_in_the_side_panel(self):
-        html = self.page('/predios/?q=Sur')
-        section = html[html.index('id="potrero-history"') : html.index('id="crop-dialog"')]
-        self.assertIn('Potrero Sur', section)
-        self.assertNotIn('Potrero Norte', section)
-        self.assertIn('value="Sur"', section)
-        empty = self.page('/predios/?q=inexistente')
-        self.assertIn('No hay potreros que coincidan con esos filtros.', empty)
+        self.assertTrue(workspace < map_card < side < selected < weather < dialog)  # mapa primero; clima en el lateral
+        self.assertEqual(html.count('class="card weather-card"'), 1)
+        for ausente in ('HISTORIAL DE POTREROS', 'potrero-history', 'name="filtro_predio"', 'terrain-pagination'):
+            self.assertNotIn(ausente, html)
 
     def test_layout_styles_two_columns_internal_scroll_and_responsive_stack(self):
         css = (Path(__file__).resolve().parent.parent / 'static' / 'css' / 'predios.css').read_text(encoding='utf-8')
         # Sin depender del formato: se comparan las reglas con los espacios y saltos de línea unificados.
         block = re.sub(r'\s+', ' ', css[css.index('/* ---------- /predios/: mapa a la izquierda') :])
         self.assertIn('.terrain-workspace { grid-template-columns: minmax(0, 2fr) minmax(340px, 1fr);', block)
-        self.assertIn('.terrain-side .potrero-history-list { max-height:', block)
-        self.assertIn('overflow-y: auto', block)
+        self.assertNotIn('potrero-history', css)  # el historial ya no existe: sin reglas huérfanas
         self.assertIn('@media (max-width: 1100px)', block)
         self.assertIn('.terrain-workspace .map-card { order: -1; }', block)  # móvil/tablet: el mapa primero
         self.assertIn(
             '@media (min-width: 760px) and (max-width: 1100px)', block
-        )  # tablet ancha: info e historial lado a lado
+        )  # tablet ancha: info y clima lado a lado
         self.assertNotIn('overflow-x: scroll', block)
 
 
@@ -4296,11 +4224,13 @@ class GuidedJourneyTests(IntegrationBase):
         self.assertIn('Parcela vacía', journey['next']['text'])
         self.assertEqual(journey['next']['url'], f'/predios/{empty_farm.pk}/potreros/nuevo/')
 
-    def test_journey_is_shown_on_main_sections_but_not_on_forms_or_farm_detail(self):
-        for url in ('/', '/predios/', '/calendario/', '/reportes/'):
+    def test_journey_is_shown_only_on_home_and_my_farms(self):
+        for url in ('/', '/predios/'):
             html = self.client.get(url).content.decode()
             self.assertIn('class="journey no-print"', html, url)
-            self.assertIn('Siguiente paso', html, url)
+            self.assertIn('Progreso de planificación', html, url)
+        for url in ('/calendario/', '/reportes/', '/actividades/', '/calculadoras/', '/productos/'):
+            self.assertNotIn('class="journey no-print"', self.client.get(url).content.decode(), url)
         # El Centro de decisiones y las calculadoras no llevan la ruta de seis pasos.
         self.assertNotIn('class="journey no-print"', self.client.get('/decisiones/').content.decode())
         for url in (f'/predios/{self.farm.pk}/', '/predios/nuevo/', f'/predios/{self.farm.pk}/potreros/nuevo/'):
@@ -4312,8 +4242,9 @@ class GuidedJourneyTests(IntegrationBase):
             'Para calcular necesitas: potrero + cultivo + superficie + dosis',
             self.client.get('/decisiones/').content.decode(),
         )
-        self.assertIn('completa la fecha de siembra', self.client.get('/calendario/').content.decode())
-        self.assertIn('quedan guardados y aparecen aquí', self.client.get('/reportes/').content.decode())
+        # El progreso de planificación vive solo en Inicio y Mis predios: Calendario y Reportes ya no llevan sus avisos.
+        for url in ('/calendario/', '/reportes/'):
+            self.assertNotIn('class="journey no-print"', self.client.get(url).content.decode(), url)
 
     def test_dashboard_lists_saved_calculations_instead_of_claiming_there_are_none(self):
         self.assertIn('Aún no has guardado cálculos', self.client.get('/').content.decode())

@@ -1038,8 +1038,7 @@ dialog::backdrop {
 }
 
 .farm-picker,
-.farm-plots-picker,
-.potrero-history {
+.farm-plots-picker {
     margin-bottom: 16px;
     padding: 16px;
 }
@@ -1076,69 +1075,13 @@ dialog::backdrop {
     scrollbar-width: thin;
 }
 
-.terrain-empty-inline {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 12px;
-    border: 1px dashed #cbdcc4;
-    border-radius: 11px;
-    background: #f8fbf6;
-}
-
-.terrain-empty-inline p {
-    margin: 0;
-    color: var(--muted);
-}
-
 .farm-plots-group {
     max-height: 260px;
     overflow: auto;
 }
 
-.farm-plot-picker-list,
-.potrero-history-list {
+.farm-plot-picker-list {
     display: grid;
-}
-
-.potrero-history-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 14px;
-    padding: 10px 4px;
-    border-top: 1px solid var(--line);
-}
-
-.potrero-history-main {
-    display: grid;
-    gap: 3px;
-    min-width: 0;
-}
-
-.potrero-history-main strong {
-    color: var(--green-dark);
-}
-
-.potrero-history-main span,
-.potrero-history-main small {
-    color: var(--muted);
-    font-size: .84rem;
-}
-
-.potrero-history-actions {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 8px 12px;
-}
-
-.potrero-history-actions .button {
-    min-height: 36px;
-    padding: 7px 10px;
-    font-size: .84rem;
 }
 
 .terrain-map-layout {
@@ -1176,72 +1119,21 @@ dialog::backdrop {
     margin: 8px 0 14px;
 }
 
-.terrain-filter-form {
-    display: grid;
-    grid-template-columns: minmax(180px, 1.4fr) repeat(3, minmax(140px, 1fr)) auto;
-    align-items: end;
-    gap: 10px;
-    margin-bottom: 12px;
-}
-
-.terrain-filter-form .field {
-    display: grid;
-    gap: 5px;
-    margin: 0;
-}
-
-.terrain-filter-form .field span {
-    color: var(--muted);
-    font-size: .81rem;
-}
-
-.terrain-filter-form input,
-.terrain-filter-form select {
-    min-height: 40px;
-    width: 100%;
-}
-
-.terrain-filter-form>.button {
-    min-height: 40px;
-}
-
-.potrero-history-item:first-child {
-    border-top: 0;
-}
-
-.terrain-pagination {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-    padding-top: 12px;
-}
-
-.terrain-pagination span {
-    color: var(--muted);
-    font-size: .88rem;
-}
-
 @media (max-width: 1024px) {
     .terrain-map-layout .map-card {
         min-height: 0;
     }
 
-    .terrain-filter-form {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
-}
 
 @media (max-width: 600px) {
 
     .farm-picker,
-    .farm-plots-picker,
-    .potrero-history {
+.farm-plots-picker {
         padding: 13px;
     }
 
-    .section-heading,
-    .potrero-history-item {
+    .section-heading {
         align-items: flex-start;
         flex-direction: column;
     }
@@ -1250,33 +1142,12 @@ dialog::backdrop {
         width: auto;
     }
 
-    .potrero-history-actions {
-        justify-content: flex-start;
-    }
-
     .terrain-map-layout .farm-map {
         min-height: 280px;
         height: 48vh;
     }
 
-    .terrain-filter-form {
-        grid-template-columns: 1fr;
     }
-
-    .terrain-filter-form .button {
-        width: 100%;
-        justify-content: center;
-    }
-
-    .terrain-empty-inline {
-        align-items: flex-start;
-        flex-direction: column;
-    }
-
-    .terrain-pagination {
-        flex-wrap: wrap;
-    }
-}
 
 /* ---- Fase 2: panel contextual, etiquetas y asignación de cultivo ---- */
 .terrain-panel-head {
@@ -1342,17 +1213,129 @@ dialog::backdrop {
     font-size: 0.9rem;
 }
 
-.terrain-season-history {
-    border: 1px solid var(--line);
-    border-radius: 10px;
-    padding: 8px 12px;
-    margin-bottom: 12px;
+/* Panel «Información seleccionada» compacto: datos clave en casillas y el resto plegado (menos scroll en el celular). */
+.terrain-keys {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin: 8px 0 10px;
 }
 
-.terrain-season-history summary {
-    cursor: pointer;
+.terrain-key {
+    display: grid;
+    align-content: start;
+    gap: 1px;
+    min-width: 0;
+    padding: 7px 10px;
+    border: 1px solid var(--line);
+    border-radius: 11px;
+    background: #fff;
+}
+
+/* Casillas anchas: etiqueta a la izquierda y valor a la derecha en una sola línea (la barra de avance va debajo). */
+.terrain-key.is-wide {
+    grid-column: 1 / -1;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: baseline;
+    gap: 1px 10px;
+}
+
+.terrain-key.is-wide strong {
+    text-align: right;
+}
+
+.terrain-key.is-wide .terrain-meter {
+    grid-column: 1 / -1;
+}
+
+.terrain-key span {
+    color: var(--muted);
+    font-size: .72rem;
     font-weight: var(--fw-semibold);
+}
+
+.terrain-key strong {
     color: var(--green-dark);
+    font-size: .95rem;
+    font-weight: var(--fw-semibold);
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+}
+
+.terrain-meter {
+    display: block;
+    width: 100%;
+    height: 6px;
+    margin-top: 5px;
+    accent-color: var(--green);
+}
+
+.terrain-line {
+    margin: 2px 0 8px;
+    color: var(--muted);
+}
+
+.terrain-line strong {
+    color: var(--green-dark);
+    font-size: 1.25rem;
+    font-weight: var(--fw-semibold);
+}
+
+.terrain-fold {
+    margin: 0 0 8px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: #fff;
+}
+
+.terrain-fold > summary {
+    cursor: pointer;
+    padding: 9px 12px;
+    color: var(--green-dark);
+    font-size: .9rem;
+    font-weight: var(--fw-semibold);
+}
+
+.terrain-fold-body {
+    padding: 0 12px 10px;
+}
+
+.terrain-fold .terrain-facts {
+    margin: 0 0 8px;
+    font-size: .88rem;
+}
+
+.terrain-fold .terrain-tool-links {
+    gap: 0 4px;
+    margin: 4px 0 2px;
+}
+
+.terrain-fold .terrain-tool-label {
+    flex-basis: 100%;
+}
+
+.terrain-fold .btn-compact {
+    min-height: 32px;
+}
+
+.selected-terrain .terrain-no-crop {
+    margin: 8px 0 10px;
+    padding: 10px 12px;
+}
+
+.selected-terrain .plot-actions {
+    gap: 8px;
+    margin: 0 0 8px;
+}
+
+.selected-terrain .plot-actions > a {
+    flex: 1 1 110px;
+    justify-content: center;
+    text-align: center;
+}
+
+.selected-terrain .plot-actions > a:first-child:not(:last-child) {
+    flex-grow: 2;
 }
 
 .season-list {
@@ -2114,11 +2097,6 @@ dialog::backdrop {
 }
 
 /* ---------- Jerarquía de acciones: principal > secundaria > terciaria ---------- */
-.potrero-history-actions {
-    align-items: center;
-    gap: 6px 8px;
-}
-
 .terrain-map-actions button.btn-secondary-agro {
     min-height: 34px;
     padding: 5px 12px;
@@ -2144,11 +2122,6 @@ dialog::backdrop {
     opacity: 1;
 }
 
-.btn-filter {
-    min-height: 40px;
-    padding: 8px 18px;
-}
-
 .terrain-tool-links {
     display: flex;
     flex-wrap: wrap;
@@ -2171,7 +2144,6 @@ dialog::backdrop {
     gap: 8px;
 }
 
-
 .confirmation-actions .btn-primary-agro,
 .confirmation-actions .btn-secondary-agro {
     min-height: 42px;
@@ -2193,7 +2165,34 @@ dialog::backdrop {
     padding: 11px 16px;
 }
 
-/* ---------- Mis predios y potreros: tarjetas de entidad, vista alternativa y panel contextual ---------- */
+/* ---------- Mis predios y potreros: tarjetas de predio y panel contextual ---------- */
+/* «Mis predios registrados» muestra solo tarjetas: entre 260 y 340 px de ancho (no se estiran cuando hay pocos
+   predios) y, en celular, una por fila. */
+.farm-picker-list.entity-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 340px));
+    justify-content: start;
+    gap: 12px;
+    padding: 2px;
+    overflow: visible;
+}
+
+@media (max-width: 600px) {
+    .farm-picker-list.entity-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+.farm-card .entity-card-select {
+    gap: 4px;
+    padding: 12px 44px 12px 14px;
+}
+
+.farm-card .next-hint {
+    margin-top: 2px;
+    padding-top: 6px;
+}
+
 .farm-plots-group {
     max-height: none;
     overflow: visible;
@@ -2201,41 +2200,6 @@ dialog::backdrop {
 
 .farm-plot-picker-list {
     gap: 10px;
-}
-
-.farm-picker-list.entity-grid[data-view="cards"] {
-    grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
-}
-
-.farm-picker-list.entity-grid[data-view="list"] {
-    grid-template-columns: 1fr;
-    gap: 8px;
-}
-
-.farm-picker-list[data-view="list"] .entity-card-select {
-    grid-template-columns: minmax(150px, 1.2fr) minmax(120px, 1fr) auto;
-    align-items: center;
-    gap: 4px 16px;
-    padding-block: 10px;
-}
-
-.farm-picker-list[data-view="list"] .entity-sub {
-    grid-column: 2;
-    grid-row: 1;
-}
-
-.farm-picker-list[data-view="list"] .meta-row {
-    grid-column: 3;
-    grid-row: 1;
-}
-
-.farm-picker-list[data-view="list"] .chip-row {
-    grid-column: 1 / -1;
-    grid-row: 2;
-}
-
-.farm-picker-list[data-view="list"] .next-hint {
-    display: none;
 }
 
 .plot-card {
@@ -2275,19 +2239,6 @@ dialog::backdrop {
 
 .drawer-chips {
     margin: 0 0 8px;
-}
-
-.drawer-area {
-    margin: 2px 0 0;
-    color: var(--green-dark);
-    font-size: 1.7rem;
-    font-weight: var(--fw-semibold);
-    line-height: 1.1;
-}
-
-.drawer-place {
-    margin: 2px 0 10px;
-    color: var(--muted);
 }
 
 .drawer-stats {
@@ -2340,21 +2291,7 @@ dialog::backdrop {
         margin: 0 14px 12px;
     }
 
-    .farm-picker-list[data-view="list"] .entity-card-select {
-        grid-template-columns: 1fr;
     }
-
-    .farm-picker-list[data-view="list"] .entity-sub,
-    .farm-picker-list[data-view="list"] .meta-row,
-    .farm-picker-list[data-view="list"] .chip-row {
-        grid-column: 1;
-        grid-row: auto;
-    }
-
-    .view-switch button span {
-        display: none;
-    }
-}
 
 /* ---------- Ficha del predio: resumen, siguiente paso y potreros ---------- */
 .detail-summary-row {
@@ -2429,7 +2366,7 @@ dialog::backdrop {
     border-top: 1px solid var(--line);
 }
 
-/* ---------- /predios/: mapa a la izquierda; información seleccionada + historial a la derecha ---------- */
+/* ---------- /predios/: mapa a la izquierda; información seleccionada + clima a la derecha ---------- */
 .terrain-workspace {
     grid-template-columns: minmax(0, 2fr) minmax(340px, 1fr);
     align-items: start;
@@ -2461,11 +2398,6 @@ dialog::backdrop {
     padding: 16px;
 }
 
-.terrain-side .potrero-history {
-    margin-bottom: 0;
-    padding: 14px;
-}
-
 .terrain-side .section-heading {
     flex-wrap: wrap;
     row-gap: 6px;
@@ -2474,92 +2406,6 @@ dialog::backdrop {
 
 .terrain-side .section-heading h2 {
     font-size: .98rem;
-}
-
-.terrain-side .terrain-filter-form {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-    margin-bottom: 10px;
-}
-
-.terrain-side .terrain-filter-form .field {
-    min-width: 0;
-}
-
-.terrain-side .terrain-filter-form .field:first-child {
-    grid-column: 1 / -1;
-}
-
-.terrain-side .terrain-filter-form .field span {
-    font-size: .76rem;
-}
-
-.terrain-side .terrain-filter-form input,
-.terrain-side .terrain-filter-form select {
-    min-height: 36px;
-    padding-block: 6px;
-    font-size: .9rem;
-    text-overflow: ellipsis;
-}
-
-.terrain-side .terrain-filter-form>.btn-filter {
-    align-self: end;
-    min-height: 36px;
-    width: 100%;
-    justify-content: center;
-    padding: 6px 10px;
-}
-
-.terrain-side .potrero-history-list {
-    max-height: min(360px, 46vh);
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    scrollbar-width: thin;
-    padding-right: 2px;
-}
-
-.terrain-side .potrero-history-item {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: start;
-    gap: 8px;
-    padding: 10px 2px;
-}
-
-.terrain-side .potrero-history-main {
-    gap: 2px;
-}
-
-.terrain-side .potrero-history-main strong {
-    overflow-wrap: anywhere;
-}
-
-.terrain-side .potrero-history-main span,
-.terrain-side .potrero-history-main small {
-    font-size: .8rem;
-    overflow-wrap: anywhere;
-}
-
-.terrain-side .potrero-history-main small {
-    line-height: 1.35;
-}
-
-.terrain-side .potrero-history-actions {
-    justify-content: flex-end;
-}
-
-.terrain-side .terrain-pagination {
-    flex-wrap: wrap;
-    gap: 8px;
-    padding-top: 10px;
-}
-
-.terrain-side .terrain-pagination .btn-sm {
-    padding: 5px 10px;
-}
-
-.terrain-side .terrain-empty-inline {
-    padding: 4px 2px;
 }
 
 /* Tablet y móvil: si no alcanza el ancho para dos columnas, se apila con el mapa primero. */
@@ -2578,12 +2424,9 @@ dialog::backdrop {
         min-height: 320px;
     }
 
-    .terrain-side .potrero-history-list {
-        max-height: 420px;
     }
-}
 
-/* Tablet con ancho suficiente: bajo el mapa, información e historial van lado a lado. */
+/* Tablet con ancho suficiente: bajo el mapa, información y clima van lado a lado. */
 @media (min-width: 760px) and (max-width: 1100px) {
     .terrain-side {
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2597,19 +2440,7 @@ dialog::backdrop {
         min-height: 280px;
     }
 
-    .terrain-side .potrero-history-item {
-        flex-direction: initial;
-        align-items: start;
     }
-
-    .terrain-side .terrain-filter-form {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .terrain-side .terrain-filter-form .button {
-        width: 100%;
-    }
-}
 
 /* Migas de pan: dónde estás (Mis predios › Predio › Potrero) y acciones directas por potrero */
 .crumbs {
@@ -2637,6 +2468,51 @@ dialog::backdrop {
     font-weight: var(--fw-semibold);
 }
 
+/* «Volver al predio» (registro de potrero): enlace discreto bajo las migas de pan */
+.back-to-predio {
+    display: inline-flex;
+    align-items: center;
+    align-self: flex-start;
+    gap: 6px;
+    width: fit-content;
+    min-height: 40px;
+    margin: -4px 0 2px;
+    color: var(--green);
+    font-size: 0.92rem;
+    font-weight: var(--fw-semibold);
+    line-height: 1.2;
+    text-decoration: none;
+}
+
+.back-to-predio svg {
+    flex: none;
+    width: 16px;
+    height: 16px;
+    transition: transform 0.15s ease;
+}
+
+.back-to-predio:hover {
+    color: var(--forest-2, var(--green));
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.back-to-predio:hover svg {
+    transform: translateX(-2px);
+}
+
+.back-to-predio:focus-visible {
+    border-radius: 8px;
+    outline: 2px solid var(--green);
+    outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .back-to-predio svg {
+        transition: none;
+    }
+}
+
 .plot-actions {
     display: flex;
     flex-wrap: wrap;
@@ -2645,18 +2521,6 @@ dialog::backdrop {
 }
 
 /* ---------- Responsive: en celular las tarjetas de predios se apilan (sin franja cortada) ---------- */
-@media (max-width: 600px) {
-    .farm-picker-list.entity-grid[data-view="cards"] {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr);
-        overflow: visible;
-    }
-
-    .farm-picker-list.entity-grid[data-view="cards"]>* {
-        min-width: 0;
-    }
-}
-
 /* Lista de potreros del panel «Información seleccionada»: se ajusta a pantallas de 320 px */
 .overview-plots {
     grid-template-columns: minmax(0, 1fr);
@@ -3219,41 +3083,16 @@ dialog::backdrop {
 }
 
 /* ---------- Pulido de diseño: Mis predios ---------- */
-.farm-picker-list.entity-grid[data-view="cards"],
-.farm-picker-list.entity-grid[data-view="list"] {
-    display: grid;
-    overflow: visible;
-    padding: 2px;
-}
-
-.farm-picker-list.entity-grid[data-view="cards"] {
-    grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
-}
-
 .farm-picker-list.entity-grid>.farm-card {
     min-width: 0;
 }
 
-.farm-picker-list[data-view="list"] .entity-card-select {
-    grid-template-columns: minmax(190px, 1.1fr) minmax(170px, 1fr) minmax(300px, auto);
-}
-
-.farm-picker-list[data-view="list"] .meta-row {
-    justify-content: flex-end;
-}
-
-.farm-picker-list.entity-grid[data-view="cards"]>.farm-card:only-child {
-    max-width: 560px;
-}
-
-#farm-picker-title,
-#potrero-history-title {
+#farm-picker-title {
     text-transform: lowercase;
     letter-spacing: 0;
 }
 
-#farm-picker-title::first-letter,
-#potrero-history-title::first-letter {
+#farm-picker-title::first-letter {
     text-transform: uppercase;
 }
 
@@ -4300,5 +4139,160 @@ dialog::backdrop {
 
     .is-predio-layout .tool-group-main button {
         flex: 1 1 auto;
+    }
+}
+
+/* ───────── Paso 2 · tarjeta «Superficie del predio»: jerarquía tipográfica y detalles técnicos visibles ─────────
+   Solo presentación, acotada a .is-predio-layout .perimeter-confirmation. Ids, JS y comportamiento no cambian:
+   el JS sigue rellenando #confirm-area, #confirm-m2, #confirm-perimeter y #confirm-vertices. */
+.is-predio-layout .perimeter-confirmation {
+    gap: 0;
+    padding: 22px 22px 20px;
+}
+
+/* Etiqueta pequeña sobre la cifra */
+.is-predio-layout .perimeter-confirmation .confirm-lead {
+    margin: 0 0 6px;
+    color: #475569;
+    font-size: .74rem;
+    font-weight: var(--fw-semibold);
+    letter-spacing: .08em;
+    line-height: 1.3;
+    text-transform: uppercase;
+}
+
+/* Hectáreas: lo más importante de la tarjeta. (#confirm-area gana por id a una regla antigua de 1.12rem) */
+.is-predio-layout .perimeter-confirmation #confirm-area {
+    margin: 0;
+    color: var(--green);
+    font-size: 2.6rem;
+    font-weight: var(--fw-semibold);
+    letter-spacing: -.02em;
+    line-height: 1.05;
+    overflow-wrap: anywhere;
+}
+
+.is-predio-layout .perimeter-confirmation .confirm-caption {
+    margin: 8px 0 0;
+    color: #475569;
+    font-size: .9rem;
+    line-height: 1.45;
+}
+
+/* Acciones: confirmar (principal) y volver a editar (secundaria), ambas a todo el ancho */
+.is-predio-layout .perimeter-confirmation #confirm-and-continue {
+    width: 100%;
+    margin-top: 18px;
+}
+
+.is-predio-layout .perimeter-confirmation #return-to-edit {
+    grid-column: 1 / -1;
+    justify-self: stretch;
+    justify-content: center;
+    width: 100%;
+    min-height: 44px;
+    margin-top: 10px;
+    padding: 0 14px;
+    border: 1px solid #cfe3c7;
+    background: #fff;
+    box-shadow: none;
+    color: var(--green);
+    font-size: .95rem;
+}
+
+.is-predio-layout .perimeter-confirmation #return-to-edit:hover {
+    border-color: var(--green);
+    background: var(--green-soft);
+}
+
+/* Detalles técnicos: siempre visibles, etiqueta a la izquierda y valor a la derecha */
+.is-predio-layout .perimeter-confirmation .confirm-details {
+    margin: 20px 0 0;
+    padding-top: 16px;
+    border-top: 1px solid rgba(11, 107, 75, .16);
+}
+
+.is-predio-layout .perimeter-confirmation .confirm-details-title {
+    margin: 0 0 4px;
+    color: var(--ink);
+    font-size: .95rem;
+    font-weight: var(--fw-semibold);
+    line-height: 1.3;
+}
+
+.is-predio-layout .perimeter-confirmation .confirm-details dl {
+    display: grid;
+    margin: 0;
+}
+
+.is-predio-layout .perimeter-confirmation .confirm-details dl>div {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 9px 0;
+    border-top: 1px solid rgba(15, 27, 45, .07);
+}
+
+.is-predio-layout .perimeter-confirmation .confirm-details dl>div:first-child {
+    border-top: 0;
+}
+
+.is-predio-layout .perimeter-confirmation .confirm-details dt {
+    margin: 0;
+    color: #475569;
+    font-size: .9rem;
+}
+
+.is-predio-layout .perimeter-confirmation .confirm-details dd {
+    min-width: 0;
+    margin: 0;
+    color: var(--ink);
+    font-size: .95rem;
+    font-variant-numeric: tabular-nums;
+    font-weight: var(--fw-semibold);
+    overflow-wrap: anywhere;
+    text-align: right;
+}
+
+/* Aviso discreto */
+.is-predio-layout .perimeter-confirmation .confirm-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin: 14px 0 0;
+    padding: 11px 13px;
+    border: 1px solid rgba(11, 107, 75, .14);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, .6);
+    color: #475569;
+    font-size: .84rem;
+    line-height: 1.45;
+}
+
+.is-predio-layout .perimeter-confirmation .confirm-note i,
+.is-predio-layout .perimeter-confirmation .confirm-note svg {
+    flex: none;
+    width: 17px;
+    height: 17px;
+    margin-top: 1px;
+    color: var(--green);
+}
+
+.is-predio-layout .perimeter-confirmation .confirm-note span {
+    min-width: 0;
+}
+
+@media (max-width: 560px) {
+    .is-predio-layout .perimeter-confirmation {
+        padding: 18px 16px 16px;
+    }
+
+    .is-predio-layout .perimeter-confirmation #confirm-area {
+        font-size: 2.25rem;
+    }
+
+    .is-predio-layout .perimeter-confirmation .confirm-details dl>div {
+        gap: 12px;
     }
 }

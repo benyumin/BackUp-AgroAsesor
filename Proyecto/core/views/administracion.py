@@ -2,11 +2,10 @@
 """
 
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
-from django.core.exceptions import PermissionDenied
 from django.shortcuts import redirect
 from django.views.decorators.http import require_POST
 
+from ..auth import administrador_requerido
 from ..catalog import (
     CROP_GROUPS,
     ensure_base_crops,
@@ -14,10 +13,8 @@ from ..catalog import (
 from .base import render_page
 
 
-@login_required
+@administrador_requerido
 def admin_panel(request):
-    if not request.user.is_staff:
-        raise PermissionDenied
     from ..estadisticas import resumen_administrador
 
     return render_page(
@@ -31,12 +28,10 @@ def admin_panel(request):
     )
 
 
-@login_required
+@administrador_requerido
 @require_POST
 def cultivos_base_cargar(request):
     """Acción explícita del administrador: carga los cultivos base que falten."""
-    if not request.user.is_staff:
-        raise PermissionDenied
     created = ensure_base_crops()
     if created:
         messages.success(request, f'Se cargaron {created} cultivos base. Ya aparecen al registrar potreros y cultivos.')

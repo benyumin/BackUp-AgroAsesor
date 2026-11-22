@@ -1,0 +1,189 @@
+/* «Completar planificación» (temporada_form.html): una sola tarjeta centrada con tres grupos de campos.
+   Solo presentación; las validaciones y el guardado siguen en la vista y el formulario de Django. */
+.season-page {
+    width: 100%;
+    max-width: 760px;
+    margin: 0 auto;
+}
+
+.season-hero {
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.season-hero > div {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.season-hero > .button {
+    flex: none;
+    white-space: nowrap;
+}
+
+.season-hero .page-title {
+    margin-bottom: 2px;
+}
+
+.season-where {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0 0 6px;
+    color: var(--green-dark);
+    font-weight: var(--fw-semibold);
+    overflow-wrap: anywhere;
+}
+
+.season-where svg,
+.season-where i {
+    width: 16px;
+    height: 16px;
+    flex: 0 0 16px;
+    color: var(--green);
+}
+
+.season-hero .page-sub {
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+.season-hero .season-note {
+    margin-top: 6px;
+}
+
+.season-card {
+    padding: 18px 20px;
+}
+
+.season-group {
+    padding-bottom: 18px;
+}
+
+.season-group + .season-group {
+    padding-top: 18px;
+    border-top: 1px solid var(--line);
+}
+
+.season-card .season-group-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 12px;
+    font-size: 1rem;
+    line-height: 1.3;
+}
+
+.season-ico {
+    display: inline-grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    flex: 0 0 30px;
+    border-radius: 10px;
+    background: var(--green-soft);
+    color: var(--green);
+}
+
+.season-ico svg,
+.season-ico i {
+    width: 18px;
+    height: 18px;
+}
+
+.season-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px 16px;
+}
+
+.season-grid + .season-grid {
+    margin-top: 12px;
+}
+
+.season-grid .field {
+    min-width: 0;
+    margin-bottom: 0;
+}
+
+.season-grid .span-2 {
+    grid-column: 1 / -1;
+}
+
+/* Las dos fechas son lo más importante del formulario: van juntas, sobre un fondo suave y con campos más altos. */
+.season-dates {
+    padding: 14px;
+    border: 1px solid var(--green-soft);
+    border-radius: 14px;
+    background: #f6faf5;
+}
+
+.season-dates label {
+    color: var(--green-dark);
+}
+
+.season-dates input[type="date"] {
+    min-height: 48px;
+    border-color: var(--green-light);
+    font-size: 1.02rem;
+}
+
+.season-dates .has-error input[type="date"] {
+    border-color: var(--red);
+}
+
+.season-form textarea {
+    height: 84px;
+    min-height: 84px;
+    resize: vertical;
+}
+
+.season-form input:focus-visible,
+.season-form select:focus-visible,
+.season-form textarea:focus-visible {
+    outline: 3px solid rgba(61, 122, 74, 0.3);
+    border-color: var(--green);
+}
+
+.season-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    padding-top: 18px;
+    border-top: 1px solid var(--line);
+}
+
+.season-actions .button {
+    min-height: 46px;
+    justify-content: center;
+    padding-inline: 22px;
+}
+
+@media (max-width: 600px) {
+    .season-hero {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .season-card {
+        padding: 16px;
+    }
+
+    .season-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .season-dates {
+        padding: 12px;
+    }
+
+    .season-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .season-actions .button {
+        width: 100%;
+    }
+}

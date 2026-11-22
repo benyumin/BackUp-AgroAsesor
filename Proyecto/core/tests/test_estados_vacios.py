@@ -109,14 +109,18 @@ class EmptyCalendarAndCalculatorsTests(NewcomerBase):
 
 
 class JourneyBannerTests(NewcomerBase):
-    def test_banner_is_hidden_without_farms_and_shown_with_them(self):
-        for url in ('/', '/predios/', '/calendario/', '/reportes/'):
-            with self.subTest(url=url):
-                self.assertNotIn('class="journey no-print"', self.client.get(url).content.decode())
-        self.client.force_login(self.owner)
-        for url in ('/', '/predios/', '/calendario/', '/reportes/'):
-            with self.subTest(url=url, farm=True):
-                self.assertIn('class="journey no-print"', self.client.get(url).content.decode())
+    def test_progress_is_shown_on_home_and_my_farms_with_or_without_farms(self):
+        # Sin predios muestra el primer paso pendiente; con predios, el paso real. Solo en Inicio y Mis predios.
+        for logged, farm in ((self.newcomer, False), (self.owner, True)):
+            self.client.force_login(logged)
+            for url in ('/', '/predios/'):
+                with self.subTest(url=url, farm=farm):
+                    html = self.client.get(url).content.decode()
+                    self.assertIn('class="journey no-print"', html)
+                    self.assertIn('Progreso de planificación', html)
+            for url in ('/calendario/', '/reportes/', '/actividades/', '/calculadoras/', '/productos/'):
+                with self.subTest(url=url, farm=farm, section='sin progreso'):
+                    self.assertNotIn('class="journey no-print"', self.client.get(url).content.decode())
 
     def test_decision_center_never_shows_the_banner(self):
         # El Centro de decisiones y las calculadoras arrancan directo en la herramienta, con o sin predios.

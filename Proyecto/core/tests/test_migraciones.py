@@ -8,6 +8,8 @@ Se vuelve a la migración 0021, se crean datos como estaban entonces, se aplica 
 Usa TransactionTestCase porque cambia el esquema de la base. Para llegar a la 0021 se revierten las migraciones más
 nuevas que ella: si algún día se agrega una que no se pueda revertir, esta prueba se adapta o se retira.
 """
+from unittest import skipIf
+
 from django.db import connection
 from django.db.migrations.executor import MigrationExecutor
 from django.test import TransactionTestCase
@@ -25,6 +27,10 @@ def _columnas(tabla):
         return {columna.name for columna in connection.introspection.get_table_description(cursor, tabla)}
 
 
+@skipIf(
+    connection.vendor == 'sqlite',
+    'Revertir migraciones necesita PostgreSQL: SQLite no lo admite con las claves foráneas activas.',
+)
 class Migracion0022Tests(TransactionTestCase):
     def setUp(self):
         super().setUp()

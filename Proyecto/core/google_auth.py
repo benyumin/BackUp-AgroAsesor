@@ -11,7 +11,8 @@ Flujo
    emisor, audiencia (= nuestro client_id), vencimiento, ``nonce`` y ``email_verified``.
    Como el ``id_token`` llega directo desde el endpoint de tokens de Google por TLS, OpenID Connect Core
    (§3.1.3.7, punto 6) permite validar el emisor por TLS en vez de verificar la firma.
-3. Si ya existe una cuenta con ese correo, entra a esa cuenta (sin duplicar usuarios ni tocar roles).
+3. Si ya existe una cuenta con ese correo, entra a esa cuenta (sin duplicar usuarios ni tocar roles) y va a la
+   pantalla de su rol: el panel si es administradora, el inicio si es agricultora (``core.auth.destino_inicial``).
    Si no existe, se pide completar el registro de agricultor (``google_completar``) con los mismos datos
    obligatorios del registro normal y la aceptación de la política.
 
@@ -37,6 +38,7 @@ from django.urls import reverse
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
 
+from .auth import destino_inicial
 from .forms import RegistroGoogleForm
 from .models import AceptacionPoliticas
 
@@ -209,7 +211,7 @@ def google_callback(request):
             messages.warning(request, 'Esta cuenta está desactivada. Contacta al administrador de AgroAsesor.')
             return redirect('login')
         login(request, user, backend=BACKEND)  # misma sesión de Django; roles y permisos intactos
-        return redirect('dashboard')
+        return redirect(destino_inicial(user))
     request.session[CLAVE_REGISTRO] = {'correo': correo, 'nombre': nombre, 'creado': time.time()}
     return redirect('google_completar')
 
@@ -219,7 +221,7 @@ def google_completar(request):
     """Datos obligatorios del agricultor para quien entra por primera vez con Google."""
     pendiente = request.session.get(CLAVE_REGISTRO)
     if request.user.is_authenticated:
-        return redirect('dashboard')
+        return redirect(destino_inicial(request.user))
     if not pendiente or time.time() - pendiente.get('creado', 0) > VIGENCIA_REGISTRO:
         request.session.pop(CLAVE_REGISTRO, None)
         messages.warning(request, 'Vuelve a continuar con Google para crear tu cuenta.')
@@ -242,5 +244,5 @@ def google_completar(request):
             request.session.pop(CLAVE_REGISTRO, None)
             login(request, user, backend=BACKEND)
             messages.success(request, 'Tu cuenta se creó correctamente con Google. Ya iniciaste sesión.')
-            return redirect('dashboard')
+            return redirect(destino_inicial(user))
     return render(request, 'registration/google_completar.html', {'form': form, 'correo': correo, 'error': error})

@@ -275,6 +275,8 @@ class PredioForm(forms.ModelForm):
                 else:
                     kwargs['data'] = bound_data
         super().__init__(*args, **kwargs)
+        # Notas ya guardadas: si el formulario llega sin ningún campo de notas no se vacían (ver _post_clean).
+        self._notas_guardadas = (instance.descripcion, instance.observaciones) if instance and instance.pk else None
         self.fields['superficie_ha'].required = False
         # Melipilla va primero y queda preseleccionada en un predio nuevo: es la zona de trabajo del proyecto.
         self.fields['zona'].queryset = (
@@ -318,6 +320,9 @@ class PredioForm(forms.ModelForm):
         if 'notas' in self.data:
             self.instance.descripcion = self.cleaned_data.get('notas', '')
             self.instance.observaciones = ''
+        elif self._notas_guardadas is not None and 'descripcion' not in self.data and 'observaciones' not in self.data:
+            # ModelForm pondría en blanco lo que no llega en el POST: se conservan las notas guardadas.
+            self.instance.descripcion, self.instance.observaciones = self._notas_guardadas
 
     def clean(self):
         data = super().clean()

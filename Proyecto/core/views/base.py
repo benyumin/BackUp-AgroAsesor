@@ -9,6 +9,7 @@ from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils.cache import add_never_cache_headers
 
+from ..auth import es_administrador
 from ..catalog import (
     catalog_payload,
     crop_picker_data,
@@ -26,6 +27,20 @@ from ..seasons import (
 from .contexto_predios import EN_POTREROS_VIGENTES, decision_url, farm_payload, plan_form_url
 
 
+def build_menu_admin(current):
+    """Menú lateral del administrador: solo la navegación administrativa (el agricultor no ve estas entradas)."""
+    return [
+        {'section': 'Administración'},
+        {
+            'label': 'Centro de administración',
+            'icon': 'shield-check',
+            'href': reverse('admin_panel'),
+            'active': current == 'admin_panel',
+        },
+        {'label': 'Django Admin', 'icon': 'database', 'href': reverse('admin:index'), 'active': False},
+    ]
+
+
 def build_menu(request, current):
     """Menú lateral agrupado por propósito: mi campo, trabajo del campo, herramientas e informes.
 
@@ -33,6 +48,8 @@ def build_menu(request, current):
     «Mis predios»), «Toma de decisiones» (es la misma página de las calculadoras) y «Buscar» (ya está el buscador
     de la barra superior). Las pantallas y sus direcciones siguen existiendo.
     """
+    if es_administrador(request.user):
+        return build_menu_admin(current)
     items = [
         {'section': 'Mi terreno'},
         {'label': 'Inicio', 'icon': 'house', 'href': reverse('dashboard'), 'active': current == 'dashboard'},
@@ -69,21 +86,9 @@ def build_menu(request, current):
     return items
 
 
-# El Centro de decisiones y las calculadoras no llevan la ruta de seis pasos: arrancan directo en la herramienta.
-JOURNEY_PAGES = {'dashboard', 'predios', 'calendario', 'reportes'}
-
-
-JOURNEY_HERE = {
-    'predios': {'predio', 'potreros', 'cultivo'},
-    'calendario': {'siembra'},
-    'reportes': {'reporte'},
-}
-
-
-JOURNEY_NOTES = {
-    'calendario': 'Después de elegir cultivo, completa la fecha de siembra del potrero.',
-    'reportes': 'Los cálculos del Centro de decisiones quedan guardados y aparecen aquí.',
-}
+# El progreso de planificación (seis etapas) se muestra solo en Inicio y Mis predios. Actividades, Calendario,
+# Calculadoras, Catálogo y Reportes no lo llevan; el Centro de decisiones arranca directo en la herramienta.
+JOURNEY_PAGES = {'dashboard', 'predios'}
 
 
 def journey_payload(user, current):
@@ -232,7 +237,6 @@ def journey_payload(user, current):
         if step['key'] == 'reporte' or (not step['done'] and step['next']):
             current_key = step['key']
             break
-    here = JOURNEY_HERE.get(current, set())
     items, current_step = [], None
     for step in steps:
         state = 'current' if step['key'] == current_key else ('done' if step['done'] else 'todo')
@@ -242,19 +246,24 @@ def journey_payload(user, current):
                 'label': step['label'],
                 'url': step['url'],
                 'state': state,
-                'here': step['key'] in here,
             }
         )
         if step['key'] == current_key:
             current_step = dict(
                 step['next'], cta=step['next']['actions'][0]['label'], url=step['next']['actions'][0]['url']
             )
+    done_count = sum(1 for step in steps if step['done'])
     return {
         'steps': items,
         'next': current_step,
-        'note': JOURNEY_NOTES.get(current, ''),
-        'done_count': sum(1 for step in steps if step['done']),
+        'done_count': done_count,
         'total': len(steps) - 1,
+        # Datos para la tarjeta compacta: salen de los mismos estados de arriba (nada se guarda ni se recalcula aparte).
+        # La etapa actual sigue pendiente, así que no suma al porcentaje.
+        'steps_total': len(steps),
+        'position': next(index for index, item in enumerate(items, 1) if item['state'] == 'current'),
+        'current_label': next(item['label'] for item in items if item['state'] == 'current'),
+        'percent': round(100 * done_count / len(steps)),
     }
 
 
@@ -266,7 +275,8 @@ def render_page(request, template, current, extra=None):
     """
     if not request.user.is_authenticated:
         return redirect('login')
-    if current == 'admin_panel' and not request.user.is_staff:
+    es_admin = es_administrador(request.user)
+    if current == 'admin_panel' and not es_admin:
         raise PermissionDenied
     extra = extra or {}
     name = request.user.get_full_name() or request.user.username
@@ -274,11 +284,13 @@ def render_page(request, template, current, extra=None):
         'user': {
             'name': name,
             'email': request.user.email,
-            'role': 'Administrador' if request.user.is_staff else 'Agricultor',
+            'role': 'Administrador' if es_admin else 'Agricultor',
         },
         'first_name': name.split()[0],
         'initials': ''.join(p[0] for p in name.split()[:2]).upper(),
         'menu': build_menu(request, current),
+        # El logotipo lleva a la pantalla de inicio del rol: el panel para el administrador, el inicio para el agricultor.
+        'home_url': reverse('admin_panel') if es_admin else reverse('dashboard'),
         'current': current,
         'query': request.GET.get('q', ''),
         'catalog': extra.get('catalog') or catalog_payload(),
@@ -306,7 +318,7 @@ def render_page(request, template, current, extra=None):
         # Cuentas creadas antes de pedir teléfono y comuna: se invita a completar el perfil (sin bloquear nada).
         'perfil_incompleto': (
             current != 'perfil'
-            and not request.user.is_staff
+            and not es_admin
             and not Agricultor.objects.filter(user=request.user).exists()
         ),
     }

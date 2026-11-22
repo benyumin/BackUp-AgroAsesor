@@ -99,18 +99,20 @@ class NoJourneyBlockTests(DecisionesBase):
             self.login(user)
             self.assertNotIn('journey', self.client.get('/decisiones/').context)
 
-    def test_journey_is_configured_only_for_the_other_pages(self):
-        self.assertEqual(views.JOURNEY_PAGES, {'dashboard', 'predios', 'calendario', 'reportes'})
-        for table in (views.JOURNEY_HERE, views.JOURNEY_NOTES):
-            self.assertNotIn('decisiones', table)
+    def test_journey_is_configured_only_for_home_and_my_farms(self):
+        self.assertEqual(views.JOURNEY_PAGES, {'dashboard', 'predios'})
+        self.assertNotIn('decisiones', views.JOURNEY_PAGES)
 
-    def test_other_pages_keep_their_journey(self):
+    def test_home_and_my_farms_keep_the_compact_progress_and_the_other_sections_do_not_show_it(self):
         self.login(self.owner)
-        for url in ('/', '/predios/', '/calendario/', '/reportes/'):
+        for url in ('/', '/predios/'):
             with self.subTest(url=url):
                 html = self.client.get(url).content.decode()
                 self.assertIn('class="journey no-print"', html)
-                self.assertIn('Siguiente paso', html)
+                self.assertIn('Progreso de planificación', html)
+        for url in ('/calendario/', '/reportes/', '/actividades/', '/calculadoras/', '/productos/'):
+            with self.subTest(url=url):
+                self.assertNotIn('class="journey no-print"', self.client.get(url).content.decode())
 
     def test_removed_pieces_are_gone_from_the_static_files_too(self):
         css = source('css', 'decisiones.css')

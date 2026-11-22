@@ -3,34 +3,67 @@
 {% block title %}{{ heading }} · AgroAsesor{% endblock %}
 {% block extra_css %}
     <link rel="stylesheet" href="{% static 'css/activities.css' %}?v=12">
+    <link rel="stylesheet" href="{% static 'css/temporada-form.css' %}?v=1">
 {% endblock %}
 {% block content %}
-    <div class="page-hero">
-        <div>
-            <h1 class="page-title">{{ heading }}</h1>
-            <p class="page-sub">{{ predio.nombre }} · {{ potrero.nombre }}. Indica el cultivo, la temporada y las fechas previstas. Es la temporada vigente del potrero; las temporadas anteriores se conservan.</p>
-            {% if is_past_season %}<p class="page-sub"><strong>Esta es una temporada anterior.</strong> Puedes corregirla; los datos vigentes del potrero no cambian.</p>{% endif %}
-        </div>
-        <a class="button secondary"
-           href="{% url 'predio_detail' predio.pk %}#potrero-{{ potrero.pk }}">Volver al predio</a>
-    </div>
-    <section class="card activity-form-card">
-        <form method="post" novalidate>
-            {% csrf_token %}
-            {% if form.non_field_errors %}<div class="alert" role="alert">{{ form.non_field_errors }}</div>{% endif %}
-            {% for field in form %}
-                <div class="field">
-                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                    {{ field }}
-                    {% if field.help_text %}<small class="muted">{{ field.help_text }}</small>{% endif %}
-                    {% for error in field.errors %}<small class="error" role="alert">{{ error }}</small>{% endfor %}
-                </div>
-            {% endfor %}
-            <div class="toolbar">
-                <button class="button" type="submit">Guardar planificación</button>
-                <a class="button secondary"
-                   href="{% url 'predio_detail' predio.pk %}#potrero-{{ potrero.pk }}">Cancelar</a>
+    <div class="season-page">
+        <div class="page-hero season-hero">
+            <div>
+                <h1 class="page-title">{{ heading }}</h1>
+                <p class="season-where">
+                    <i data-lucide="map-pin" aria-hidden="true"></i>
+                    <span>{{ predio.nombre }} · {{ potrero.nombre }}</span>
+                </p>
+                <p class="page-sub">Indica el cultivo, la temporada y las fechas previstas. Es la temporada vigente del potrero; las temporadas anteriores se conservan.</p>
+                {% if is_past_season %}<p class="page-sub season-note"><strong>Esta es una temporada anterior.</strong> Puedes corregirla; los datos vigentes del potrero no cambian.</p>{% endif %}
             </div>
-        </form>
-    </section>
+            <a class="button secondary"
+               href="{% url 'predio_detail' predio.pk %}#potrero-{{ potrero.pk }}">Volver al predio</a>
+        </div>
+        <section class="card season-card">
+            <form method="post" novalidate class="season-form">
+                {% csrf_token %}
+                {% if form.non_field_errors %}<div class="alert" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+                {% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
+                <section class="season-group" aria-labelledby="season-cultivo">
+                    <h2 class="season-group-title" id="season-cultivo">
+                        <span class="season-ico" aria-hidden="true"><i data-lucide="sprout"></i></span>
+                        Información del cultivo
+                    </h2>
+                    <div class="season-grid">
+                        {% include "partials/field.html" with field=form.cultivo %}
+                        {% include "partials/field.html" with field=form.variedad %}
+                    </div>
+                </section>
+                <section class="season-group" aria-labelledby="season-fechas">
+                    <h2 class="season-group-title" id="season-fechas">
+                        <span class="season-ico" aria-hidden="true"><i data-lucide="calendar-days"></i></span>
+                        Temporada y fechas
+                    </h2>
+                    <div class="season-grid">
+                        {% include "partials/field.html" with field=form.temporada_agricola %}
+                    </div>
+                    <div class="season-grid season-dates">
+                        {% include "partials/field.html" with field=form.fecha_siembra %}
+                        {% include "partials/field.html" with field=form.fecha_cosecha %}
+                    </div>
+                </section>
+                <section class="season-group" aria-labelledby="season-estado">
+                    <h2 class="season-group-title" id="season-estado">
+                        <span class="season-ico" aria-hidden="true"><i data-lucide="clipboard-list"></i></span>
+                        Estado y observaciones
+                    </h2>
+                    <div class="season-grid">
+                        {% include "partials/field.html" with field=form.estado %}
+                        {% include "partials/field.html" with field=form.observaciones wide=True %}
+                    </div>
+                </section>
+                <div class="season-actions">
+                    <button class="button" type="submit">Guardar planificación</button>
+                    <a class="button secondary"
+                       href="{% url 'predio_detail' predio.pk %}#potrero-{{ potrero.pk }}">Cancelar</a>
+                </div>
+            </form>
+        </section>
+    </div>
 {% endblock %}

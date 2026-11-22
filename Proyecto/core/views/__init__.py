@@ -30,8 +30,6 @@ from .administracion import (  # noqa: F401
     cultivos_base_cargar,
 )
 from .base import (  # noqa: F401
-    JOURNEY_HERE,
-    JOURNEY_NOTES,
     JOURNEY_PAGES,
     build_menu,
     journey_payload,
@@ -56,6 +54,9 @@ from .catalogo import (  # noqa: F401
     producto_detail,
     producto_pdf,
     productos,
+)
+from .clima_predio import (  # noqa: F401
+    predio_clima_api,
 )
 from .contexto_predios import (  # noqa: F401
     ACTIVITY_ICONS,

@@ -1857,7 +1857,7 @@
     .activity-table-row > :nth-child(4):has(> small.muted:only-child) { display: none; }
     .activity-table-row > :nth-child(5) { grid-column: 3; grid-row: 1; justify-self: end; }
     .activity-table-row > :nth-child(6) { grid-column: 3; grid-row: 2 / span 2; justify-self: end; align-self: end; }
-    .activity-table-row > :nth-child(3) strong::after { content: " ·"; color: var(--muted); font-weight: 400; }
+    .activity-table-row > :nth-child(3) strong::after { content: " ·"; color: var(--muted); font-weight: var(--fw-regular); }
     .activity-table-row > :nth-child(3) small { color: var(--muted); }
 }
 @media (max-width: 560px) {

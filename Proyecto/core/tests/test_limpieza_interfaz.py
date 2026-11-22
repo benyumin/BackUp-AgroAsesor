@@ -89,6 +89,6 @@ class LimpiezaInterfazTests(TestCase):
     def test_mis_predios_con_predios_muestra_listado_mapa_y_panel(self):
         self.con_predio()
         html = self.client.get('/predios/').content.decode()
-        for presente in ('id="farm-map"', 'id="selected-terrain"', 'id="potrero-history"', 'Fundo', 'Lote 1'):
+        for presente in ('id="farm-map"', 'id="selected-terrain"', 'Fundo', 'Lote 1'):
             self.assertIn(presente, html)
         self.assertNotIn('Registrar primer predio', html)

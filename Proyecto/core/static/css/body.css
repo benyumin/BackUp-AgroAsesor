@@ -1163,52 +1163,6 @@ main>.page-container>.callout {
     display: none !important;
 }
 
-/* ---------- Selector de vista ---------- */
-.view-switch {
-    display: inline-flex;
-    gap: 2px;
-    padding: 3px;
-    border: 1px solid var(--line);
-    border-radius: 11px;
-    background: #f4f7f2;
-}
-
-.view-switch button {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 5px 11px;
-    border: 0;
-    border-radius: 8px;
-    background: transparent;
-    color: var(--muted);
-    font: inherit;
-    font-size: .85rem;
-    font-weight: var(--fw-semibold);
-    cursor: pointer;
-    transition: background .15s, color .15s;
-}
-
-.view-switch button svg {
-    width: 15px;
-    height: 15px;
-}
-
-.view-switch button:hover {
-    color: var(--green-dark);
-}
-
-.view-switch button.is-active {
-    background: #fff;
-    color: var(--green-dark);
-    box-shadow: 0 1px 3px rgba(30, 61, 40, .14);
-}
-
-.view-switch button:focus-visible {
-    outline: 3px solid #79a97e;
-    outline-offset: 1px;
-}
-
 /* ---------- Estados vacíos que enseñan qué hacer ---------- */
 .empty-state {
     display: grid;
@@ -1745,160 +1699,114 @@ i[data-lucide="check"]:empty::before {
 
 }
 
-/* ---------- Guía «Siguiente paso» de las secciones principales ---------- */
+/* ---------- Progreso de planificación (solo Inicio y Mis predios) ---------- */
 .journey {
     display: grid;
-    gap: 10px;
-    margin: 0 0 18px;
-    padding: 12px 16px;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+        "head act"
+        "bar act"
+        "msg act"
+        "more more";
+    align-items: center;
+    gap: 4px 20px;
+    margin: 0 0 16px;
+    padding: 12px 18px;
     border: 1px solid var(--line);
     border-radius: var(--radius);
     background: var(--paper);
+    box-shadow: var(--shadow);
 }
 
-.journey-steps {
-    display: grid;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-    gap: 6px;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-}
-
-.journey-step {
-    position: relative;
+.journey-head {
+    grid-area: head;
     min-width: 0;
-}
-
-.journey-step+.journey-step::before {
-    position: absolute;
-    top: 13px;
-    right: calc(50% + 17px);
-    left: calc(-50% + 17px);
-    height: 2px;
-    background: var(--line);
-    content: "";
-}
-
-.journey-step.is-done+.journey-step::before,
-.journey-step.is-current::before {
-    background: var(--green-light);
-}
-
-.journey-step a {
-    display: grid;
-    justify-items: center;
-    gap: 4px;
-    color: var(--muted);
-    font-size: 0.82rem;
-    font-weight: var(--fw-semibold);
-    text-align: center;
-    text-decoration: none;
-}
-
-.journey-label {
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.journey-step a:hover .journey-label {
-    color: var(--green-dark);
-}
-
-.journey-step a:focus-visible {
-    outline: 3px solid #79a97e;
-    outline-offset: 3px;
-    border-radius: 8px;
-}
-
-.journey-dot {
-    position: relative;
-    z-index: 1;
-    display: grid;
-    width: 26px;
-    height: 26px;
-    place-items: center;
-    border: 2px solid var(--line);
-    border-radius: 50%;
-    background: var(--paper);
-    color: var(--muted);
-    font-size: 0.78rem;
-    font-weight: var(--fw-semibold);
-}
-
-.journey-step.is-done .journey-dot {
-    border-color: var(--green);
-    background: var(--green);
-    color: #fff;
-}
-
-.journey-step.is-current .journey-dot {
-    border-color: var(--green);
-    color: var(--green-dark);
-    box-shadow: 0 0 0 4px var(--green-soft);
-}
-
-.journey-step.is-current .journey-label,
-.journey-step.is-done .journey-label {
-    color: var(--green-dark);
-}
-
-.journey-step.is-here .journey-label {
-    text-decoration: underline;
-    text-decoration-color: var(--green-light);
-    text-underline-offset: 4px;
-}
-
-.journey-next {
-    display: grid;
-    gap: 6px;
-    padding: 10px 12px;
-    border-radius: 12px;
-    background: var(--green-soft);
-}
-
-.journey-status {
-    margin: 0;
-    color: var(--green-dark);
-    font-size: 0.9rem;
-    font-weight: var(--fw-semibold);
-}
-
-.journey-row {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 6px 12px;
 }
 
 .journey-kicker {
+    margin: 0;
     color: var(--green-dark);
-    font-size: 0.72rem;
+    font-size: 0.7rem;
     font-weight: var(--fw-semibold);
-    letter-spacing: 0.05em;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
 }
 
-.journey-copy {
-    flex: 1 1 260px;
-    min-width: 0;
-    color: var(--ink);
-    font-size: 0.92rem;
+.journey-short {
+    display: none;
 }
 
-.journey-copy small {
-    margin-left: 4px;
+.journey-state {
+    margin: 1px 0 0;
+    color: var(--ink);
+    font-size: 1.05rem;
+    font-weight: var(--fw-semibold);
+    line-height: 1.25;
+}
+
+.journey-bar {
+    grid-area: bar;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 2px 0;
+}
+
+.journey-meter {
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 6px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--line);
+    overflow: hidden;
+    accent-color: var(--green);
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.journey-meter::-webkit-progress-bar {
+    border-radius: 999px;
+    background: var(--line);
+}
+
+.journey-meter::-webkit-progress-value {
+    border-radius: 999px;
+    background: var(--green);
+}
+
+.journey-meter::-moz-progress-bar {
+    border-radius: 999px;
+    background: var(--green);
+}
+
+.journey-percent {
+    flex: none;
+    min-width: 2.8em;
     color: var(--muted);
-    font-size: 0.84rem;
+    font-size: 0.78rem;
+    font-weight: var(--fw-semibold);
+    text-align: right;
+}
+
+.journey-text {
+    grid-area: msg;
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.88rem;
+    line-height: 1.4;
+}
+
+.journey-status {
+    color: var(--green-dark);
+    font-weight: var(--fw-semibold);
 }
 
 .journey-actions {
+    grid-area: act;
     display: flex;
-    flex-wrap: wrap;
     align-items: center;
-    gap: 8px;
+    justify-content: flex-end;
 }
 
 .journey-form {
@@ -1908,15 +1816,17 @@ i[data-lucide="check"]:empty::before {
 .journey-btn {
     display: inline-flex;
     align-items: center;
-    padding: 7px 14px;
+    justify-content: center;
+    padding: 8px 16px;
     border: 1px solid var(--green);
     border-radius: 999px;
     background: var(--paper);
     color: var(--green-dark);
     font: inherit;
-    font-size: 0.88rem;
+    font-size: 0.9rem;
     font-weight: var(--fw-semibold);
     line-height: 1.2;
+    text-align: center;
     text-decoration: none;
     white-space: nowrap;
     cursor: pointer;
@@ -1937,59 +1847,77 @@ i[data-lucide="check"]:empty::before {
     outline-offset: 2px;
 }
 
-.journey-note {
-    margin: 0;
-    color: var(--muted);
-    font-size: 0.86rem;
+.journey-more {
+    grid-area: more;
 }
 
-@media (max-width: 620px) {
+.journey-more > summary {
+    display: inline-flex;
+    align-items: center;
+    min-height: 36px;
+    color: var(--green-dark);
+    font-size: 0.85rem;
+    font-weight: var(--fw-semibold);
+    cursor: pointer;
+}
+
+.journey-more-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 4px 0 2px;
+}
+
+/* Móvil: «Planificación pendiente» + «Paso N de 6 · Etapa» a la izquierda y la acción a la derecha; barra y mensaje debajo. */
+@media (max-width: 600px) {
     .journey {
+        grid-template-areas:
+            "head act"
+            "bar bar"
+            "msg msg"
+            "more more";
+        gap: 6px 10px;
         padding: 10px 12px;
+        margin-bottom: 12px;
     }
 
-    .journey-step a {
-        font-size: 0.68rem;
+    .journey-long,
+    .journey-pending {
+        display: none;
     }
 
-    .journey-steps {
-        gap: 2px;
+    .journey-short {
+        display: inline;
     }
 
-    .journey-dot {
-        width: 24px;
-        height: 24px;
+    .journey-kicker {
+        font-size: 0.66rem;
+        letter-spacing: 0.04em;
     }
 
-    .journey-step+.journey-step::before {
-        top: 11px;
-        right: calc(50% + 15px);
-        left: calc(-50% + 15px);
+    .journey-state {
+        font-size: 0.95rem;
     }
 
-    .journey-copy small {
-        display: block;
-        margin: 2px 0 0;
+    .journey-text {
+        font-size: 0.82rem;
     }
 
     .journey-btn {
+        max-width: 124px;
+        padding: 6px 10px;
+        font-size: 0.82rem;
         white-space: normal;
     }
 
-    .journey-actions {
-        width: 100%;
+    .journey-more-list .journey-btn {
+        max-width: none;
     }
 }
 
 @media print {
     .journey {
         display: none;
-    }
-}
-
-@media (max-width: 400px) {
-    .journey-step a {
-        font-size: 0.62rem;
     }
 }
 

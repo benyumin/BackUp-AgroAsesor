@@ -4,12 +4,19 @@
   en vez de la pantalla de error de Django se vuelve a la página anterior (o al login) con un aviso claro.
 * Llamadas de la propia página (fetch/AJAX): responden JSON ``{"codigo": "sesion_vencida"}`` en vez de HTML,
   y ``static/js/layout.js`` lleva a la persona al login sin pantallas rotas.
+* Roles: ``es_administrador`` es la única regla del servidor para saber quién es administrador; ``destino_inicial``
+  la usa para elegir la pantalla al entrar (panel o inicio) y ``administrador_requerido`` para proteger las vistas
+  del panel. El rol nunca se lee de la petición: solo de la cuenta autenticada.
 """
+
+from functools import wraps
 
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.backends import ModelBackend
+from django.contrib.auth.decorators import login_required
+from django.core.exceptions import PermissionDenied
 from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import redirect, resolve_url
@@ -41,6 +48,40 @@ class EmailBackend(ModelBackend):
             if user.check_password(password) and self.user_can_authenticate(user):
                 return user
         return None
+
+
+def es_administrador(user):
+    """Única regla del servidor para saber si una cuenta es administradora de AgroAsesor.
+
+    Se exige sesión iniciada, cuenta activa e ``is_staff``: es el mismo criterio que ya usaban el panel, la carga de
+    cultivos base y la pasarela de la API, así que no se amplía ningún permiso. ``is_superuser`` no decide por sí solo
+    (da permisos sobre todos los modelos de Django Admin, que es otra cosa). Las cuentas que se registran, con
+    formulario o con Google, siempre nacen con ambos en ``False``; los administradores se asignan solo desde el
+    servidor (``manage.py administradores`` o ``createsuperuser``).
+    """
+    return bool(user and user.is_authenticated and user.is_active and user.is_staff)
+
+
+def destino_inicial(user):
+    """Ruta a la que va una persona al entrar: el panel si es administradora, el inicio si es agricultora.
+
+    Devuelve siempre el nombre de una ruta fija, nunca un valor que venga de la petición (``next``, campos del
+    formulario), así que no hay redirecciones abiertas ni forma de elegir el rol desde el navegador.
+    """
+    return 'admin_panel' if es_administrador(user) else 'dashboard'
+
+
+def administrador_requerido(vista):
+    """Protege una vista del panel: sin sesión va al login y con sesión pero sin ser administrador responde 403."""
+
+    @login_required
+    @wraps(vista)
+    def envoltura(request, *args, **kwargs):
+        if not es_administrador(request.user):
+            raise PermissionDenied
+        return vista(request, *args, **kwargs)
+
+    return envoltura
 
 
 MENSAJE_VENCIDA = 'Tu sesión venció o se borraron las cookies. Vuelve a iniciar sesión para continuar.'
@@ -82,7 +123,7 @@ def fallo_csrf(request, reason=''):
     login = resolve_url(settings.LOGIN_URL)
     if request.user.is_authenticated:
         messages.warning(request, MENSAJE_REINTENTAR)
-        return redirect(_volver(request) or resolve_url(settings.LOGIN_REDIRECT_URL))
+        return redirect(_volver(request) or destino_inicial(request.user))
     messages.warning(request, MENSAJE_VENCIDA if request.path != login else MENSAJE_REINTENTAR)
     return redirect(login)
 

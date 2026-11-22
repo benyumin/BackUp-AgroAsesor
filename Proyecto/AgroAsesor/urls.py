@@ -59,6 +59,7 @@ urlpatterns = [
     ),
     path("panel-admin/cultivos-base/", views.cultivos_base_cargar, name="cultivos_base"),
     path("api/potreros/<int:pk>/", views.potrero_api, name="potrero_api"),
+    path("api/predios/<int:pk>/clima/", views.predio_clima_api, name="predio_clima_api"),
     path(
         "api/potreros/<int:pk>/cultivo/",
         views.potrero_assign_crop,

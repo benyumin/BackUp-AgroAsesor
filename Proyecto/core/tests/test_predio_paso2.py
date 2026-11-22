@@ -61,7 +61,6 @@ PREDIO_IDS = (
     'map-summary-location',
     'id_nombre',
     'id_ubicacion',
-    'id_notas',
     'id_superficie_ha',
     'id_perimetro_aceptado',
 )
@@ -122,9 +121,19 @@ class EstructuraTests(PredioPaso2Base):
             ('Confirmar y continuar', 1),
             ('Volver a editar', 1),
             ('Guardar predio', 1),
-            ('Ver detalles técnicos', 2),
-            ('Sobre este registro', 1),
-            ('Agregar más detalles', 1),
+            ('Ver detalles técnicos', 1),
+            ('Detalles técnicos', 1),
+            ('Superficie del predio', 1),
+            ('Superficie calculada según el contorno marcado.', 1),
+            ('Perímetro del predio', 1),
+            ('Puntos del contorno', 1),
+            ('Si la medida no corresponde a tu terreno, vuelve a editar el contorno antes de continuar.', 1),
+            ('Sobre este registro', 0),
+            ('Registra únicamente predios', 0),
+            ('no acredita propiedad legal', 0),
+            ('Agregar más detalles', 0),
+            ('Notas del predio (opcional)', 0),
+            ('id="id_notas"', 0),
             ('Tus datos se guardan de forma privada en tu cuenta.', 1),
         ):
             self.assertEqual(html.count(text), times, text)
@@ -164,6 +173,11 @@ class EstructuraTests(PredioPaso2Base):
         self.assertIn('id="map-form-summary"', html)
         self.assertIn('is-predio-heading', html)
         self.assertIn('Corrige el contorno o los datos de tu predio.', html)
+        # Al editar un predio existente las notas siguen disponibles (solo se quitaron del registro nuevo).
+        self.assertEqual(html.count('id="id_notas"'), 1)
+        self.assertIn('Agregar más detalles', html)
+        self.assertNotIn('Sobre este registro', html)
+        self.assertIn('Tus datos se guardan de forma privada en tu cuenta.', html)
 
     def test_assets_are_versioned_so_browsers_reload_them(self):
         html = self.page()
@@ -180,6 +194,20 @@ class GuardadoTests(PredioPaso2Base):
         self.assertEqual(predio.propietario, self.user)
         self.assertGreater(predio.superficie_ha, 0)
         self.assertEqual(predio.geojson['geometry']['type'], 'Polygon')
+
+    def test_registration_without_notes_field_saves_and_editing_keeps_stored_notes(self):
+        self.assertNotIn('notas', self.data())
+        self.client.post('/predios/nuevo/', self.data())
+        predio = Predio.objects.get(nombre='Fundo Paso Dos')
+        self.assertEqual((predio.descripcion, predio.observaciones), ('', ''))
+        # Un predio con notas guardadas no las pierde si el formulario se envía sin el campo.
+        predio.descripcion = 'Nota guardada'
+        predio.observaciones = 'Observación guardada'
+        predio.save()
+        response = self.client.post(f'/predios/{predio.pk}/editar/', self.data(nombre='Fundo Paso Dos'))
+        self.assertRedirects(response, f'/predios/{predio.pk}/')
+        predio.refresh_from_db()
+        self.assertEqual((predio.descripcion, predio.observaciones), ('Nota guardada', 'Observación guardada'))
 
     def test_fields_are_still_validated(self):
         for values, field in (({'nombre': ''}, 'nombre'), ({'ubicacion': ''}, 'ubicacion')):
@@ -256,6 +284,22 @@ class EstilosTests(PredioPaso2Base):
         self.assertIn('.is-predio-layout .confirm-big { margin: 0 0 12px; font-size: 1.9rem;', css)
         self.assertIn('.is-predio-layout .perimeter-confirmation .confirmation-actions { display: contents; }', css)
         self.assertIn('.is-predio-layout[data-reg-state="editing"] .form-submit-row { display: none; }', css)
+
+    def test_confirmation_card_shows_area_prominently_and_details_always_visible(self):
+        css = re.sub(r'\s+', ' ', block(CSS, MARKER))
+        # La cifra de hectáreas gana por id a la regla antigua de 1.12rem y es lo más grande de la tarjeta.
+        self.assertIn(
+            '.is-predio-layout .perimeter-confirmation #confirm-area { margin: 0; color: var(--green); font-size: 2.6rem;',
+            css,
+        )
+        self.assertIn('.is-predio-layout .perimeter-confirmation .confirm-details dl>div { display: flex;', css)
+        self.assertIn('justify-content: space-between;', css[css.index('.confirm-details dl>div') :])
+        self.assertIn('.is-predio-layout .perimeter-confirmation .confirm-note {', css)
+        # «Volver a editar» sigue a todo el ancho bajo el botón principal.
+        self.assertIn('.is-predio-layout .perimeter-confirmation #return-to-edit { grid-column: 1 / -1;', css)
+        # El valor lo sigue rellenando el JS existente, sin cálculos nuevos en el HTML.
+        for element_id in ('confirm-area', 'confirm-m2', 'confirm-perimeter', 'confirm-vertices'):
+            self.assertIn(f"getElementById('{element_id}')", JS)
 
     def test_correct_contour_stays_available_when_opening_edit_predio(self):
         css = re.sub(r'\s+', ' ', block(CSS, MARKER))

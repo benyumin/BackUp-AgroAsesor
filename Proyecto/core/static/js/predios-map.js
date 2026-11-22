@@ -443,21 +443,28 @@
       parent.appendChild(dl);
       return (label, value) => dl.append(el('dt', '', label), el('dd', '', value));
     };
-    // Panel contextual: informa y propone UNA próxima acción. Las acciones habituales están en el menú «⋯» de cada tarjeta.
-    const tools = el('div', 'terrain-tool-links');
-    tools.appendChild(el('span', 'terrain-tool-label', 'Usar este potrero en:'));
-    const addLink = (label, href) => {
-      const link = el('a', 'btn-ghost-agro btn-compact', label);
-      link.href = href;
-      tools.appendChild(link);
-      return link;
+    // Panel compacto: lo esencial a la vista (superficie, cultivo, fechas, avance y UNA acción principal) y el resto
+    // plegado, para no alargar la página en el celular. Las acciones habituales están en el menú «⋯» de cada tarjeta.
+    const key = (parent, label, value, wide) => {
+      const tile = el('div', 'terrain-key' + (wide ? ' is-wide' : ''));
+      tile.append(el('span', '', label), el('strong', '', value));
+      parent.appendChild(tile);
+      return tile;
+    };
+    const fold = (title) => {
+      const box = el('details', 'terrain-fold');
+      box.appendChild(el('summary', '', title));
+      const body = el('div', 'terrain-fold-body');
+      box.appendChild(body);
+      details.appendChild(box);
+      return body;
     };
     const farmPlots = farmData.plots.filter((item) => String(item.predio) === String(farm.id));
     const assignedArea = farmPlots.reduce((sum, item) => sum + Number(item.areaHa || 0), 0);
 
     if (plot) {
       const head = el('div', 'terrain-panel-head');
-      head.append(el('span', 'terrain-eyebrow', 'Potrero seleccionado'), el('h3', '', plot.name));
+      head.append(el('span', 'terrain-eyebrow', 'Potrero de ' + farm.name), el('h3', '', plot.name));
       details.appendChild(head);
       const chips = el('div', 'chip-row drawer-chips');
       chips.appendChild(stateChip(plot.crop ? 'Con cultivo' : 'Sin cultivo', plot.crop ? 'is-green' : 'is-neutral'));
@@ -467,19 +474,29 @@
       if (plot.overdueTasks) chips.appendChild(stateChip('Labores vencidas · ' + plot.overdueTasks, 'is-red'));
       else if (plot.pendingTasks) chips.appendChild(stateChip('Labores pendientes · ' + plot.pendingTasks, 'is-amber'));
       details.appendChild(chips);
-      const add = list(details);
-      add('Predio', farm.name);
-      add('Superficie', fmtHa(plot.areaHa, 2) + ' ha (' + fmtHa(plot.areaM2, 0) + ' m²)');
-      if (plot.perimeterM !== null && plot.perimeterM !== undefined) add('Perímetro', formatLength(plot.perimeterM));
+
+      const keys = el('div', 'terrain-keys');
+      key(keys, 'Superficie', fmtHa(plot.areaHa, 2) + ' ha', !plot.crop);
       if (plot.crop) {
-        add('Cultivo actual', plot.crop);
-        add('Variedad', plot.variety || 'No registrada');
-        add('Temporada', plot.season || 'Sin rótulo');
-        add('Fecha de siembra', fmtDate(plot.sowing));
-        add('Cosecha estimada', fmtDate(plot.harvest));
-        add('Estado', plot.status || 'No disponible');
-        add('Planificación', plot.planDone + ' de ' + plot.planTotal + ' pasos');
-      } else {
+        key(keys, 'Cultivo', plot.crop);
+        if (plot.sowing || plot.harvest) {
+          key(keys, 'Siembra', plot.sowing ? fmtDate(plot.sowing) : 'Sin fecha');
+          key(keys, 'Cosecha', plot.harvest ? fmtDate(plot.harvest) : 'Sin fecha');
+        } else {
+          key(keys, 'Siembra y cosecha', 'Sin fechas registradas', true);
+        }
+        const plan = key(keys, 'Planificación', plot.planDone + ' de ' + plot.planTotal + ' pasos', true);
+        if (Number(plot.planTotal) > 0) {
+          const bar = el('progress', 'terrain-meter');
+          bar.max = Number(plot.planTotal);
+          bar.value = Number(plot.planDone);
+          bar.setAttribute('aria-label', 'Avance de la planificación');
+          plan.appendChild(bar);
+        }
+      }
+      if (plot.nextTask) key(keys, 'Próxima labor', plot.nextTask.label + ' · ' + plot.nextTask.date, true);
+      details.appendChild(keys);
+      if (!plot.crop) {
         const notice = el('div', 'terrain-no-crop');
         notice.append(el('p', '', 'Este potrero todavía no tiene un cultivo asignado'));
         // Única acción del aviso: abre el mismo diálogo «Asignar cultivo» del listado.
@@ -489,18 +506,53 @@
         notice.appendChild(assign);
         details.appendChild(notice);
       }
-      if (plot.nextTask) add('Próxima labor', plot.nextTask.label + ' · ' + plot.nextTask.date);
+
+      const plotActions = el('div', 'plot-actions');
+      if (plot.crop) {
+        // La misma acción que la tarjeta del predio: el servidor decide según la temporada vigente.
+        const plotNext = el('a', 'btn-primary-agro btn-sm', plot.primaryLabel || 'Calcular semillas');
+        plotNext.href = plot.primaryUrl || plot.seedsUrl;
+        plotActions.appendChild(plotNext);
+      }
+      const plotOpen = el('a', 'btn-secondary-agro btn-sm', 'Ver ficha');
+      plotOpen.href = plot.detailUrl;
+      plotActions.appendChild(plotOpen);
+      details.appendChild(plotActions);
+
+      const more = fold('Más datos y herramientas');
+      const addMore = list(more);
+      addMore('Superficie', fmtHa(plot.areaM2, 0) + ' m²');
+      if (plot.perimeterM !== null && plot.perimeterM !== undefined) addMore('Perímetro', formatLength(plot.perimeterM));
+      if (plot.crop) {
+        addMore('Variedad', plot.variety || 'No registrada');
+        addMore('Temporada', plot.season || 'Sin rótulo');
+        addMore('Estado', plot.status || 'No disponible');
+      }
+      addMore('Predio', farm.name + ' · ' + fmtHa(farm.area, 2) + ' ha');
+      addMore('Ubicación', farm.location || 'No registrada');
+      const crops = [...new Set(farmPlots.map((item) => item.crop).filter(Boolean))];
+      addMore('Cultivos del predio', crops.length ? crops.join(', ') : 'Sin cultivos asignados');
+      const tools = el('div', 'terrain-tool-links');
+      tools.appendChild(el('span', 'terrain-tool-label', 'Usar este potrero en:'));
+      const addLink = (label, href) => {
+        const link = el('a', 'btn-ghost-agro btn-compact', label);
+        link.href = href;
+        tools.appendChild(link);
+        return link;
+      };
       addLink('Planificar siembra', plotActionUrl('calendar', plot, farm));
       addLink('Calcular semillas', plotActionUrl('seeds', plot, farm));
       addLink('Calcular fertilizantes', plotActionUrl('inputs', plot, farm));
-      details.appendChild(tools);
+      more.appendChild(tools);
+      const farmOpen = el('a', 'btn-ghost-agro btn-compact', 'Abrir predio');
+      farmOpen.href = farm.detailUrl;
+      more.appendChild(farmOpen);
 
-      const history = el('details', 'terrain-season-history');
-      history.open = (plot.seasons || []).length > 0 && (plot.seasons || []).length <= 3;
-      history.append(el('summary', '', 'Historial de cultivos (' + (plot.seasons || []).length + ')'));
-      if ((plot.seasons || []).length) {
+      const seasons = plot.seasons || [];
+      const history = fold('Historial de cultivos (' + seasons.length + ')');
+      if (seasons.length) {
         const ol = el('ol', 'season-list');
-        plot.seasons.forEach((season, index) => {
+        seasons.forEach((season, index) => {
           const item = el('li', index === 0 ? 'is-current' : '');
           item.append(
             el(
@@ -511,18 +563,10 @@
                 (season.variety ? ' · ' + season.variety : ''),
             ),
           );
-          item.append(
-            el(
-              'span',
-              '',
-              (index === 0 ? 'Actual · ' : 'Anterior · ') +
-                season.statusLabel +
-                ' · siembra ' +
-                fmtDate(season.sowingDate) +
-                ' · cosecha ' +
-                fmtDate(season.harvestDate),
-            ),
-          );
+          const parts = [index === 0 ? 'Actual' : 'Anterior', season.statusLabel];
+          if (season.sowingDate) parts.push('siembra ' + fmtDate(season.sowingDate));
+          if (season.harvestDate) parts.push('cosecha ' + fmtDate(season.harvestDate));
+          item.append(el('span', '', parts.join(' · ')));
           if (season.notes) item.append(el('small', '', season.notes));
           ol.appendChild(item);
         });
@@ -530,27 +574,13 @@
       } else {
         history.appendChild(el('p', 'muted', 'Aún no hay temporadas registradas para este potrero.'));
       }
-      details.appendChild(history);
-      const plotActions = el('div', 'plot-actions');
-      // La misma acción que la tarjeta del predio: el servidor decide según la temporada vigente.
-      const plotNext = el('a', 'btn-primary-agro btn-sm', plot.primaryLabel || 'Calcular semillas');
-      plotNext.href = plot.primaryUrl || plot.seedsUrl;
-      const plotOpen = el('a', 'btn-secondary-agro btn-sm', 'Ver ficha e historial');
-      plotOpen.href = plot.detailUrl;
-      plotActions.append(plotNext, plotOpen);
-      details.appendChild(plotActions);
-      details.appendChild(el('hr'));
-    }
-
-    const farmHead = el('div', 'terrain-panel-head');
-    farmHead.append(
-      el('span', 'terrain-eyebrow', plot ? 'Predio del potrero' : 'Predio seleccionado'),
-      el(plot ? 'h4' : 'h3', '', farm.name),
-    );
-    details.appendChild(farmHead);
-    if (!plot) {
-      details.appendChild(el('p', 'drawer-area', fmtHa(farm.area, 2) + ' ha'));
-      details.appendChild(el('p', 'drawer-place', farm.location || 'Ubicación no registrada'));
+    } else {
+      const farmHead = el('div', 'terrain-panel-head');
+      farmHead.append(el('span', 'terrain-eyebrow', 'Predio seleccionado'), el('h3', '', farm.name));
+      details.appendChild(farmHead);
+      const line = el('p', 'terrain-line');
+      line.append(el('strong', '', fmtHa(farm.area, 2) + ' ha'), ' · ' + (farm.location || 'Ubicación no registrada'));
+      details.appendChild(line);
       const stats = el('div', 'drawer-stats');
       const addStat = (label, value, tone) => {
         const box = el('div', 'drawer-stat' + (tone ? ' ' + tone : ''));
@@ -561,25 +591,18 @@
       addStat('Cultivos', farm.cropCount || 0);
       addStat('Labores pendientes', farm.pendingTasks || 0, farm.overdueTasks ? 'is-alert' : '');
       details.appendChild(stats);
-    }
-    const addFarm = list(details);
-    if (plot) addFarm('Ubicación', farm.location || 'No registrada');
-    addFarm('Superficie total', fmtHa(farm.area, 2) + ' ha');
-    if (!plot) {
-      if (farm.perimeterM !== null && farm.perimeterM !== undefined)
-        addFarm('Perímetro', formatLength(farm.perimeterM));
+      const more = fold('Más datos');
+      const addFarm = list(more);
+      if (farm.perimeterM !== null && farm.perimeterM !== undefined) addFarm('Perímetro', formatLength(farm.perimeterM));
       addFarm(
         'Superficie en potreros',
         fmtHa(assignedArea, 2) + ' ha · sin asignar ' + fmtHa(Math.max(0, Number(farm.area) - assignedArea), 2) + ' ha',
       );
       addFarm('Última modificación', farm.updated || 'No disponible');
-    } else {
-      const crops = [...new Set(farmPlots.map((item) => item.crop).filter(Boolean))];
-      addFarm('Cultivos actuales', crops.length ? crops.join(', ') : 'Sin cultivos asignados');
+      const farmOpen = el('a', 'btn-secondary-agro btn-sm', 'Abrir predio');
+      farmOpen.href = farm.detailUrl;
+      details.appendChild(farmOpen);
     }
-    const farmOpen = el('a', plot ? 'btn-ghost-agro btn-compact' : 'btn-secondary-agro btn-sm', 'Abrir predio');
-    farmOpen.href = farm.detailUrl;
-    details.appendChild(farmOpen);
 
     emptyState.hidden = true;
     details.hidden = false;

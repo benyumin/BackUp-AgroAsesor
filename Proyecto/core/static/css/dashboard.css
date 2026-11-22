@@ -16,12 +16,6 @@
     margin: 0;
 }
 
-/* La ruta de etapas (body.css) se alinea con las tarjetas del Inicio. */
-.page-container:has(.dash) > .journey {
-    margin-bottom: 16px;
-    box-shadow: var(--shadow);
-}
-
 /* ---------- Banner de bienvenida ---------- */
 .dash-hero {
     position: relative;

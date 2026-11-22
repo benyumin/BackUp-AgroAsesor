@@ -2,11 +2,19 @@
 {% load static agro_assets %}
 {% block title %}{{ heading }} · AgroAsesor{% endblock %}
 {% block extra_css %}
-    <link rel="stylesheet" href="{% static 'css/predios.css' %}?v=35">
+    <link rel="stylesheet" href="{% static 'css/predios.css' %}?v=40">
     <link rel="stylesheet" href="{% static 'css/mapa-google.css' %}?v=2">
 {% endblock %}
 {% block content %}
     <nav class="crumbs" aria-label="Dónde estás"><a href="{% url 'predios' %}">Mis predios</a>{% if predio %}<span aria-hidden="true">›</span><a href="{% url 'predio_detail' predio.pk %}">{{ predio.nombre }}</a>{% endif %}{% if is_potrero %}<span aria-hidden="true">›</span><span class="is-current" aria-current="page">{{ heading }}</span>{% elif not predio %}<span aria-hidden="true">›</span><span class="is-current" aria-current="page">{{ heading }}</span>{% endif %}</nav>
+    {% if is_potrero and predio and not form.instance.pk %}
+        <a class="back-to-predio"
+           id="back-to-predio"
+           href="{% url 'predio_detail' predio.pk %}"{% if form.is_bound %} data-unsaved-start{% endif %}>
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m12 19-7-7 7-7" /><path d="M19 12H5" /></svg>
+            <span>Volver al predio</span>
+        </a>
+    {% endif %}
     <div class="terrain-page-heading is-simple{% if is_potrero %} is-potrero-heading{% elif is_predio %} is-predio-heading{% endif %}">
         <div>
             <h1 class="page-title">{{ heading }}</h1>
@@ -170,13 +178,14 @@
                      class="perimeter-confirmation"
                      aria-live="polite"
                      hidden>
-                <p class="confirm-lead">✓ Tu predio mide</p>
+                <p class="confirm-lead">Superficie del predio</p>
                 <p class="confirm-big" id="confirm-area"></p>
+                <p class="confirm-caption">Superficie calculada según el contorno marcado.</p>
                 <div class="confirmation-actions">
                     <button type="button" id="confirm-and-continue" class="btn-primary-agro"><i data-lucide="check"></i> Confirmar y continuar</button><button type="button" id="return-to-edit" class="btn-secondary-agro"><i data-lucide="pencil"></i> Volver a editar</button>
                 </div>
-                <details class="tech-details">
-                    <summary>Ver detalles técnicos</summary>
+                <div class="confirm-details">
+                    <h3 class="confirm-details-title">Detalles técnicos</h3>
                     <dl>
                         <div>
                             <dt>Superficie en m²</dt>
@@ -184,17 +193,21 @@
                             </dd>
                         </div>
                         <div>
-                            <dt>Largo del borde</dt>
+                            <dt>Perímetro del predio</dt>
                             <dd id="confirm-perimeter">
                             </dd>
                         </div>
                         <div>
-                            <dt>Esquinas marcadas</dt>
+                            <dt>Puntos del contorno</dt>
                             <dd id="confirm-vertices">
                             </dd>
                         </div>
                     </dl>
-                </details>
+                </div>
+                <p class="confirm-note" role="note">
+                    <i data-lucide="info" aria-hidden="true"></i>
+                    <span>Si la medida no corresponde a tu terreno, vuelve a editar el contorno antes de continuar.</span>
+                </p>
             </section>
         {% endif %}
         <form method="post" id="terrain-form" {% if is_predio and not registration_open and not form.instance.pk %}hidden{% endif %}{% if is_predio %} data-mode="{% if form.instance.pk %}edit{% else %}create{% endif %}" autocomplete="off"{% endif %}>
@@ -206,11 +219,13 @@
                     <label class="field" for="{{ form.nombre.id_for_label }}"><span>Nombre del predio <b class="req" aria-hidden="true">*</b></span>{{ form.nombre }}{{ form.nombre.errors }}</label>
                     <label class="field" for="{{ form.ubicacion.id_for_label }}"><span>Referencia de ubicación{% if form.ubicacion.field.required %} <b class="req" aria-hidden="true">*</b>{% endif %}</span>{{ form.ubicacion }}{{ form.ubicacion.errors }}</label>
                     {% if form.zona.errors or zone_count > 1 or zone_count == 1 and not form.zona.value %}<label class="field" for="{{ form.zona.id_for_label }}"><span>Zona{% if form.zona.field.required %} <b class="req" aria-hidden="true">*</b>{% endif %}</span>{{ form.zona }}{{ form.zona.errors }}{% if form.zona.help_text %}<small>{{ form.zona.help_text }}</small>{% endif %}</label>{% else %}<div class="zone-fixed" hidden>{{ form.zona }}</div>{% endif %}
-                    <details class="more-details"
-                             {% if form.notas.value or form.notas.errors %} open{% endif %}><summary>Agregar más detalles</summary>
-                        <label class="field"
-                               for="{{ form.notas.id_for_label }}"><span>Notas del predio (opcional)</span>{{ form.notas }}{{ form.notas.errors }}</label>
-                    </details>
+                    {% if form.instance.pk %}
+                        <details class="more-details"
+                                 {% if form.notas.value or form.notas.errors %} open{% endif %}><summary>Agregar más detalles</summary>
+                            <label class="field"
+                                   for="{{ form.notas.id_for_label }}"><span>Notas del predio (opcional)</span>{{ form.notas }}{{ form.notas.errors }}</label>
+                        </details>
+                    {% endif %}
                 </div>
             {% endwith %}
 {% else %}{% for field in form %}{% if field.is_hidden %}{{ field }}{{ field.errors }}{% else %}<label class="field" for="{{ field.id_for_label }}"><span>{{ field.label }}</span>{{ field }}{{ field.errors }}{% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}</label>{% endif %}{% endfor %}{% endif %}
@@ -253,8 +268,8 @@
         </details>
     </section>
 {% endif %}
-{% if is_predio %}<div class="form-submit-row is-stacked"><button class="btn-primary-agro terrain-submit" type="submit"><i data-lucide="save"></i> Guardar predio</button><p class="save-note"><i data-lucide="lock"></i> Tus datos se guardan de forma privada en tu cuenta.</p><details class="legal-note"><summary>Sobre este registro</summary><p class="privacy-note">Registra únicamente predios que administras o tienes autorización para gestionar. Este trazado no acredita propiedad legal.</p></details></div>{% else %}<div class="form-submit-row is-stacked"><button class="btn-primary-agro terrain-submit" type="submit"><i data-lucide="save"></i> Guardar predio</button></div>{% endif %}</form></section>
+{% if is_predio %}<div class="form-submit-row is-stacked"><button class="btn-primary-agro terrain-submit" type="submit"><i data-lucide="save"></i> Guardar predio</button><p class="save-note"><i data-lucide="lock"></i> Tus datos se guardan de forma privada en tu cuenta.</p></div>{% else %}<div class="form-submit-row is-stacked"><button class="btn-primary-agro terrain-submit" type="submit"><i data-lucide="save"></i> Guardar predio</button></div>{% endif %}</form></section>
 </div>
 {% endif %}
 {% endblock %}
-{% block extra_js %}{% if potrero_sin_espacio %}{% elif is_potrero or is_predio %}{{ maps_config|json_script:'maps-config' }}<script src="{% vendor 'leaflet/leaflet.js' 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js' %}"></script><script src="{% vendor 'leaflet/leaflet-geoman.min.js' 'https://unpkg.com/@geoman-io/leaflet-geoman-free@2.18.0/dist/leaflet-geoman.min.js' %}"></script><script src="{% static 'js/agro-basemap.js' %}?v=3"></script><script src="{% static 'js/predios-map.js' %}?v=31"></script>{% endif %}{% endblock %}
+{% block extra_js %}{% if potrero_sin_espacio %}{% elif is_potrero or is_predio %}{{ maps_config|json_script:'maps-config' }}<script src="{% vendor 'leaflet/leaflet.js' 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js' %}"></script><script src="{% vendor 'leaflet/leaflet-geoman.min.js' 'https://unpkg.com/@geoman-io/leaflet-geoman-free@2.18.0/dist/leaflet-geoman.min.js' %}"></script><script src="{% static 'js/agro-basemap.js' %}?v=3"></script><script src="{% static 'js/predios-map.js' %}?v=31"></script>{% if is_potrero and not form.instance.pk %}<script src="{% static 'js/potrero-volver.js' %}?v=1"></script>{% endif %}{% endif %}{% endblock %}

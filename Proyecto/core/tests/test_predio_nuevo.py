@@ -230,7 +230,7 @@ class SetupVisibilityTests(PredioNuevoBase):
             html = visible(self.client.get(url))
             for gone in (TITLE, 'Un solo potrero', 'Utilizar todo el predio', 'Lo haré más tarde', 'use-card'):
                 self.assertNotIn(gone, html)
-            self.assertIn('Gestión agrícola', html)
+            self.assertIn('Potreros asociados', html)
             self.assertIn('Agregar potrero', html)  # acción de gestión en lugar del asistente
 
     def test_map_and_general_information_are_present_on_the_new_predio_page(self):

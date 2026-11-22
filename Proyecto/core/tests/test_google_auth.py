@@ -120,7 +120,7 @@ class GoogleOAuthTests(TestCase):
     def test_cuenta_existente_entra_sin_duplicar_y_conserva_su_rol(self):
         admin = User.objects.create_user('admin@example.com', email='Admin@Example.com', password='x', is_staff=True)
         r, canje, params = self.volver(token_kwargs={'email': 'admin@example.com'})
-        self.assertRedirects(r, '/', fetch_redirect_response=False)
+        self.assertRedirects(r, '/panel-admin/', fetch_redirect_response=False)  # el administrador entra a su panel
         self.assertEqual(int(self.client.session['_auth_user_id']), admin.pk)
         self.assertEqual(User.objects.filter(email__iexact='admin@example.com').count(), 1)
         admin.refresh_from_db()

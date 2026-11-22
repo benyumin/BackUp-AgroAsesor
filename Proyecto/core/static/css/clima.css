@@ -1,0 +1,233 @@
+/* Resumen meteorológico de «Mis predios y potreros» (datos de Open-Meteo). Solo presentación: hereda la tarjeta
+   (.card), los verdes, la tipografía Outfit y los radios del resto de la plataforma.
+   Diseño compacto: un resumen de «ahora», una franja de 5 días y el detalle plegado, para no alargar la página. */
+.weather-card {
+    display: grid;
+    gap: 10px;
+    padding: 14px 16px;
+}
+
+.weather-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 6px 10px;
+}
+
+.weather-head h2 {
+    margin: 0;
+}
+
+.weather-provider {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: var(--green-soft);
+    color: var(--green);
+    font-size: .72rem;
+    font-weight: var(--fw-semibold);
+    letter-spacing: .04em;
+    white-space: nowrap;
+    text-decoration: none;
+}
+
+a.weather-provider:hover {
+    background: var(--green);
+    color: #fff;
+}
+
+.weather-place,
+.weather-note {
+    margin: 0;
+    color: var(--muted);
+    font-size: .76rem;
+    line-height: 1.4;
+}
+
+.weather-place {
+    margin-top: -6px;
+}
+
+.weather-status {
+    margin: 0;
+    color: var(--muted);
+    font-size: .88rem;
+}
+
+.weather-status.alert {
+    margin: 0;
+    color: #5c4d16;
+}
+
+.weather-status[hidden],
+.weather-place[hidden],
+.weather-content[hidden],
+.weather-retry[hidden] {
+    display: none;
+}
+
+.weather-content {
+    display: grid;
+    gap: 10px;
+}
+
+.weather-block-title {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px 8px;
+    margin: 0 0 6px;
+    color: var(--green-dark);
+    font-size: .82rem;
+    font-weight: var(--fw-semibold);
+}
+
+/* Ahora: temperatura a la izquierda, humedad / viento / lluvia a la derecha. */
+.weather-now {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+    align-items: center;
+    gap: 6px 12px;
+    padding: 10px 12px;
+    border: 1px solid #cfe9dc;
+    border-radius: 16px;
+    background: var(--green-soft);
+}
+
+.weather-now-main {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.weather-now-main svg {
+    width: 28px;
+    height: 28px;
+    flex: none;
+    color: var(--green);
+}
+
+.weather-temp {
+    display: block;
+    color: var(--green);
+    font-size: 1.7rem;
+    font-weight: var(--fw-semibold);
+    line-height: 1;
+}
+
+.weather-desc {
+    display: block;
+    margin-top: 3px;
+    color: var(--green-dark);
+    font-size: .8rem;
+}
+
+.weather-metrics {
+    display: grid;
+    gap: 2px;
+    margin: 0;
+}
+
+.weather-metric {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: .78rem;
+}
+
+.weather-metric dt {
+    color: var(--muted);
+}
+
+.weather-metric dd {
+    margin: 0;
+    color: var(--green-dark);
+    font-weight: var(--fw-semibold);
+    white-space: nowrap;
+}
+
+.weather-now .weather-note {
+    grid-column: 1 / -1;
+}
+
+/* Próximos días: una franja de 5 casillas (sin desplazarse hacia abajo). */
+.weather-days {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.weather-day {
+    display: grid;
+    justify-items: center;
+    align-content: start;
+    gap: 3px;
+    min-width: 0;
+    padding: 8px 2px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: #fff;
+    text-align: center;
+}
+
+.weather-day-name {
+    color: var(--green-dark);
+    font-size: .74rem;
+    font-weight: var(--fw-medium);
+    text-transform: capitalize;
+}
+
+.weather-day svg {
+    width: 20px;
+    height: 20px;
+    color: var(--green);
+}
+
+.weather-day-temp {
+    display: grid;
+    color: var(--muted);
+    font-size: .74rem;
+    line-height: 1.25;
+}
+
+.weather-day-temp strong {
+    color: var(--green-dark);
+    font-size: .84rem;
+    font-weight: var(--fw-semibold);
+}
+
+.weather-day-rain {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    color: var(--green);
+    font-size: .72rem;
+    font-weight: var(--fw-medium);
+    white-space: nowrap;
+}
+
+.weather-day-rain svg {
+    width: 12px;
+    height: 12px;
+}
+
+.weather-retry {
+    justify-self: start;
+}
+
+@media (max-width: 380px) {
+    .weather-days {
+        gap: 4px;
+    }
+
+    .weather-day {
+        padding: 6px 0;
+    }
+}
