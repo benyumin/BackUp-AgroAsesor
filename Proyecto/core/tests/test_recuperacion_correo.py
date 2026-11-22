@@ -79,6 +79,19 @@ class EnlaceDelCorreoTests(Base):
         self.assertEqual(mail.outbox[0].from_email, REMITENTE)
 
     @override_settings(SITE_URL='https://agroasesor.example')
+    def test_email_incluye_diseno_html_y_conserva_texto_plano(self):
+        self.assertRedirects(self.enviar(), '/cuenta/enviado/')
+        self.assertEqual(len(mail.outbox), 1)
+        mensaje = mail.outbox[0]
+        self.assertEqual(len(mensaje.alternatives), 1)
+        html = mensaje.alternatives[0].content
+        self.assertEqual(mensaje.alternatives[0].mimetype, 'text/html')
+        self.assertIn('Restablecer contraseña', html)
+        self.assertIn('https://agroasesor.example/cuenta/restablecer/', html)
+        self.assertIn('https://agroasesor.example/cuenta/restablecer/', mensaje.body)
+        self.assertNotIn('http://', html)
+
+    @override_settings(SITE_URL='https://agroasesor.example')
     def test_la_cabecera_host_de_la_peticion_no_cambia_el_dominio_del_enlace(self):
         with override_settings(ALLOWED_HOSTS=['*']):
             self.enviar(HTTP_HOST='atacante.example')
