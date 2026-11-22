@@ -18,11 +18,14 @@ Flujo
 
 Configuración (variables de entorno, nunca en el código ni en GitHub):
     GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET y, opcional, GOOGLE_REDIRECT_URI.
+En Vercel se definen en Settings → Environment Variables (ámbito «Production») y hay que volver a desplegar.
+La URL de retorno que debe autorizarse en Google Cloud es ``<dominio>/cuenta/google/retorno/`` (ver ``direccion_de_retorno``).
 """
 
 import base64
 import hashlib
 import json
+import logging
 import secrets
 import time
 import urllib.error
@@ -42,6 +45,8 @@ from .auth import destino_inicial
 from .forms import RegistroGoogleForm
 from .models import AceptacionPoliticas
 
+logger = logging.getLogger(__name__)
+
 URL_AUTORIZACION = 'https://accounts.google.com/o/oauth2/v2/auth'
 URL_TOKEN = 'https://oauth2.googleapis.com/token'
 EMISORES = {'accounts.google.com', 'https://accounts.google.com'}
@@ -58,8 +63,33 @@ class ErrorGoogle(Exception):
     """La respuesta de Google no es válida o no se pudo confirmar."""
 
 
+def google_variables_faltantes():
+    """Nombres (nunca valores) de las variables de Google que no están definidas."""
+    return [
+        nombre
+        for nombre in ('GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET')
+        if not str(getattr(settings, nombre, '') or '').strip()
+    ]
+
+
 def google_configurado():
-    return bool(getattr(settings, 'GOOGLE_CLIENT_ID', '') and getattr(settings, 'GOOGLE_CLIENT_SECRET', ''))
+    return not google_variables_faltantes()
+
+
+_aviso_emitido = False
+
+
+def _avisar_si_falta_configuracion():
+    """Deja UNA línea en el log del servidor (por instancia) cuando el botón se oculta por falta de variables."""
+    global _aviso_emitido
+    if _aviso_emitido:
+        return
+    _aviso_emitido = True
+    logger.warning(
+        'Inicio de sesión con Google desactivado: faltan las variables %s. En Vercel defínelas para el ámbito '
+        'Production y vuelve a desplegar.',
+        ', '.join(google_variables_faltantes()),
+    )
 
 
 def google_login_url():
@@ -68,11 +98,25 @@ def google_login_url():
     Con credenciales, el botón inicia el flujo real. Sin credenciales solo se muestra en desarrollo (DEBUG), junto a
     un aviso de configuración; en producción se oculta para no ofrecer un acceso que no funciona.
     """
-    return reverse('google_iniciar') if google_configurado() or settings.DEBUG else ''
+    if google_configurado() or settings.DEBUG:
+        return reverse('google_iniciar')
+    _avisar_si_falta_configuracion()
+    return ''
 
 
-def _redirect_uri(request):
-    return getattr(settings, 'GOOGLE_REDIRECT_URI', '') or request.build_absolute_uri(reverse('google_callback'))
+def direccion_de_retorno(request):
+    """URL exacta a la que Google devuelve a la persona; debe estar autorizada, carácter por carácter, en Google Cloud.
+
+    Prioridad: ``GOOGLE_REDIRECT_URI`` (si se define) → ``SITE_URL`` + ruta de retorno → dirección de la petición
+    (con ``https`` si Django confía en el proxy; ver ``SECURE_PROXY_SSL_HEADER``).
+    """
+    explicita = str(getattr(settings, 'GOOGLE_REDIRECT_URI', '') or '').strip()
+    if explicita:
+        return explicita
+    sitio = str(getattr(settings, 'SITE_URL', '') or '').strip().rstrip('/')
+    if sitio:
+        return sitio + reverse('google_callback')
+    return request.build_absolute_uri(reverse('google_callback'))
 
 
 def _b64url(datos):
@@ -101,8 +145,20 @@ def canjear_codigo(datos):
     try:
         with urllib.request.urlopen(solicitud, timeout=10) as respuesta:
             return json.loads(respuesta.read().decode('utf-8'))
+    except urllib.error.HTTPError as exc:
+        # Google explica el rechazo con un código público (redirect_uri_mismatch, invalid_client, invalid_grant…).
+        raise ErrorGoogle(f'Google rechazó el canje del código: {_codigo_de_error(exc)}') from exc
     except (urllib.error.URLError, TimeoutError, ValueError) as exc:
         raise ErrorGoogle('no se pudo canjear el código') from exc
+
+
+def _codigo_de_error(exc):
+    """Código de error que Google devuelve en el cuerpo (texto corto y público); nunca datos de la persona."""
+    try:
+        codigo = json.loads(exc.read(2000).decode('utf-8')).get('error')
+    except (AttributeError, ValueError, UnicodeDecodeError, OSError):
+        codigo = None
+    return codigo if isinstance(codigo, str) and codigo.replace('_', '').isalnum() and len(codigo) <= 40 else f'HTTP {exc.code}'
 
 
 def validar_id_token(token, nonce):
@@ -142,7 +198,7 @@ def google_iniciar(request):
         messages.warning(
             request,
             'El inicio de sesión con Google todavía no está configurado: faltan GOOGLE_CLIENT_ID y '
-            'GOOGLE_CLIENT_SECRET en el archivo .env.',
+            'GOOGLE_CLIENT_SECRET (variables de entorno; en local, el archivo .env).',
         )
         return redirect('login')
     verificador = secrets.token_urlsafe(64)
@@ -150,7 +206,7 @@ def google_iniciar(request):
         'state': secrets.token_urlsafe(32),
         'nonce': secrets.token_urlsafe(32),
         'verificador': verificador,
-        'redirect_uri': _redirect_uri(request),
+        'redirect_uri': direccion_de_retorno(request),
         'creado': time.time(),
     }
     request.session[CLAVE_FLUJO] = flujo
@@ -177,14 +233,19 @@ def google_callback(request):
         return redirect('login')
     state = request.GET.get('state', '')
     codigo = request.GET.get('code', '')
-    if (
-        not google_configurado()
-        or not flujo
-        or not state
-        or not codigo
-        or not secrets.compare_digest(state, flujo.get('state', ''))
-        or time.time() - flujo.get('creado', 0) > VIGENCIA_FLUJO
-    ):
+    motivo = None
+    if not google_configurado():
+        motivo = 'Google no está configurado'
+    elif not flujo:
+        motivo = 'no hay un inicio de sesión en curso en la sesión (cookie de sesión ausente o vencida)'
+    elif not state or not codigo:
+        motivo = 'el retorno no trae state o code'
+    elif not secrets.compare_digest(state, flujo.get('state', '')):
+        motivo = 'el state no coincide'
+    elif time.time() - flujo.get('creado', 0) > VIGENCIA_FLUJO:
+        motivo = 'el inicio de sesión tardó demasiado en completarse'
+    if motivo:
+        logger.warning('Retorno de Google rechazado: %s.', motivo)
         messages.warning(request, MENSAJE_FALLO)
         return redirect('login')
     try:
@@ -201,7 +262,8 @@ def google_callback(request):
         if not isinstance(tokens, dict) or 'id_token' not in tokens:
             raise ErrorGoogle('respuesta sin id_token')
         correo, nombre = validar_id_token(tokens['id_token'], flujo.get('nonce', ''))
-    except ErrorGoogle:
+    except ErrorGoogle as exc:
+        logger.warning('Inicio de sesión con Google no completado: %s.', exc)
         messages.warning(request, MENSAJE_FALLO)
         return redirect('login')
 

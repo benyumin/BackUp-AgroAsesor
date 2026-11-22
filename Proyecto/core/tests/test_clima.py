@@ -15,7 +15,7 @@ from unittest import mock
 
 from django.test import SimpleTestCase, TestCase
 
-from core import clima
+from core import clima, clima_compartido
 
 RAIZ = Path(__file__).resolve().parent.parent.parent
 CSS = RAIZ / 'core' / 'static' / 'css' / 'clima.css'
@@ -268,7 +268,9 @@ class ClimaEndpointTests(TestCase):
         from django.core.cache import cache
 
         cache.clear()
+        clima_compartido.reiniciar()
         self.addCleanup(cache.clear)
+        self.addCleanup(clima_compartido.reiniciar)
         self.client.force_login(self.ana)
         self.url = f'/api/predios/{self.predio.pk}/clima/'
 
@@ -340,8 +342,9 @@ class ClimaEndpointTests(TestCase):
         self.assertIn('no-store', respuesta['Cache-Control'])
         url_consultada = abrir.call_args.args[0]
         self.assertIn('api.open-meteo.com', url_consultada)
-        self.assertIn('latitude=-33.705', url_consultada)
-        self.assertIn('longitude=-71.205', url_consultada)
+        # Se consulta la zona (2 decimales ≈ 1,1 km, CLIMA_PRECISION_COORDENADAS): predios cercanos comparten la consulta.
+        self.assertIn(f'latitude={clima.redondear(-33.705, 2):.2f}', url_consultada)
+        self.assertIn(f'longitude={clima.redondear(-71.205, 2):.2f}', url_consultada)
 
     def test_no_expone_datos_de_la_cuenta_ni_del_proveedor_que_no_hacen_falta(self):
         texto = json.dumps(self.pedir()[0].json())
@@ -381,14 +384,14 @@ class ClimaEndpointTests(TestCase):
         respuesta, abrir = self.pedir(f'/api/predios/{punto.pk}/clima/')
         self.assertEqual(respuesta.status_code, 200)
         self.assertEqual(respuesta.json()['ubicacion']['origen'], 'coordenadas_guardadas')
-        self.assertIn('latitude=-34.100', abrir.call_args.args[0])
+        self.assertIn('latitude=-34.10&', abrir.call_args.args[0])
 
     def test_si_open_meteo_falla_responde_error_json_sin_datos_inventados_y_no_cachea_el_fallo(self):
         casos = [
             (TimeoutError(), 504, 'tiempo_agotado'),
             (urllib.error.URLError('sin red'), 502, 'proveedor_no_disponible'),
             (urllib.error.HTTPError('u', 500, 'Error', {}, None), 502, 'proveedor_error'),
-            (urllib.error.HTTPError('u', 429, 'Many', {}, None), 503, 'proveedor_limite'),
+            (urllib.error.HTTPError('u', 502, 'Bad Gateway', {}, None), 502, 'proveedor_error'),
         ]
         for excepcion, estado, codigo in casos:
             with self.subTest(codigo):
@@ -402,6 +405,18 @@ class ClimaEndpointTests(TestCase):
         recuperada, abrir = self.pedir()  # el fallo anterior no quedó guardado: se vuelve a intentar
         self.assertEqual(recuperada.status_code, 200)
         self.assertEqual(abrir.call_count, 1)
+
+    def test_un_429_responde_503_con_pausa_y_no_inventa_datos(self):
+        # A diferencia de los demás fallos, un 429 SÍ se recuerda: la pausa se comparte (ver test_clima_compartido).
+        respuesta, _ = self.pedir(efecto=urllib.error.HTTPError('u', 429, 'Many', {}, None))
+        self.assertEqual(respuesta.status_code, 503)
+        datos = respuesta.json()
+        self.assertFalse(datos['ok'])
+        self.assertEqual(datos['error']['codigo'], 'proveedor_limite')
+        self.assertGreaterEqual(datos['error']['reintentar_en'], 5)
+        self.assertEqual(respuesta['Retry-After'], str(datos['error']['reintentar_en']))
+        for clave in ('actual', 'pronostico', 'unidades'):
+            self.assertNotIn(clave, datos)
 
     def test_una_respuesta_invalida_del_proveedor_responde_502(self):
         for malo in ((200, b'<html>en mantencion</html>'), cuerpo({'error': True, 'reason': 'x'}), cuerpo({})):
@@ -469,3 +484,11 @@ class ClimaArchivosEstaticosTests(SimpleTestCase):
         self.assertIn('AbortController', js)  # tiempo de espera del navegador
         self.assertNotRegex(js, r'-?\d{2}\.\d{3,}')  # ninguna coordenada escrita en el código
         self.assertNotRegex(js, r'open-meteo\.com/v1')  # el navegador nunca llama al proveedor directamente
+
+    def test_el_script_maneja_datos_antiguos_y_limite_de_consultas_sin_reintentos_agresivos(self):
+        js = JS.read_text(encoding='utf-8')
+        self.assertIn('desactualizado', js)  # marca visible cuando el pronóstico viene de una consulta anterior
+        self.assertIn('reintentar_en', js)  # respeta el tiempo de espera que indica el servidor
+        self.assertIn('startCooldown', js)  # el botón «Reintentar» espera en lugar de insistir
+        self.assertNotRegex(js, r'setInterval\([^)]*(fetch|load)')  # nunca consulta en bucle
+        self.assertIn('if (!result.data.desactualizado)', js)  # un dato antiguo no se guarda como si fuera reciente

@@ -1,26 +1,55 @@
-"""Endpoint JSON con el tiempo de un predio (Open-Meteo). Solo lectura: no escribe en la base de datos."""
+"""Endpoint JSON con el tiempo de un predio (Open-Meteo). Solo lectura: no escribe en la base de datos del agricultor.
 
-from django.conf import settings
-from django.core.cache import cache
+La consulta al proveedor, la caché compartida entre instancias, la pausa por límite y los «datos anteriores» viven en
+``core.clima_compartido``. Aquí solo se comprueba quién pregunta y de qué predio, y se arma la respuesta.
+"""
+
 from django.http import JsonResponse
 from django.utils.cache import add_never_cache_headers
 from django.views.decorators.http import require_GET
 
-from .. import clima
+from .. import clima, clima_compartido
 from ..models import Predio
 
-# Cuánto se reutiliza una respuesta del proveedor (Open-Meteo actualiza sus modelos cada 15 minutos a 1 hora).
-SEGUNDOS_EN_CACHE = 600
+AVISO_DATOS_ANTERIORES = {
+    'proveedor_limite': 'Open-Meteo está limitando las consultas por ahora.',
+    'tiempo_agotado': 'Open-Meteo tardó demasiado en responder.',
+}
+AVISO_DATOS_ANTERIORES_GENERICO = 'No pudimos actualizar el pronóstico.'
 
 
-def _responder(datos, estado=200):
+def _responder(datos, estado=200, cabeceras=None):
     respuesta = JsonResponse(datos, status=estado)
     add_never_cache_headers(respuesta)  # el navegador no guarda copia; el ahorro de consultas lo da la caché del servidor
+    for nombre, valor in (cabeceras or {}).items():
+        respuesta[nombre] = valor
     return respuesta
 
 
-def _error(estado, codigo, mensaje):
-    return _responder({'ok': False, 'error': {'codigo': codigo, 'mensaje': mensaje}}, estado)
+def _error(estado, codigo, mensaje, reintentar_en=None):
+    detalle = {'codigo': codigo, 'mensaje': mensaje}
+    cabeceras = None
+    if reintentar_en:
+        detalle['reintentar_en'] = int(reintentar_en)  # segundos que conviene esperar antes de volver a pedirlo
+        cabeceras = {'Retry-After': str(int(reintentar_en))}
+    return _responder({'ok': False, 'error': detalle}, estado, cabeceras)
+
+
+def _hace(segundos):
+    minutos = int(segundos) // 60
+    if minutos < 1:
+        return 'menos de 1 minuto'
+    if minutos < 60:
+        return f'{minutos} min'
+    horas, resto = divmod(minutos, 60)
+    return f'{horas} h' if not resto else f'{horas} h {resto} min'
+
+
+def _aviso(resultado):
+    if not resultado.desactualizado:
+        return None
+    causa = AVISO_DATOS_ANTERIORES.get(resultado.motivo, AVISO_DATOS_ANTERIORES_GENERICO)
+    return f'{causa} Mostramos el último pronóstico disponible, de hace {_hace(resultado.antiguedad)}.'
 
 
 @require_GET
@@ -45,17 +74,11 @@ def predio_clima_api(request, pk):
             'sin_ubicacion',
             'Este predio no tiene una ubicación registrada, así que no se puede consultar el clima.',
         )
-    clave = clima.clave_cache(centro['latitud'], centro['longitud'])
-    datos = cache.get(clave)
-    en_cache = datos is not None
-    if datos is None:
-        try:
-            datos = clima.pronostico(
-                centro['latitud'], centro['longitud'], timeout=getattr(settings, 'CLIMA_TIMEOUT_SEGUNDOS', clima.TIMEOUT_SEGUNDOS)
-            )
-        except clima.ClimaError as exc:
-            return _error(exc.estado, exc.codigo, exc.mensaje)
-        cache.set(clave, datos, getattr(settings, 'CLIMA_CACHE_SEGUNDOS', SEGUNDOS_EN_CACHE))
+    try:
+        resultado = clima_compartido.obtener_pronostico(centro['latitud'], centro['longitud'])
+    except clima.ClimaError as exc:
+        return _error(exc.estado, exc.codigo, exc.mensaje, exc.reintentar_en)
+    datos = resultado.datos
     return _responder(
         {
             'ok': True,
@@ -68,7 +91,10 @@ def predio_clima_api(request, pk):
             },
             'proveedor': clima.PROVEEDOR,
             'obtenido_en': datos['obtenido_en'],
-            'en_cache': en_cache,
+            'en_cache': resultado.en_cache,
+            'desactualizado': resultado.desactualizado,
+            'antiguedad_segundos': resultado.antiguedad,
+            'aviso': _aviso(resultado),
             'zona_horaria': datos['zona_horaria'],
             'unidades': datos['unidades'],
             'actual': datos['actual'],

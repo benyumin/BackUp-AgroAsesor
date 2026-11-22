@@ -931,3 +931,25 @@ class ActividadAgricola(models.Model):
 
     def __str__(self):
         return f'{self.nombre} · {self.potrero}'
+
+
+class CacheCompartida(models.Model):
+    """Caché compartida entre las instancias del servidor (en Vercel cada instancia tiene su propia memoria).
+
+    Guarda JSON firmado con HMAC (derivado de la clave secreta del sitio): una fila alterada o creada desde fuera de
+    la aplicación se ignora al leerla. Hoy solo la usa el clima, con el pronóstico público de una zona (sin datos de
+    personas ni de predios) y las marcas de pausa por límite de consultas. La tabla se protege con RLS (migración 0024).
+    """
+
+    clave = models.CharField(max_length=80, unique=True)
+    carga = models.TextField()
+    firma = models.CharField(max_length=64)
+    obtenido_en = models.DateTimeField()
+    vence_en = models.DateTimeField()
+
+    class Meta:
+        verbose_name = 'entrada de caché compartida'
+        verbose_name_plural = 'caché compartida'
+
+    def __str__(self):
+        return self.clave
