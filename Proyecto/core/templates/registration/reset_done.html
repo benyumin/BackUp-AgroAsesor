@@ -26,8 +26,13 @@
                         </svg>
                     </span>
                     <h1>Solicitud Recibida</h1>
-                    <p class="lead">Si existe una cuenta activa con ese correo, te enviamos las instrucciones para restablecer tu contraseña. Revisa tu bandeja de entrada y la carpeta de spam.</p>
+                    <p class="lead">Si existe una cuenta activa con ese correo, te enviamos las instrucciones para restablecer tu contraseña.</p>
+                    <div class="access-tip" role="note">
+                        <strong>¿No encuentras el mensaje?</strong>
+                        <p>Revisa tu bandeja de entrada y la carpeta de spam o correo no deseado. Puede tardar unos minutos en llegar.</p>
+                    </div>
                     <a class="submit" href="{% url 'login' %}">Volver al inicio de sesión</a>
+                    <p class="switch">¿Escribiste mal tu correo? <a href="{% url 'password_reset' %}">Intentar de nuevo</a></p>
                 </div>
             </section>
         </main>

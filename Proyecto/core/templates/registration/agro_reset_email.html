@@ -1,0 +1,72 @@
+{% load static %}{% url 'password_reset_confirm' uidb64=uid token=token as ruta_restablecer %}<!DOCTYPE html>
+<html lang="es" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="x-apple-disable-message-reformatting">
+    <meta name="color-scheme" content="light">
+    <meta name="supported-color-schemes" content="light">
+    <title>Restablece tu contraseña · AgroAsesor</title>
+    {# Outfit (la tipografía de AgroAsesor) se carga donde el cliente de correo lo permite; si no, queda la fuente del sistema. #}
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        @media only screen and (max-width: 520px) {
+            .agro-px { padding-left: 24px !important; padding-right: 24px !important; }
+            .agro-titulo { font-size: 26px !important; line-height: 32px !important; }
+            .agro-tabla-boton { width: 100% !important; }
+            .agro-boton { display: block !important; text-align: center !important; }
+        }
+    </style>
+</head>
+{# Los colores son los del tema de la plataforma: verde #0b6b4b, tinta #0f1b2d, gris #64748b, línea #e6eaee, fondo #f6f8f7. #}
+<body style="margin:0;padding:0;background-color:#f6f8f7;font-family:Outfit,'Segoe UI',sans-serif;color:#0f1b2d;">
+    <div style="display:none;max-height:0;overflow:hidden;opacity:0;font-size:1px;line-height:1px;color:#f6f8f7;">Usa este enlace seguro para elegir una nueva contraseña de AgroAsesor.</div>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f6f8f7" style="background-color:#f6f8f7;border-collapse:collapse;">
+        <tr>
+            <td align="center" style="padding:32px 16px;">
+                <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;border-collapse:separate;border-spacing:0;background-color:#ffffff;border:1px solid #e6eaee;border-radius:16px;overflow:hidden;font-family:Outfit,'Segoe UI',sans-serif;">
+                    <tr>
+                        <td class="agro-px" bgcolor="#17231a" style="padding:28px 40px;background-color:#17231a;border-radius:16px 16px 0 0;font-family:Outfit,'Segoe UI',sans-serif;">
+                            <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                                <tr>
+                                    <td width="40" height="40" bgcolor="#0b6b4b" style="width:40px;height:40px;border-radius:10px;background-color:#0b6b4b;">
+                                        <img src="{{ protocol }}://{{ domain }}{% static 'img/email-logo.png' %}" width="40" height="40" alt="" style="display:block;width:40px;height:40px;border:0;border-radius:10px;">
+                                    </td>
+                                    <td style="padding-left:12px;font-family:Outfit,'Segoe UI',sans-serif;font-size:24px;line-height:28px;font-weight:600;letter-spacing:-0.3px;color:#ffffff;">AgroAsesor</td>
+                                </tr>
+                            </table>
+                            <p style="margin:14px 0 0;font-family:Outfit,'Segoe UI',sans-serif;font-size:14px;line-height:20px;color:#dbe4dc;">Gestión agrícola inteligente</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="agro-px" style="padding:40px 40px 8px;font-family:Outfit,'Segoe UI',sans-serif;">
+                            <h1 class="agro-titulo" style="margin:0;font-family:Outfit,'Segoe UI',sans-serif;font-size:30px;line-height:36px;font-weight:600;letter-spacing:-0.6px;color:#0f1b2d;">Restablece tu contraseña</h1>
+                            <p style="margin:14px 0 0;font-family:Outfit,'Segoe UI',sans-serif;font-size:15px;line-height:24px;color:#64748b;">Hola{% if user.first_name %}, {{ user.first_name }}{% endif %}. Recibimos una solicitud para restablecer la contraseña de tu cuenta de AgroAsesor. Pulsa el botón para elegir una nueva.</p>
+                            <table class="agro-tabla-boton" role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:28px 0 28px;">
+                                <tr>
+                                    <td bgcolor="#0b6b4b" style="border-radius:10px;background-color:#0b6b4b;">
+                                        <a class="agro-boton" href="{{ protocol }}://{{ domain }}{{ ruta_restablecer }}" style="display:inline-block;padding:15px 32px;border-radius:10px;font-family:Outfit,'Segoe UI',sans-serif;font-size:16px;line-height:20px;font-weight:600;color:#ffffff;text-decoration:none;">Restablecer contraseña</a>
+                                    </td>
+                                </tr>
+                            </table>
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;">
+                                <tr>
+                                    <td bgcolor="#e6f7ef" style="padding:14px 16px;background-color:#e6f7ef;border:1px solid #cfe9dc;border-radius:10px;font-family:Outfit,'Segoe UI',sans-serif;font-size:14px;line-height:21px;color:#14532d;"><strong style="font-weight:600;">¿No fuiste tú?</strong> Si no solicitaste este cambio, ignora este correo: tu contraseña actual no se modificará. Por seguridad, el enlace es personal, funciona una sola vez y tiene vigencia limitada. No lo compartas con nadie.</td>
+                                </tr>
+                            </table>
+                            <p style="margin:28px 0 6px;font-family:Outfit,'Segoe UI',sans-serif;font-size:13px;line-height:20px;color:#64748b;">¿El botón no funciona? Copia y pega este enlace en tu navegador:</p>
+                            <p style="margin:0 0 32px;font-family:Outfit,'Segoe UI',sans-serif;font-size:13px;line-height:20px;word-break:break-all;overflow-wrap:anywhere;"><a href="{{ protocol }}://{{ domain }}{{ ruta_restablecer }}" style="color:#0b6b4b;text-decoration:underline;">{{ protocol }}://{{ domain }}{{ ruta_restablecer }}</a></p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="agro-px" bgcolor="#f9fbfa" style="padding:20px 40px 24px;background-color:#f9fbfa;border-top:1px solid #e6eaee;font-family:Outfit,'Segoe UI',sans-serif;">
+                            <p style="margin:0;font-family:Outfit,'Segoe UI',sans-serif;font-size:13px;line-height:20px;font-weight:600;color:#0f1b2d;">AgroAsesor</p>
+                            <p style="margin:2px 0 0;font-family:Outfit,'Segoe UI',sans-serif;font-size:12px;line-height:18px;color:#64748b;">Melipilla, Chile · Este es un mensaje automático enviado desde AgroAsesor.</p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

@@ -232,7 +232,8 @@ class RecuperarContrasenaVistaOficialTests(TestCase):
         for texto in (
             '<h1>Solicitud Recibida</h1>',
             'class="access-status"',
-            'te enviamos las instrucciones para restablecer tu contraseña. Revisa tu bandeja de entrada y la carpeta de spam.',
+            'te enviamos las instrucciones para restablecer tu contraseña.',
+            'Revisa tu bandeja de entrada y la carpeta de spam o correo no deseado.',  # recuadro de ayuda
             '<a class="submit" href="/login/">Volver al inicio de sesión</a>',
             HEADLINE_RECUPERAR,
         ):
@@ -293,7 +294,7 @@ class RecuperarContrasenaVistaOficialTests(TestCase):
         self.assertEqual(r.status_code, 200)
         self.assertContains(r, 'recovery-shell')
         self.assertContains(r, 'policy-content')
-        self.assertContains(r, 'css/login.css?v=9')
+        self.assertContains(r, 'css/login.css?v=10')
 
 
 class ComposicionComunTests(TestCase):
@@ -308,7 +309,7 @@ class ComposicionComunTests(TestCase):
             self.assertIn('<span>Módulo de Acceso v2.1</span>', html, url)
             self.assertIn('class="access-panel"', html, url)
             self.assertIn('css/tema-figma.css', html, url)
-            self.assertIn('css/login.css?v=9', html, url)
+            self.assertIn('css/login.css?v=10', html, url)
             self.assertLess(html.index('css/tema-figma.css'), html.index('css/login.css'), url)
             self.assertRegex(html, r'(?s)<link href="[^"]*(outfit\.css|family=Outfit)[^"]*"')
             self.assertNotRegex(html, r'family=Inter|inter\.css', url)  # una sola tipografía
