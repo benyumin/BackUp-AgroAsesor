@@ -1,0 +1,31 @@
+
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "services": {
+    "app": {
+      "root": ".",
+      "framework": "django",
+      "bindings": [
+        {
+          "type": "service",
+          "service": "backend_flask",
+          "format": "url",
+          "env": "AGROASESOR_API_URL"
+        }
+      ]
+    },
+    "backend_flask": {
+      "root": "backend_flask",
+      "framework": "flask",
+      "entrypoint": "run:app"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": {
+        "service": "app"
+      }
+    }
+  ]
+}
