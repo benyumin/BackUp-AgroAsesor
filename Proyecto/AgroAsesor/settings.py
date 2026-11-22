@@ -1,6 +1,7 @@
 from pathlib import Path
 import os
 import sys
+from urllib.parse import urlparse
 from django.core.exceptions import ImproperlyConfigured
 from django.core.management.utils import get_random_secret_key
 from dotenv import load_dotenv
@@ -33,6 +34,39 @@ if os.getenv('CODESPACES') == 'true':
     CSRF_TRUSTED_ORIGINS += ['https://*.app.github.dev']
     USE_X_FORWARDED_HOST = True
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# Vercel (o cualquier proxy HTTPS): el proxy entrega la petición a Django por HTTP aunque el navegador usó HTTPS. Sin
+# esta línea ``request.is_secure()`` es falso y las direcciones absolutas (retorno de Google, enlace del correo de
+# recuperación) salen con http:// y no coinciden con las autorizadas. Vercel envía X-Forwarded-Proto (https en
+# producción); solo se confía en esa cabecera cuando la plataforma lo indica (VERCEL=1) o se pide expresamente.
+if os.getenv('VERCEL') or os.getenv('DJANGO_CONFIAR_PROXY_HTTPS', '').strip().lower() == 'true':
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+
+def _direccion_publica(texto):
+    """``https://dominio`` válido o cadena vacía (un valor mal escrito no debe tumbar el sitio)."""
+    texto = (texto or '').strip().rstrip('/')
+    partes = urlparse(texto)
+    if texto and partes.scheme in ('http', 'https') and partes.hostname and not partes.path.strip('/'):
+        return f'{partes.scheme}://{partes.netloc}'
+    if texto:
+        print(
+            'AVISO: SITE_URL debe ser solo el dominio con https, por ejemplo https://agroasesor.vercel.app; se ignora.',
+            file=sys.stderr,
+        )
+    return ''
+
+
+# Dirección pública del sitio (recomendado en producción): fija el dominio de los enlaces del correo de recuperación y
+# la URL de retorno de Google, sin depender de las cabeceras de la petición. También se acepta como host y origen de
+# confianza. Ejemplo: SITE_URL=https://agroasesor.vercel.app (sin barra final ni ruta).
+SITE_URL = _direccion_publica(os.getenv('SITE_URL'))
+if SITE_URL:
+    _sitio = urlparse(SITE_URL)
+    if _sitio.hostname not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(_sitio.hostname)
+    if SITE_URL not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append(SITE_URL)
 MAP_TILE_URL = os.getenv(
     'MAP_TILE_URL',
     'https://tile.openstreetmap.de/{z}/{x}/{y}.png',
@@ -169,16 +203,36 @@ STATICFILES_DIRS = []
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
 
 # Las opciones del servidor (host, clave, etc.) solo sirven para SMTP; el backend de consola no las acepta.
-CORREO_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
+# Sin EMAIL_BACKEND: si hay EMAIL_HOST se envía por SMTP (producción); si no, los correos solo se escriben en el log
+# (desarrollo). Puerto 465 = SSL implícito; 587 u otros = STARTTLS. Nunca se escriben claves en el código ni en el log.
+def _env_entero(nombre, defecto, minimo=1, maximo=65535):
+    try:
+        return min(max(int(os.getenv(nombre, '').strip() or defecto), minimo), maximo)
+    except ValueError:
+        return defecto
+
+
+def _env_si(nombre, defecto):
+    valor = os.getenv(nombre, '').strip().lower()
+    return defecto if not valor else valor in ('1', 'true', 'si', 'sí', 'yes')
+
+
+CORREO_HOST = os.getenv('EMAIL_HOST', '').strip()  # (no se llama EMAIL_HOST: Django 6.1 lo prohíbe junto a MAILERS)
+CORREO_BACKEND = os.getenv('EMAIL_BACKEND', '').strip() or (
+    'django.core.mail.backends.smtp.EmailBackend' if CORREO_HOST else 'django.core.mail.backends.console.EmailBackend'
+)
 CORREO_OPCIONES = {}
 if CORREO_BACKEND.endswith('smtp.EmailBackend'):
+    _puerto_correo = _env_entero('EMAIL_PORT', 587)
+    _usa_ssl = _env_si('EMAIL_USE_SSL', _puerto_correo == 465)
     CORREO_OPCIONES = {
-        'host': os.getenv('EMAIL_HOST', ''),
-        'port': int(os.getenv('EMAIL_PORT', '587')),
-        'use_tls': os.getenv('EMAIL_USE_TLS', 'True').lower() == 'true',
-        'username': os.getenv('EMAIL_HOST_USER', ''),
-        'password': os.getenv('EMAIL_HOST_PASSWORD', ''),
-        'timeout': 15,
+        'host': CORREO_HOST,
+        'port': _puerto_correo,
+        'use_tls': False if _usa_ssl else _env_si('EMAIL_USE_TLS', True),
+        'use_ssl': _usa_ssl,
+        'username': os.getenv('EMAIL_HOST_USER', '').strip(),
+        'password': os.getenv('EMAIL_HOST_PASSWORD', '').strip(),
+        'timeout': _env_entero('EMAIL_TIMEOUT', 10, 3, 30),
     }
 MAILERS = {
     'default': {
@@ -195,3 +249,16 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AGROASESOR_API_URL = os.getenv('AGROASESOR_API_URL', '').rstrip('/')
 AGROASESOR_INTERNAL_SECRET = os.getenv('AGROASESOR_INTERNAL_SECRET', '')
 AGROASESOR_API_TIMEOUT = float(os.getenv('AGROASESOR_API_TIMEOUT', '10'))
+
+# Clima (Open-Meteo). Todo es opcional: sin variables se usan estos valores. Ver core/clima_compartido.py.
+# Open-Meteo gratuito: 600 consultas/minuto, 5 000/hora y 10 000/día por dirección IP, y en Vercel muchas apps comparten
+# direcciones de salida; por eso el resultado se guarda en una caché COMPARTIDA y se respeta el aviso de límite (429).
+CLIMA_CACHE_SEGUNDOS = _env_entero('CLIMA_CACHE_SEGUNDOS', 900, 0, 86400)  # cuánto se reutiliza un pronóstico
+CLIMA_DATOS_ANTIGUOS_MAX_SEGUNDOS = _env_entero('CLIMA_DATOS_ANTIGUOS_MAX_SEGUNDOS', 6 * 3600, 0, 7 * 86400)  # tope «datos anteriores»
+CLIMA_PRECISION_COORDENADAS = _env_entero('CLIMA_PRECISION_COORDENADAS', 2, 1, 4)  # 2 decimales ≈ 1,1 km: predios cercanos comparten
+CLIMA_TIMEOUT_SEGUNDOS = _env_entero('CLIMA_TIMEOUT_SEGUNDOS', 6, 2, 20)
+CLIMA_ESPERA_LIMITE_SEGUNDOS = _env_entero('CLIMA_ESPERA_LIMITE_SEGUNDOS', 120, 30, 3600)  # pausa si Open-Meteo no indica cuánto
+CLIMA_ESPERA_LIMITE_MAX_SEGUNDOS = _env_entero('CLIMA_ESPERA_LIMITE_MAX_SEGUNDOS', 1800, 60, 7200)
+CLIMA_ESPERA_CONCURRENTE_SEGUNDOS = _env_entero('CLIMA_ESPERA_CONCURRENTE_SEGUNDOS', 3, 0, 10)  # espera acotada si otra petición ya consulta
+CLIMA_CACHE_COMPARTIDA = _env_si('CLIMA_CACHE_COMPARTIDA', True)  # tabla en la base de datos; False = solo memoria local
+CLIMA_API_KEY = os.getenv('OPEN_METEO_API_KEY', '').strip()  # opcional: clave de pago de Open-Meteo (cuenta comercial)

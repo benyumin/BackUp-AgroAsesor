@@ -3,6 +3,7 @@ from django.urls import path
 from django.contrib.auth import views as auth_views
 from core import google_auth, views
 from core.api_gateway import api_v1
+from core.recuperacion import RecuperarContrasenaView
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -67,7 +68,7 @@ urlpatterns = [
     ),
     path(
         "cuenta/recuperar/",
-        auth_views.PasswordResetView.as_view(
+        RecuperarContrasenaView.as_view(
             template_name="registration/access_form.html",
             email_template_name="registration/password_reset_email.txt",
             subject_template_name="registration/agro_reset_subject.txt",

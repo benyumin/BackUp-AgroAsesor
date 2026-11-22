@@ -26,17 +26,21 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from datetime import date, datetime, timezone
+from email.utils import parsedate_to_datetime
 
 from django.core.exceptions import ValidationError
 
 from .geometry import coordinates_from_geojson, point_in_polygon
 
 URL_API = 'https://api.open-meteo.com/v1/forecast'
+URL_API_CLIENTES = 'https://customer-api.open-meteo.com/v1/forecast'  # solo con clave de pago (parámetro apikey)
 PROVEEDOR = {'nombre': 'Open-Meteo', 'url': 'https://open-meteo.com/', 'licencia': 'CC BY 4.0'}
 DIAS_PRONOSTICO = 5  # hoy y los 4 días siguientes
 TIMEOUT_SEGUNDOS = 6
 MAX_BYTES_RESPUESTA = 200_000
 DECIMALES_COORDENADA = 3  # ~110 m: mucho menos que la resolución de los modelos (1 a 11 km)
+# Pausa (segundos) cuando Open-Meteo responde 429 sin cabecera Retry-After: según el límite que dice haber superado.
+PAUSA_POR_LIMITE = {'minutely': 60, 'hourly': 600, 'daily': 1800}
 
 VARIABLES_ACTUALES = ('temperature_2m', 'relative_humidity_2m', 'wind_speed_10m', 'precipitation', 'weather_code')
 VARIABLES_DIARIAS = (
@@ -92,11 +96,12 @@ CODIGOS_TIEMPO = {
 class ClimaError(Exception):
     """Fallo controlado al obtener el pronóstico: lleva un código estable, un mensaje para la persona y el estado HTTP."""
 
-    def __init__(self, codigo, mensaje, estado=502):
+    def __init__(self, codigo, mensaje, estado=502, reintentar_en=None):
         super().__init__(mensaje)
         self.codigo = codigo
         self.mensaje = mensaje
         self.estado = estado
+        self.reintentar_en = reintentar_en  # segundos de espera sugeridos (solo cuando el proveedor limita)
 
 
 # ---------------------------------------------------------------- ubicación del predio
@@ -186,25 +191,28 @@ def centro_representativo(geojson, latitud, longitud):
 
 # ---------------------------------------------------------------- consulta a Open-Meteo
 
-def _redondear(valor):
-    return round(float(valor), DECIMALES_COORDENADA)
+def redondear(valor, decimales=DECIMALES_COORDENADA):
+    """Coordenada redondeada a la precisión indicada (con menos decimales, predios cercanos comparten pronóstico)."""
+    return round(float(valor), decimales)
 
 
-def clave_cache(latitud, longitud):
-    return f'clima:v1:{_redondear(latitud):.{DECIMALES_COORDENADA}f}:{_redondear(longitud):.{DECIMALES_COORDENADA}f}'
+def clave_cache(latitud, longitud, decimales=DECIMALES_COORDENADA):
+    return f'clima:v1:{redondear(latitud, decimales):.{decimales}f}:{redondear(longitud, decimales):.{decimales}f}'
 
 
-def construir_url(latitud, longitud):
+def construir_url(latitud, longitud, decimales=DECIMALES_COORDENADA, clave_api=None):
     consulta = {
-        'latitude': f'{_redondear(latitud):.{DECIMALES_COORDENADA}f}',
-        'longitude': f'{_redondear(longitud):.{DECIMALES_COORDENADA}f}',
+        'latitude': f'{redondear(latitud, decimales):.{decimales}f}',
+        'longitude': f'{redondear(longitud, decimales):.{decimales}f}',
         'current': ','.join(VARIABLES_ACTUALES),
         'daily': ','.join(VARIABLES_DIARIAS),
         'timezone': 'auto',
         'forecast_days': DIAS_PRONOSTICO,
         **UNIDADES_SOLICITADAS,
     }
-    return f'{URL_API}?{urllib.parse.urlencode(consulta, safe=",")}'
+    if clave_api:  # cuenta de pago de Open-Meteo: otro dominio y la clave en la dirección (nunca se escribe en el log)
+        consulta['apikey'] = clave_api
+    return f'{URL_API_CLIENTES if clave_api else URL_API}?{urllib.parse.urlencode(consulta, safe=",")}'
 
 
 def _abrir(url, timeout):
@@ -216,14 +224,47 @@ def _abrir(url, timeout):
         return respuesta.status, respuesta.read(MAX_BYTES_RESPUESTA + 1)
 
 
-def consultar(latitud, longitud, timeout=TIMEOUT_SEGUNDOS):
+def espera_por_limite(exc):
+    """Segundos de pausa que indica Open-Meteo al responder 429, o ``None`` si no lo dice con claridad.
+
+    Primero la cabecera ``Retry-After`` (segundos o fecha HTTP); si no, el texto del aviso («Minutely/Hourly/Daily API
+    request limit exceeded»). Sin ninguno de los dos el llamador usa su pausa por defecto.
+    """
+    try:
+        cabecera = str(exc.headers.get('Retry-After') or '').strip()
+    except AttributeError:
+        cabecera = ''
+    if cabecera:
+        try:
+            segundos = int(cabecera)
+        except ValueError:
+            try:
+                segundos = int((parsedate_to_datetime(cabecera) - datetime.now(timezone.utc)).total_seconds())
+            except (TypeError, ValueError, OverflowError):
+                segundos = 0
+        if segundos > 0:
+            return segundos
+    try:
+        aviso = str(json.loads(exc.read(2000).decode('utf-8')).get('reason', '')).lower()
+    except (AttributeError, OSError, ValueError, UnicodeDecodeError):
+        return None
+    for palabra, segundos in PAUSA_POR_LIMITE.items():
+        if palabra in aviso:
+            return segundos
+    return None
+
+
+def consultar(latitud, longitud, timeout=TIMEOUT_SEGUNDOS, decimales=DECIMALES_COORDENADA, clave_api=None):
     """Pide el pronóstico a Open-Meteo y devuelve el JSON ya decodificado (sin validar el contenido)."""
     try:
-        estado, cuerpo = _abrir(construir_url(latitud, longitud), timeout)
+        estado, cuerpo = _abrir(construir_url(latitud, longitud, decimales, clave_api), timeout)
     except urllib.error.HTTPError as exc:
         if exc.code == 429:
             raise ClimaError(
-                'proveedor_limite', 'Open-Meteo recibió demasiadas consultas. Intenta de nuevo en unos minutos.', 503
+                'proveedor_limite',
+                'Open-Meteo recibió demasiadas consultas. Intenta de nuevo en unos minutos.',
+                503,
+                reintentar_en=espera_por_limite(exc),
             ) from exc
         raise ClimaError('proveedor_error', 'Open-Meteo respondió con un error. Intenta de nuevo más tarde.') from exc
     except urllib.error.URLError as exc:
@@ -381,8 +422,8 @@ def normalizar(datos):
     }
 
 
-def pronostico(latitud, longitud, timeout=TIMEOUT_SEGUNDOS):
+def pronostico(latitud, longitud, timeout=TIMEOUT_SEGUNDOS, decimales=DECIMALES_COORDENADA, clave_api=None):
     """Consulta, valida y normaliza. ``obtenido_en`` es el momento (UTC) en que se pidió a Open-Meteo."""
-    datos = normalizar(consultar(latitud, longitud, timeout))
+    datos = normalizar(consultar(latitud, longitud, timeout, decimales, clave_api))
     datos['obtenido_en'] = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
     return datos

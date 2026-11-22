@@ -61,6 +61,21 @@ a.weather-provider:hover {
     color: #5c4d16;
 }
 
+.weather-stale {
+    margin: 0;
+    padding: 8px 10px;
+    border-radius: 12px;
+    background: var(--amber-soft);
+    color: #5c4d16;
+    font-size: .8rem;
+    line-height: 1.4;
+}
+
+.weather-retry:disabled {
+    opacity: .65;
+    cursor: not-allowed;
+}
+
 .weather-status[hidden],
 .weather-place[hidden],
 .weather-content[hidden],

@@ -1,7 +1,9 @@
 /* Resumen meteorológico de «Mis predios y potreros».
    Pide el pronóstico al endpoint propio de Django (/api/predios/<id>/clima/); el navegador nunca habla con Open-Meteo.
    Sigue al predio seleccionado en el listado (sin tocar el código del mapa) y no muestra nada que el servidor no haya
-   entregado: si falta un dato escribe «—» y si la consulta falla lo dice. */
+   entregado: si falta un dato escribe «—» y si la consulta falla lo dice. Si el servidor entrega un pronóstico anterior
+   (porque no pudo actualizarlo) lo muestra con un aviso. Si Open-Meteo pide esperar, el botón «Reintentar» queda en
+   cuenta regresiva en vez de repetir la consulta. */
 (function () {
   'use strict';
 
@@ -14,6 +16,11 @@
   var retry = document.getElementById('weather-retry');
   var list = document.getElementById('farm-picker-list');
   var TIMEOUT_MS = 12000;
+  var MEMO_MS = 5 * 60 * 1000; // al volver a un predio ya consultado se reutiliza lo recibido (sin otra consulta)
+  var MAX_WAIT_SECONDS = 1800;
+  var retryLabel = retry.textContent;
+  var memo = {};
+  var cooldown = null;
 
   var currentId = null;
   var sequence = 0;
@@ -85,6 +92,30 @@
     statusEl.textContent = text || '';
     statusEl.classList.toggle('alert', Boolean(isError));
     retry.hidden = !isError;
+  }
+
+  function waitLabel(seconds) {
+    return seconds >= 60 ? Math.ceil(seconds / 60) + ' min' : seconds + ' s';
+  }
+
+  function stopCooldown() {
+    if (cooldown) window.clearInterval(cooldown);
+    cooldown = null;
+    retry.disabled = false;
+    retry.textContent = retryLabel;
+  }
+
+  function startCooldown(seconds) {
+    stopCooldown();
+    var left = Math.min(Math.max(Math.ceil(Number(seconds) || 0), 1), MAX_WAIT_SECONDS);
+    retry.disabled = true;
+    function tick() {
+      if (left <= 0) return stopCooldown();
+      retry.textContent = 'Reintentar en ' + waitLabel(left);
+      left -= 1;
+    }
+    tick();
+    cooldown = window.setInterval(tick, 1000);
   }
 
   function showIcons() {
@@ -164,6 +195,9 @@
     placeEl.textContent = '«' + farmName(id) + '»';
     placeEl.hidden = false;
     var today = data.actual && data.actual.hora ? data.actual.hora.slice(0, 10) : null;
+    if (data.desactualizado) {
+      content.appendChild(el('p', 'weather-stale', data.aviso || 'Mostramos el último pronóstico disponible; no pudimos actualizarlo.'));
+    }
     if (data.actual) content.appendChild(renderNow(data));
     if (data.pronostico && data.pronostico.length) {
       content.appendChild(renderForecast(data, today));
@@ -173,9 +207,10 @@
     showIcons();
   }
 
-  function fail(message) {
+  function fail(message, waitSeconds) {
     clearContent();
     status(message, true);
+    if (waitSeconds) startCooldown(waitSeconds);
   }
 
   function finish() {
@@ -184,7 +219,8 @@
     controller = null;
   }
 
-  function load(id) {
+  function load(id, forceRefresh) {
+    stopCooldown();
     if (!id || !template) {
       clearContent();
       status('Selecciona un predio para ver su pronóstico.', false);
@@ -194,6 +230,12 @@
     if (timer) window.clearTimeout(timer);
     var mine = ++sequence;
     currentId = id;
+    var saved = memo[id];
+    if (!forceRefresh && saved && Date.now() - saved.at < MEMO_MS) {
+      controller = null;
+      timer = null;
+      return render(saved.data, id);
+    }
     var request = new AbortController();
     controller = request;
     timer = window.setTimeout(function () { request.abort(); }, TIMEOUT_MS);
@@ -211,10 +253,14 @@
     }).then(function (result) {
       if (mine !== sequence) return;
       finish();
-      if (result.data && result.data.ok) return render(result.data, id);
+      if (result.data && result.data.ok) {
+        // Un pronóstico anterior no se reutiliza en la página: al volver se intenta de nuevo actualizarlo.
+        if (!result.data.desactualizado) memo[id] = { data: result.data, at: Date.now() };
+        return render(result.data, id);
+      }
       if (!result.data) return fail('No pudimos leer la respuesta. Si tu sesión terminó, vuelve a iniciar sesión.');
       var error = result.data.error || {};
-      fail(error.mensaje || 'No se pudo obtener el pronóstico en este momento.');
+      fail(error.mensaje || 'No se pudo obtener el pronóstico en este momento.', error.reintentar_en);
     }).catch(function () {
       if (mine !== sequence) return;
       finish();
@@ -222,7 +268,7 @@
     });
   }
 
-  retry.addEventListener('click', function () { load(currentId || selectedId() || firstId()); });
+  retry.addEventListener('click', function () { load(currentId || selectedId() || firstId(), true); });
 
   if (list && 'MutationObserver' in window) {
     new MutationObserver(function () {
