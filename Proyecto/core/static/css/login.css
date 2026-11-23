@@ -620,6 +620,28 @@
 @media (max-width: 960px) {
     .access-body {
         --acc-pad: 16px;
+        /* Altura real visible: con la barra del navegador móvil, 100vh deja un scroll sobrante. */
+        min-height: 100vh;
+        min-height: 100dvh;
+        -webkit-text-size-adjust: 100%;
+        text-size-adjust: 100%;
+    }
+
+    /* Safari en iPhone amplía toda la página al enfocar un campo con letra menor a 16 px
+       (y la deja ampliada y cortada a la derecha). Con 16 px no hay zoom automático
+       y el zoom manual del usuario sigue disponible. */
+    .field input,
+    .field select {
+        font-size: 16px;
+        scroll-margin-block: 88px;
+    }
+
+    .submit,
+    .access-google,
+    .eye,
+    .forgot,
+    .switch a {
+        touch-action: manipulation;
     }
 
     .access-shell {
@@ -653,47 +675,188 @@
 
 @media (max-width: 560px) {
     .access-body {
-        --acc-pad: 10px;
+        --acc-pad: 8px;
     }
 
+    /* Tarjeta pegada arriba (sin centrarla en vertical): el formulario empieza antes
+       y no queda tapado por el teclado. */
     .access-shell {
+        margin: 0 auto;
         border-radius: 14px;
     }
 
+    /* Franja agrícola compacta */
     .access-visual {
-        padding: 22px 20px;
+        padding: 16px 18px;
+        gap: 0;
+    }
+
+    .access-brand {
+        column-gap: 10px;
+        row-gap: 4px;
+    }
+
+    .access-logo {
+        width: 34px;
+        height: 34px;
+        border-radius: 9px;
+    }
+
+    .access-logo svg {
+        width: 19px;
+        height: 19px;
     }
 
     .access-brand strong {
-        font-size: 22px;
+        font-size: 20px;
     }
 
     .access-brand small {
-        font-size: 13px;
+        font-size: 12.5px;
     }
 
     .access-copy {
         display: none;
     }
 
+    /* Panel del formulario */
     .access-panel {
-        padding: 30px 20px 36px;
+        padding: 22px 18px 26px;
     }
 
     .recovery-shell .access-panel {
-        padding: 30px 20px 28px;
+        padding: 22px 18px 24px;
+    }
+
+    .access-status {
+        width: 46px;
+        height: 46px;
+        margin-bottom: 14px;
+    }
+
+    .access-status svg {
+        width: 24px;
+        height: 24px;
     }
 
     .access-panel h1 {
-        font-size: 28px;
+        font-size: 24px;
+        letter-spacing: -0.015em;
     }
 
     .lead {
-        margin-bottom: 24px;
+        margin: 8px 0 18px;
+        font-size: 13.5px;
+        line-height: 20px;
+    }
+
+    .access-content--registro .lead {
+        margin-bottom: 16px;
+    }
+
+    /* Campos: letra de 16 px (regla de 960 px), altura cómoda y menos aire entre ellos */
+    .field {
+        gap: 6px;
+        margin-bottom: 13px;
+    }
+
+    .field input,
+    .field select {
+        height: 46px;
+        padding: 0 13px;
+    }
+
+    .pass-box input {
+        padding-right: 46px;
+    }
+
+    .eye {
+        right: 7px;
+        width: 34px;
+        height: 34px;
     }
 
     .row-2 {
         grid-template-columns: 1fr;
         gap: 0;
+    }
+
+    .pass-help {
+        margin: -4px 0 14px;
+    }
+
+    .policy-consent {
+        margin-bottom: 16px;
+    }
+
+    .policy-consent input {
+        width: 18px;
+        height: 18px;
+        margin-top: 1px;
+    }
+
+    /* Botones y enlaces */
+    .forgot {
+        margin: -6px 0 14px auto;
+        padding: 6px 0;
+    }
+
+    .submit,
+    .access-google {
+        height: 46px;
+    }
+
+    .field + .submit {
+        margin-top: 22px;
+    }
+
+    .switch {
+        margin-top: 12px;
+    }
+
+    .switch a {
+        padding: 6px 4px;
+        margin: -6px -4px;
+    }
+
+    .access-divider {
+        margin: 16px 0 12px;
+    }
+
+    .access-nota {
+        margin-top: 8px;
+    }
+
+    .error,
+    .notice,
+    .aviso {
+        margin-bottom: 14px;
+    }
+
+    .access-tip {
+        margin-bottom: 18px;
+        padding: 12px 14px;
+    }
+
+    .lead + .access-tip {
+        margin-top: -6px;
+    }
+}
+
+/* ---------- Móvil angosto (320–360 px) ---------- */
+
+@media (max-width: 360px) {
+    .access-visual {
+        padding: 14px 16px;
+    }
+
+    .access-panel,
+    .recovery-shell .access-panel {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+
+    .access-panel h1 {
+        font-size: 23px;
     }
 }
