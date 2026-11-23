@@ -1,0 +1,23 @@
+# Modo PRUEBAS local: la misma aplicación, pero con una base SQLite propia y el correo por consola.
+# NO toca Supabase (ni sus tablas ni sus usuarios) y NO envía correos reales.
+#
+# Uso (siempre con los dos archivos):
+#   docker compose -f docker-compose.yml -f docker-compose.pruebas.yml up -d --build
+#   docker compose -f docker-compose.yml -f docker-compose.pruebas.yml logs -f agroasesor      <- aquí salen los correos
+#   docker compose -f docker-compose.yml -f docker-compose.pruebas.yml run --rm agroasesor python manage.py test
+#
+# Para volver al modo normal (base oficial de tu .env): docker compose up -d
+# Para empezar de cero las pruebas: borra el archivo de la base de pruebas
+#   docker compose -f docker-compose.yml -f docker-compose.pruebas.yml run --rm --no-deps --entrypoint rm agroasesor -f /data/pruebas.sqlite3
+#
+# Correo real en pruebas (opcional): pon en tu .env los datos SMTP del proveedor (Brevo) y esta línea:
+#   EMAIL_BACKEND_PRUEBAS=django.core.mail.backends.smtp.EmailBackend
+# Sin esa línea el correo sale solo por consola, aunque tu .env tenga datos SMTP.
+
+services:
+  agroasesor:
+    environment:
+      # Base propia de pruebas dentro del volumen de Docker (archivo distinto de la base oficial /data/db.sqlite3).
+      DATABASE_URL: sqlite:////data/pruebas.sqlite3
+      DJANGO_DEBUG: "True"
+      EMAIL_BACKEND: ${EMAIL_BACKEND_PRUEBAS:-django.core.mail.backends.console.EmailBackend}

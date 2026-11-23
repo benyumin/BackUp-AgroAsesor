@@ -239,4 +239,56 @@ class HojaDeEstilosTests(SimpleTestCase):
 
     def test_la_version_del_css_en_la_plantilla_es_la_actual(self):
         cabecera = (RAIZ / 'templates' / 'partials' / 'access_head.html').read_text(encoding='utf-8')
-        self.assertIn("css/login.css' %}?v=10", cabecera)
+        self.assertIn("css/login.css' %}?v=11", cabecera)
+
+
+def _bloque_media(css, consulta):
+    """Texto de un @media de primer nivel, hasta el siguiente @media."""
+    inicio = css.index('@media (%s) {' % consulta)
+    siguiente = css.find('@media', inicio + 1)
+    return css[inicio:siguiente if siguiente != -1 else len(css)]
+
+
+class VistaMovilTests(SimpleTestCase):
+    """Acceso en teléfonos: compacto, sin zoom automático de Safari y sin tocar el escritorio."""
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.css = CSS.read_text(encoding='utf-8').replace('\r\n', '\n')
+
+    def test_los_campos_miden_16px_en_movil_para_evitar_el_zoom_de_safari(self):
+        movil = _bloque_media(self.css, 'max-width: 960px')
+        self.assertRegex(movil, r'\.field input,\s*\.field select\s*\{[^}]*font-size:\s*16px')
+
+    def test_el_escritorio_conserva_la_letra_de_14px_en_los_campos(self):
+        escritorio = self.css[:self.css.index('@media (max-width: 1200px)')]
+        self.assertRegex(escritorio, r'\.field input,\s*\.field select\s*\{[^}]*font-size:\s*14px')
+
+    def test_titulos_y_marca_son_mas_compactos_en_telefono(self):
+        telefono = _bloque_media(self.css, 'max-width: 560px')
+        titulo = int(re.search(r'\.access-panel h1\s*\{[^}]*font-size:\s*(\d+)px', telefono).group(1))
+        marca = int(re.search(r'\.access-brand strong\s*\{[^}]*font-size:\s*(\d+)px', telefono).group(1))
+        self.assertLessEqual(titulo, 26)  # antes 28
+        self.assertGreaterEqual(titulo, 22)  # sin perder legibilidad
+        self.assertLessEqual(marca, 21)  # antes 22
+        self.assertIn('.access-copy', telefono)  # el texto grande del panel sigue oculto en celular
+
+    def test_la_altura_usa_la_ventana_visible_dinamica(self):
+        movil = _bloque_media(self.css, 'max-width: 960px')
+        self.assertIn('min-height: 100dvh', movil)
+
+    def test_no_se_encoge_la_pagina_con_zoom_ni_escala(self):
+        self.assertNotRegex(self.css, r'(^|[;{\s])zoom\s*:')
+        self.assertNotRegex(self.css, r'scale\(')
+
+    def test_el_zoom_manual_del_navegador_sigue_permitido(self):
+        for plantilla in (RAIZ / 'templates').rglob('*.html'):
+            texto = plantilla.read_text(encoding='utf-8')
+            self.assertNotIn('user-scalable', texto, plantilla.name)
+            self.assertNotIn('maximum-scale', texto, plantilla.name)
+
+    def test_los_anchos_chicos_no_tienen_anchos_fijos_que_desborden(self):
+        for consulta in ('max-width: 560px', 'max-width: 360px'):
+            bloque = _bloque_media(self.css, consulta)
+            self.assertNotRegex(bloque, r'(?<![-\w])width:\s*(?!100%|\d{1,2}px)[\d.]+px')  # solo íconos y botones pequeños
