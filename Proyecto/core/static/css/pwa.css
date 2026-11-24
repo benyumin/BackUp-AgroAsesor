@@ -1,0 +1,227 @@
+/* Aplicación instalable (PWA): botón «Instalar», aviso discreto, hoja de pasos para iPhone y aviso de versión nueva.
+   Usa las variables de tema-figma.css (mismo verde, mismas esquinas y misma tipografía Outfit). No toca el resto del diseño. */
+
+.pwa-instalar {
+    display: block;
+    margin: 10px 0 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    font-weight: var(--fw-semibold);
+    color: var(--green);
+    text-align: left;
+    cursor: pointer;
+}
+
+.pwa-instalar[hidden] {
+    display: none;
+}
+
+.pwa-instalar:hover {
+    text-decoration: underline;
+}
+
+/* ── Aviso inferior (solo en pantallas chicas y solo en el navegador, nunca con la app ya instalada) ── */
+.pwa-aviso,
+.pwa-actualizacion {
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    z-index: 90;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    max-width: 440px;
+    margin: 0 auto;
+    padding: 12px 12px 12px 14px;
+    border: 1px solid var(--line, #e6eaee);
+    border-radius: 16px;
+    background: var(--paper, #fff);
+    box-shadow: 0 8px 28px rgba(15, 27, 45, .14);
+    color: var(--ink, #0f1b2d);
+    font-family: var(--font-sans);
+}
+
+.pwa-aviso[hidden],
+.pwa-actualizacion[hidden] {
+    display: none;
+}
+
+.pwa-aviso-icono {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: var(--green, #0b6b4b);
+    color: #fff;
+}
+
+.pwa-aviso-texto {
+    flex: 1;
+    min-width: 0;
+    font-size: 14px;
+    line-height: 19px;
+}
+
+.pwa-aviso-texto strong {
+    display: block;
+    font-weight: var(--fw-semibold);
+    font-size: 15px;
+}
+
+.pwa-aviso-texto span {
+    color: var(--muted, #64748b);
+}
+
+.pwa-boton {
+    flex: none;
+    min-height: 40px;
+    padding: 0 16px;
+    border: 0;
+    border-radius: 12px;
+    background: var(--green, #0b6b4b);
+    color: #fff;
+    font: inherit;
+    font-size: 14px;
+    font-weight: var(--fw-semibold);
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.pwa-boton:hover {
+    background: var(--forest-2, #095a3f);
+}
+
+.pwa-cerrar {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border: 0;
+    border-radius: 10px;
+    background: none;
+    color: var(--muted, #64748b);
+    font: inherit;
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.pwa-cerrar:hover {
+    background: var(--bg, #f6f8f7);
+}
+
+.pwa-boton:focus-visible,
+.pwa-cerrar:focus-visible,
+.pwa-instalar:focus-visible {
+    outline: 3px solid var(--green-light, #34b27b);
+    outline-offset: 2px;
+}
+
+/* ── Hoja de pasos para iPhone (Safari no tiene botón de instalar: hay que usar «Compartir») ── */
+.pwa-hoja-fondo {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    background: rgba(15, 27, 45, .45);
+}
+
+.pwa-hoja-fondo[hidden] {
+    display: none;
+}
+
+.pwa-hoja {
+    width: 100%;
+    max-width: 480px;
+    padding: 22px 20px calc(20px + env(safe-area-inset-bottom, 0px));
+    border-radius: 20px 20px 0 0;
+    background: var(--paper, #fff);
+    color: var(--ink, #0f1b2d);
+    font-family: var(--font-sans);
+}
+
+.pwa-hoja h2 {
+    margin: 0 0 4px;
+    font-size: 20px;
+    line-height: 1.25;
+    font-weight: var(--fw-semibold);
+}
+
+.pwa-hoja p {
+    margin: 0;
+    color: var(--muted, #64748b);
+    font-size: 15px;
+    line-height: 22px;
+}
+
+.pwa-pasos {
+    display: grid;
+    gap: 12px;
+    margin: 18px 0 20px;
+    padding: 0;
+    list-style: none;
+    counter-reset: paso;
+}
+
+.pwa-pasos li {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 15px;
+    line-height: 21px;
+    counter-increment: paso;
+}
+
+.pwa-pasos li::before {
+    content: counter(paso);
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--green-soft, #e6f7ef);
+    color: var(--green, #0b6b4b);
+    font-weight: var(--fw-semibold);
+    font-size: 14px;
+}
+
+.pwa-pasos svg {
+    display: inline-block;
+    vertical-align: -4px;
+    color: var(--green, #0b6b4b);
+}
+
+.pwa-hoja .pwa-boton {
+    width: 100%;
+    min-height: 48px;
+    font-size: 16px;
+}
+
+@media (min-width: 821px) {
+    .pwa-aviso {
+        display: none;
+    }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .pwa-aviso,
+    .pwa-actualizacion {
+        animation: pwa-subir .22s ease-out;
+    }
+
+    @keyframes pwa-subir {
+        from {
+            opacity: 0;
+            transform: translateY(12px);
+        }
+    }
+}

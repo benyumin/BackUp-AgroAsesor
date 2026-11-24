@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="es">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="theme-color" content="#0b6b4b">
+        <title>Sin conexión · AgroAsesor</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap"
+              rel="stylesheet">
+        {# Pantalla autónoma (CSS en línea, íconos SVG): se guarda en el dispositivo y debe verse sin internet. #}
+        <style>
+            :root {
+                --font-sans: Outfit, "Segoe UI", sans-serif;
+                --fw-regular: 400;
+                --fw-semibold: 600;
+                --green: #0b6b4b;
+                --green-soft: #e6f7ef;
+                --ink: #0f1b2d;
+                --muted: #64748b;
+                --line: #e6eaee;
+                --bg: #f6f8f7;
+            }
+
+            * {
+                box-sizing: border-box;
+            }
+
+            html {
+                -webkit-text-size-adjust: 100%;
+                text-size-adjust: 100%;
+            }
+
+            body {
+                margin: 0;
+                min-height: 100vh;
+                min-height: 100dvh;
+                display: flex;
+                flex-direction: column;
+                background: var(--bg);
+                color: var(--ink);
+                font-family: var(--font-sans);
+            }
+
+            .franja {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                padding: 16px 20px;
+                background: #17231a;
+                color: #fff;
+            }
+
+            .logo {
+                display: grid;
+                place-items: center;
+                width: 36px;
+                height: 36px;
+                border-radius: 10px;
+                background: var(--green);
+            }
+
+            .franja strong {
+                font-size: 20px;
+                font-weight: var(--fw-semibold);
+                letter-spacing: -0.3px;
+            }
+
+            main {
+                flex: 1;
+                width: 100%;
+                max-width: 480px;
+                margin: 0 auto;
+                padding: 40px 24px 32px;
+            }
+
+            .estado {
+                display: grid;
+                place-items: center;
+                width: 52px;
+                height: 52px;
+                margin-bottom: 18px;
+                border-radius: 16px;
+                background: var(--green-soft);
+                color: var(--green);
+            }
+
+            h1 {
+                margin: 0;
+                font-size: 26px;
+                line-height: 1.2;
+                font-weight: var(--fw-semibold);
+                letter-spacing: -0.015em;
+            }
+
+            p {
+                margin: 10px 0 0;
+                color: var(--muted);
+                font-size: 15px;
+                line-height: 22px;
+            }
+
+            .aviso {
+                margin-top: 22px;
+                padding: 14px 16px;
+                border: 1px solid #cfe9dc;
+                border-radius: 12px;
+                background: var(--green-soft);
+                color: #14532d;
+                font-size: 14px;
+                line-height: 21px;
+            }
+
+            .aviso strong {
+                display: block;
+                margin-bottom: 2px;
+                font-weight: var(--fw-semibold);
+            }
+
+            button {
+                width: 100%;
+                min-height: 48px;
+                margin-top: 26px;
+                border: 0;
+                border-radius: 12px;
+                background: var(--green);
+                color: #fff;
+                font: inherit;
+                font-weight: var(--fw-semibold);
+                font-size: 16px;
+                cursor: pointer;
+                touch-action: manipulation;
+            }
+
+            button:focus-visible {
+                outline: 3px solid #34b27b;
+                outline-offset: 2px;
+            }
+
+            @media (max-width: 560px) {
+                main {
+                    padding: 28px 18px 24px;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="franja">
+            <span class="logo" aria-hidden="true">
+                <svg viewBox="0 0 24 24"
+                     width="20"
+                     height="20"
+                     fill="none"
+                     stroke="#fff"
+                     stroke-width="2"
+                     stroke-linecap="round"
+                     stroke-linejoin="round">
+                    <path d="M7 20h10" />
+                    <path d="M10 20c5.5-2.5.8-6.4 3-10" />
+                    <path d="M9.5 9.4c1.1.8 1.8 2.2 2.3 3.7-2 .4-3.5.4-4.8-.3-1.2-.6-2.3-1.9-3-4.2 2.8-.5 4.4 0 5.5.8z" />
+                    <path d="M14.1 6a7 7 0 0 0-1.1 4c1.9-.1 3.3-.6 4.3-1.4 1-1 1.6-2.3 1.7-4.6-2.7.1-4 1-4.9 2z" />
+                </svg>
+            </span>
+            <strong>AgroAsesor</strong>
+        </div>
+        <main>
+            <span class="estado" aria-hidden="true">
+                <svg viewBox="0 0 24 24"
+                     width="26"
+                     height="26"
+                     fill="none"
+                     stroke="currentColor"
+                     stroke-width="2"
+                     stroke-linecap="round"
+                     stroke-linejoin="round">
+                    <path d="M12 20h.01" />
+                    <path d="M8.5 16.4a5 5 0 0 1 7 0" />
+                    <path d="M5 12.9a10 10 0 0 1 5.2-2.7" />
+                    <path d="M19 12.9a10 10 0 0 0-2.2-1.7" />
+                    <path d="M2 8.8a15 15 0 0 1 4.2-2.6" />
+                    <path d="M22 8.8a15 15 0 0 0-8.6-3.7" />
+                    <path d="m2 2 20 20" />
+                </svg>
+            </span>
+            <h1>Sin conexión</h1>
+            <p>No pudimos cargar AgroAsesor. Revisa tu conexión a internet e inténtalo de nuevo.</p>
+            <div class="aviso" role="note">
+                <strong>Tu información sigue en tu cuenta</strong>
+                Lo que ya habías guardado no se pierde. Cuando vuelvas a tener señal podrás continuar.
+            </div>
+            <button type="button" id="reintentar">Reintentar</button>
+        </main>
+        <script>
+            // Desde la pantalla guardada se recarga la dirección que se intentaba abrir; si se abrió directamente, va al inicio.
+            document.getElementById('reintentar').addEventListener('click', function () {
+                if (location.pathname.indexOf('/sin-conexion') === 0) {
+                    location.href = '/';
+                } else {
+                    location.reload();
+                }
+            });
+            // Al volver la conexión, reintenta solo.
+            window.addEventListener('online', function () {
+                if (location.pathname.indexOf('/sin-conexion') !== 0) location.reload();
+            });
+        </script>
+    </body>
+</html>

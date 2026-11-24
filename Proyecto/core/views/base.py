@@ -13,6 +13,7 @@ from ..auth import es_administrador
 from ..catalog import (
     catalog_payload,
     crop_picker_data,
+    empty_catalog_payload,
 )
 from ..models import (
     ActividadAgricola,
@@ -24,7 +25,7 @@ from ..models import (
 from ..seasons import (
     planning_state,
 )
-from .contexto_predios import EN_POTREROS_VIGENTES, decision_url, farm_payload, plan_form_url
+from .contexto_predios import EN_POTREROS_VIGENTES, decision_url, empty_farm_payload, farm_payload, plan_form_url
 
 
 def build_menu_admin(current):
@@ -89,6 +90,23 @@ def build_menu(request, current):
 # El progreso de planificación (seis etapas) se muestra solo en Inicio y Mis predios. Actividades, Calendario,
 # Calculadoras, Catálogo y Reportes no lo llevan; el Centro de decisiones arranca directo en la herramienta.
 JOURNEY_PAGES = {'dashboard', 'predios'}
+
+# Plantillas que leen los predios del usuario (``farm_data`` / ``agro-farms``) o el catálogo (``catalog`` /
+# ``agro-catalog``), en la propia plantilla o en sus JavaScript:
+#   predios.html         predios-map.js (mapa y diálogo de cultivo) y las cifras del listado.
+#   terreno_form.html    predios-map.js (dibuja el predio y los potreros vecinos). No tiene diálogo de cultivo.
+#   decisiones.html      calc-flow, calc-panel (→ terreno-mini), tool-flow, decisiones.js y la plantilla.
+#   dashboard.html       cifras de Inicio (la vista entrega ``farm_data``).
+#   busqueda.html        el buscador (la vista entrega ambos).
+#   calendario.html      calendario.js.
+#   activity_form.html   actividades.js (insumos).
+# El resto de las pantallas recibe la misma estructura vacía y se ahorra esas consultas en cada clic.
+FARM_DATA_TEMPLATES = frozenset(
+    {'predios.html', 'terreno_form.html', 'decisiones.html', 'dashboard.html', 'busqueda.html'}
+)
+CATALOG_TEMPLATES = frozenset(
+    {'predios.html', 'decisiones.html', 'calendario.html', 'activity_form.html', 'busqueda.html'}
+)
 
 
 def journey_payload(user, current):
@@ -272,6 +290,11 @@ def render_page(request, template, current, extra=None):
 
     ``current`` es la clave de la pantalla activa en el menú (por ejemplo ``'predios'``) y ``extra`` el contexto
     propio de la vista. Sin sesión redirige al inicio de sesión; el panel de administración exige ser personal.
+
+    Los predios del usuario (``farm_data`` → ``agro-farms``) y el catálogo (``catalog`` → ``agro-catalog``) se
+    calculan solo si ``template`` está en ``FARM_DATA_TEMPLATES`` / ``CATALOG_TEMPLATES``, o los entrega la vista en
+    ``extra``. Las demás pantallas reciben la misma estructura vacía (``empty_farm_payload`` /
+    ``empty_catalog_payload``): las etiquetas siguen en la página con las mismas claves, sin consultar la base.
     """
     if not request.user.is_authenticated:
         return redirect('login')
@@ -293,8 +316,10 @@ def render_page(request, template, current, extra=None):
         'home_url': reverse('admin_panel') if es_admin else reverse('dashboard'),
         'current': current,
         'query': request.GET.get('q', ''),
-        'catalog': extra.get('catalog') or catalog_payload(),
-        'farm_data': extra.get('farm_data') or farm_payload(request.user),
+        'catalog': extra.get('catalog')
+        or (catalog_payload() if template in CATALOG_TEMPLATES else empty_catalog_payload()),
+        'farm_data': extra.get('farm_data')
+        or (farm_payload(request.user) if template in FARM_DATA_TEMPLATES else empty_farm_payload()),
         'pending_activities': ActividadAgricola.objects.filter(
             EN_POTREROS_VIGENTES,
             usuario=request.user,

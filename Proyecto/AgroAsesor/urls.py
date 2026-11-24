@@ -1,13 +1,17 @@
 from django.contrib import admin
 from django.urls import path
 from django.contrib.auth import views as auth_views
-from core import google_auth, views
+from core import google_auth, pwa, views
 from core.api_gateway import api_v1
 from core.recuperacion import RecuperarContrasenaView
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/v1/<path:ruta>", api_v1, name="api_v1"),
+    # Aplicación instalable (PWA): el service worker va en la raíz para controlar todo el sitio.
+    path("manifest.json", pwa.manifest, name="pwa_manifest"),
+    path("service-worker.js", pwa.service_worker, name="pwa_service_worker"),
+    path("sin-conexion/", pwa.sin_conexion, name="pwa_offline"),
     path("login/", views.login_view, name="login"),
     path(
         "politicas/privacidad-y-cookies/",

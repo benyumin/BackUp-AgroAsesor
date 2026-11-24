@@ -13,12 +13,18 @@
         <link rel="stylesheet" href="{% static 'css/tema-figma.css' %}?v=5">
         <link rel="stylesheet" href="{% static 'css/componentes.css' %}?v=1">
         {% if current == "predios" %}
+            {% if maps_config.google_maps_key %}
+                {# Abre la conexión con Google Maps mientras se descarga la página: el mapa base llega antes. #}
+                <link rel="preconnect" href="https://maps.googleapis.com">
+                <link rel="preconnect" href="https://maps.gstatic.com">
+            {% endif %}
             <link rel="stylesheet"
                   href="{% vendor 'leaflet/leaflet.css' 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css' %}">
             <link rel="stylesheet"
                   href="{% vendor 'leaflet/leaflet-geoman.css' 'https://unpkg.com/@geoman-io/leaflet-geoman-free@2.18.0/dist/leaflet-geoman.css' %}">
         {% endif %}
         {% block extra_css %}{% endblock %}
+        {% include "partials/pwa_head.html" %}
     </head>
     <body class="app-body">
         <button class="scrim" type="button" aria-label="Cerrar menú"></button>
@@ -105,6 +111,7 @@
                                 <p>{{ user.email }}</p>
                                 {% if not user.role == "Administrador" %}<a class="text-link"
    href="{% url 'perfil' %}">Mi perfil</a>{% endif %}
+                                <button class="text-link pwa-instalar" type="button" data-pwa-install hidden>Instalar AgroAsesor</button>
                                 <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="button secondary" type="submit">Cerrar sesión</button></form>
                             </div>
                         </div>
