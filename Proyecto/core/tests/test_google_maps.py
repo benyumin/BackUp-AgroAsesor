@@ -50,6 +50,25 @@ class GoogleMapsConfigTests(TestCase):
             self.assertLess(html.index('leaflet.js'), html.index('js/agro-basemap.js'), url)
             self.assertEqual(html.count('clave-de-prueba-123'), 1, url)  # solo en la configuración del mapa
 
+    @override_settings(GOOGLE_MAPS_API_KEY='clave-de-prueba-123')
+    def test_con_clave_las_pantallas_del_mapa_abren_antes_la_conexion_con_google(self):
+        for url in self.paginas:
+            self.assertContains(self.client.get(url), '<link rel="preconnect" href="https://maps.googleapis.com">', msg_prefix=url)
+        for url in ('/', '/calendario/'):
+            self.assertNotContains(self.client.get(url), 'maps.googleapis.com', msg_prefix=url)
+
+    @override_settings(GOOGLE_MAPS_API_KEY='')
+    def test_sin_clave_no_se_abre_conexion_con_google(self):
+        self.assertNotContains(self.client.get('/predios/'), 'maps.googleapis.com')
+
+    def test_listado_y_formularios_comparten_la_misma_version_de_los_scripts_del_mapa(self):
+        # Una sola URL por archivo: el navegador lo descarga una vez y lo reutiliza al pasar del listado al formulario.
+        versiones = set()
+        for url in ('/predios/', '/predios/nuevo/', f'/predios/{self.predio.pk}/editar/'):
+            html = self.client.get(url).content.decode()
+            versiones.add(tuple(re.findall(r'js/(?:agro-basemap|predios-map)\.js\?v=\d+', html)))
+        self.assertEqual(len(versiones), 1, versiones)
+
     @override_settings(GOOGLE_MAPS_API_KEY='')
     def test_sin_clave_la_configuracion_queda_vacia_y_conserva_el_mapa_de_respaldo(self):
         config = config_del_mapa(self.client.get('/predios/'))
@@ -87,6 +106,16 @@ class GoogleMapsScriptTests(TestCase):
         self.assertIn('Google Maps rechazó la clave de API', js)
         self.assertIn('falta GOOGLE_MAPS_API_KEY', js)
         self.assertIn("box.className = 'map-base-notice'", js)
+
+    def test_el_respaldo_se_muestra_mientras_google_termina_de_cargar(self):
+        js = fuente('js', 'agro-basemap.js')
+        self.assertIn('const PROVISIONAL_AFTER_MS = 2500;', js)  # el fondo no queda vacío esperando a Google
+        self.assertIn('const LOAD_TIMEOUT_MS = 15000;', js)  # el aviso de «Google tardó demasiado» no cambia
+        self.assertIn("if (state.engine === 'pending') useTiles(true);", js)
+        self.assertIn('window.clearTimeout(provisionalTimer);', js)
+        # Cuando Google llega, retira las teselas del respaldo provisional; si rechaza la clave, el aviso igual aparece.
+        self.assertIn('if (map.hasLayer(tiles[view])) map.removeLayer(tiles[view]);', js)
+        self.assertIn("if (state.engine === 'tiles' && !state.provisional) return;", js)
 
     def test_las_pantallas_usan_el_mapa_base_comun(self):
         for archivo in ('predios-map.js', 'predio-detail.js'):

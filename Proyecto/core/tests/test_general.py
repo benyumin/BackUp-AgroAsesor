@@ -777,8 +777,9 @@ class TerrainTests(TestCase):
         self.client.post(self.url, self.plot_data())
         response = self.client.get(f'/predios/{self.predio.pk}/')
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Historial del predio')
-        self.assertContains(response, 'Potrero creado')
+        # La ficha ya no muestra la pestaña Historial; la bitácora se sigue guardando y llega al contexto.
+        self.assertNotContains(response, 'Historial del predio')
+        self.assertNotContains(response, 'id="predio-history"')
         self.assertContains(response, 'Superficie utilizada')
         self.assertNotContains(response, 'class="next-step-line"')
         self.assertContains(response, 'Ver planificación')  # el potrero de este flujo ya tiene cultivo
@@ -921,9 +922,10 @@ class TerrainTests(TestCase):
         self.assertEqual(event.potrero, plot)
         self.assertIn('Nombre: Potrero norte → Sur', event.resumen)
         filtered_history = self.client.get(f'/predios/{self.predio.pk}/', {'potrero': plot.pk})
-        self.assertContains(filtered_history, 'Historial de Sur')
-        self.assertContains(filtered_history, 'Se modificó el potrero')
-        self.assertNotContains(filtered_history, 'Predio creado')
+        self.assertNotContains(filtered_history, 'Historial de Sur')  # la ficha ya no muestra el historial
+        resumenes = ' '.join(f'{item.get_accion_display()} {item.resumen}' for item in filtered_history.context['historial'])
+        self.assertIn('Se modificó el potrero', resumenes)
+        self.assertNotIn('Predio creado', resumenes)
 
     def test_owners_cannot_see_or_modify_other_terrain(self):
         self.client.post(self.url, self.plot_data())
@@ -972,7 +974,7 @@ class TerrainTests(TestCase):
 
     def test_empty_catalog_stays_empty(self):
         Cultivo.objects.all().delete()
-        response = self.client.get('/')
+        response = self.client.get('/decisiones/')
         self.assertEqual(response.context['catalog']['cultivos'], [])
         self.assertEqual(response.context['catalog']['semillas'], [])
 

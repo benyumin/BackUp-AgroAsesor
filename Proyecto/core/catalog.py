@@ -411,6 +411,36 @@ def catalog_payload():
     }
 
 
+def empty_catalog_payload():
+    """Misma forma que ``catalog_payload()`` con el catálogo vacío, sin consultar la base de datos.
+
+    La usan las pantallas que no leen ``agro-catalog`` (ver ``CATALOG_TEMPLATES`` en ``views/base.py``): la etiqueta
+    sigue en la página con las mismas claves, pero no se repiten las consultas del catálogo en cada clic.
+    """
+    return {
+        'fromDb': True,
+        'stats': {
+            'crops': 0,
+            'zones': 0,
+            'seeds': 0,
+            'cropsWithDensity': 0,
+            'fertilizers': 0,
+            'otherInputs': 0,
+            'products': 0,
+            'inventoryTracked': False,
+        },
+        'categoryLabels': dict(CATEGORY_LABELS),
+        'varieties': {},
+        'zonas': [],
+        'cultivos': [],
+        'insumos': [],
+        'semillas': [],
+        'yields': {},
+        'yieldReferences': {},
+        'regionalYieldReferences': [],
+    }
+
+
 CATEGORIAS_INSUMO = ['Fertilizante', 'Herbicida', 'Fungicida', 'Insecticida', 'Acaricida', 'Otros', 'Semilla']
 
 

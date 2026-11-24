@@ -1,6 +1,6 @@
 (() => {
   'use strict';
-  // Pestañas Información / Historial: funcionan aunque el predio no tenga geometría (sin mapa).
+  // Pestañas de la ficha (hoy solo Información): funcionan aunque el predio no tenga geometría (sin mapa).
   const tabs = [
     [document.getElementById('tab-information'), document.getElementById('predio-information')],
     [document.getElementById('tab-history'), document.getElementById('predio-history')],
@@ -18,8 +18,10 @@
     if (!button || !panel) return;
     button.addEventListener('click', () => activateTab(button));
   });
-  if (window.location.hash === '#predio-history') {
-    activateTab(document.getElementById('tab-history'));
+  // Enlaces antiguos con #predio-history: sin esa pestaña, Información sigue visible.
+  const historyTab = document.getElementById('tab-history');
+  if (window.location.hash === '#predio-history' && historyTab) {
+    activateTab(historyTab);
   }
 
   const geometryNode = document.getElementById('predio-detail-geometry');

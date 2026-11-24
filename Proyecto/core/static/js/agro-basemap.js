@@ -14,6 +14,9 @@
   const ESRI_ATTRIBUTION = '&copy; Esri, Maxar, Earthstar Geographics, and the GIS User Community';
   const MAX_ZOOM = 19;
   const LOAD_TIMEOUT_MS = 15000;
+  // Si Google tarda más que esto, el mapa de respaldo se muestra mientras tanto (el fondo no queda vacío); cuando
+  // Google llega, lo reemplaza. Solo después de LOAD_TIMEOUT_MS se avisa que Google no respondió.
+  const PROVISIONAL_AFTER_MS = 2500;
   const GOOGLE_TYPES = { normal: 'roadmap', satellite: 'hybrid' };
   const authListeners = new Set();
   let authFailed = false;
@@ -133,7 +136,15 @@
       box.dataset.kind = kind || 'info';
       box.textContent = message;
     };
-    const state = { view: 'normal', engine: 'pending', gmap: null, holder: null, following: false, zoomControl: map.zoomControl };
+    const state = {
+      view: 'normal',
+      engine: 'pending',
+      provisional: false, // mapa de respaldo mostrado solo mientras Google termina de cargar
+      gmap: null,
+      holder: null,
+      following: false,
+      zoomControl: map.zoomControl,
+    };
     const tiles = {
       normal: L.tileLayer(config.tile_url, { attribution: config.attribution, maxZoom: MAX_ZOOM, crossOrigin: true }),
       satellite: L.tileLayer(ESRI_URL, { attribution: ESRI_ATTRIBUTION, maxZoom: MAX_ZOOM, crossOrigin: true }),
@@ -160,11 +171,12 @@
       if (!map.hasLayer(tiles[state.view])) tiles[state.view].addTo(map);
     }
 
-    function useTiles() {
+    function useTiles(provisional) {
       if (state.holder) state.holder.remove();
       state.holder = null;
       state.gmap = null;
       state.engine = 'tiles';
+      state.provisional = Boolean(provisional);
       map.agroGoogleMaster = false;
       map.getContainer().classList.remove('has-google-base', 'is-google-zooming');
       // Leaflet vuelve a manejar los gestos y muestra sus botones + y −.
@@ -201,6 +213,11 @@
 
     function useGoogle(maps) {
       const container = map.getContainer();
+      // Si el respaldo provisional estaba a la vista, sus teselas se retiran: desde aquí el fondo es Google.
+      Object.keys(tiles).forEach((view) => {
+        if (map.hasLayer(tiles[view])) map.removeLayer(tiles[view]);
+      });
+      state.provisional = false;
       const holder = document.createElement('div');
       holder.className = 'agro-google-base';
       container.insertBefore(holder, container.firstChild);
@@ -267,7 +284,7 @@
     }
 
     function googleRejected() {
-      if (state.engine === 'tiles') return;
+      if (state.engine === 'tiles' && !state.provisional) return;
       useTiles();
       notice(
         'Google Maps rechazó la clave de API. Revisa en Google Cloud que «Maps JavaScript API» esté habilitada, ' +
@@ -291,12 +308,17 @@
       googleRejected();
     } else {
       authListeners.add(googleRejected);
+      const provisionalTimer = window.setTimeout(() => {
+        if (state.engine === 'pending') useTiles(true);
+      }, PROVISIONAL_AFTER_MS);
       loadGoogle(config.google_maps_key)
         .then((maps) => {
+          window.clearTimeout(provisionalTimer);
           if (authFailed) return;
           useGoogle(maps);
         })
         .catch((error) => {
+          window.clearTimeout(provisionalTimer);
           useTiles();
           notice(
             (error && error.message === 'timeout'

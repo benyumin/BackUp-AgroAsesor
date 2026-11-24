@@ -4,7 +4,7 @@
 {% block extra_css %}
     <link rel="stylesheet" href="{% static 'css/predios.css' %}?v=35">
     <link rel="stylesheet" href="{% static 'css/mapa-google.css' %}?v=2">
-    <link rel="stylesheet" href="{% static 'css/predio-ficha.css' %}?v=4">
+    <link rel="stylesheet" href="{% static 'css/predio-ficha.css' %}?v=5">
 {% endblock %}
 {% block content %}
     <nav class="crumbs" aria-label="Dónde estás"><a class="crumbs-back" href="{% url 'predios' %}"><i data-lucide="arrow-left"></i> Mis predios</a>{% if selected_potrero %}<span aria-hidden="true">›</span><a href="{% url 'predio_detail' predio.pk %}">{{ predio.nombre }}</a><span aria-hidden="true">›</span><span class="is-current" aria-current="page">{{ selected_potrero.nombre }}</span>{% endif %}</nav>
@@ -38,10 +38,6 @@
             <a class="row-menu-item"
                role="menuitem"
                href="{% url 'predios' %}?predio={{ predio.pk }}"><i data-lucide="map"></i> Ver en mapa</a>
-            <button type="button"
-                    class="row-menu-item"
-                    role="menuitem"
-                    data-open-history><i data-lucide="history"></i> Ver historial</button>
             {% if potreros %}<a class="row-menu-item"
    role="menuitem"
    href="{% url 'calendario' %}#siembra-registro"><i data-lucide="calendar-days"></i> Ver planificación</a>{% endif %}
@@ -174,12 +170,6 @@
                     role="tab"
                     aria-selected="true"
                     aria-controls="predio-information">Información</button>
-            <button type="button"
-                    class="detail-tab"
-                    id="tab-history"
-                    role="tab"
-                    aria-selected="false"
-                    aria-controls="predio-history">Historial <span>{{ historial|length }}</span></button>
         </div>
         <section id="predio-information"
                  class="detail-tab-panel"
@@ -217,9 +207,6 @@
                                     <a class="row-menu-item"
                                        role="menuitem"
                                        href="{{ ui.task_url }}"><i data-lucide="clipboard-plus"></i> Programar labor</a>
-                                    <a class="row-menu-item"
-                                       role="menuitem"
-                                       href="{% url 'predio_detail' predio.pk %}?potrero={{ potrero.pk }}#predio-history"><i data-lucide="history"></i> Ver historial</a>
                                     {% if potrero.cultivo %}<a class="row-menu-item" role="menuitem" href="{{ ui.plan_url }}"><i data-lucide="calendar-days"></i> Ver planificación</a>{% endif %}
                                     <a class="row-menu-item"
                                        role="menuitem"
@@ -279,30 +266,6 @@
             </div>
         {% elif not cultivos %}<p class="muted pf-foot-note">Todavía no hay cultivos registrados en sus potreros.</p>{% endif %}
     </section>
-    <section id="predio-history"
-             class="detail-tab-panel history-panel"
-             role="tabpanel"
-             aria-labelledby="tab-history"
-             hidden>
-        <h2>{% if selected_potrero %}Historial de {{ selected_potrero.nombre }}{% else %}Historial del predio{% endif %}</h2>
-        <p class="muted">Del más reciente al más antiguo.{% if selected_potrero %} Solo los cambios de este potrero.{% endif %}</p>
-        <ol class="history-list">
-            {% for item in historial %}
-                <li class="history-item">
-                    <span class="history-marker" aria-hidden="true"></span>
-                    <div class="history-entry">
-                        <div class="history-heading"><strong>{{ item.get_accion_display }}</strong><time datetime="{{ item.creado|date:'c' }}">{{ item.creado|date:"d/m/Y H:i" }}</time></div>
-                        <p>{{ item.resumen }}</p>
-                        {% if item.potrero %}<small>Potrero relacionado: {{ item.potrero.nombre }}</small><br>{% endif %}
-                        <small>Responsable: {{ item.usuario.get_full_name|default:item.usuario.username|default:'Usuario eliminado' }}</small>
-                        {% if item.superficie_anterior_ha != None or item.superficie_nueva_ha != None %}<small>Superficie: {{ item.superficie_anterior_ha|default:'—' }} ha → {{ item.superficie_nueva_ha|default:'—' }} ha</small>{% endif %}
-                    </div>
-                </li>
-            {% empty %}
-                <li class="detail-empty-state">Aún no hay movimientos registrados.</li>
-            {% endfor %}
-        </ol>
-    </section>
 </section>
 </div>
 </div>
@@ -311,4 +274,4 @@
     {{ predio.geojson|json_script:'predio-detail-geometry' }}
 {% endif %}
 {% endblock %}
-{% block extra_js %}<script>document.addEventListener('click',function(e){var b=e.target.closest('[data-open-history]');if(!b)return;var t=document.getElementById('tab-history');if(t){t.click();var p=document.getElementById('predio-history');if(p&&p.scrollIntoView)p.scrollIntoView({behavior:'smooth',block:'start'});}});</script>{% if predio.geojson %}<script src="{% vendor 'leaflet/leaflet.js' 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js' %}"></script>{% endif %}{% if predio.geojson %}<script src="{% static 'js/agro-basemap.js' %}?v=3"></script>{% endif %}<script src="{% static 'js/predio-detail.js' %}?v=6"></script>{% endblock %}
+{% block extra_js %}{% if predio.geojson %}<script src="{% vendor 'leaflet/leaflet.js' 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js' %}"></script>{% endif %}{% if predio.geojson %}<script src="{% static 'js/agro-basemap.js' %}?v=4"></script>{% endif %}<script src="{% static 'js/predio-detail.js' %}?v=7"></script>{% endblock %}

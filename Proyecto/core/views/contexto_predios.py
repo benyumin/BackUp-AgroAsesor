@@ -356,6 +356,28 @@ def farm_payload(user):
     }
 
 
+def empty_farm_payload():
+    """Misma forma que ``farm_payload()`` de una cuenta sin predios, sin consultar la base de datos.
+
+    La usan las pantallas que no leen ``agro-farms`` (ver ``FARM_DATA_TEMPLATES`` en ``views/base.py``).
+    """
+    return {
+        'predios': [],
+        'plots': [],
+        'stats': {
+            'predios': 0,
+            'potreros': 0,
+            'superficie_predios': 0.0,
+            'superficie': 0.0,
+            'superficie_sin_asignar': 0.0,
+            'distribucion_pct': 0.0,
+            'distribucion_bar_pct': 0.0,
+            'sobreasignada': False,
+            'cultivos': 0,
+        },
+    }
+
+
 def plot_season_summary(plot):
     seasons = sorted(plot.temporadas.all(), key=lambda item: (item.creado, item.pk), reverse=True)
     current = seasons[0] if seasons else None

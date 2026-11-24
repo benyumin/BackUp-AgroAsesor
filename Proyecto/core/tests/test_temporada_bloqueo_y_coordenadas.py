@@ -125,12 +125,13 @@ class HistorialSinCoordenadasTests(Base):
             superficie_anterior_ha=1,
             superficie_nueva_ha=2,
         )
-        html = self.client.get(f'/predios/{self.predio.pk}/').content.decode()
-        panel = html[html.index('id="predio-history"') : html.index('<script id="maps-config"')]
-        self.assertIn('Perímetro actualizado; superficie: 1 ha → 2 ha.', panel)
-        self.assertIn('Superficie:', panel)
-        for texto in ('Ver coordenadas registradas', 'Coordenadas anteriores', '<table', 'coordinates'):
-            self.assertNotIn(texto, panel)
+        response = self.client.get(f'/predios/{self.predio.pk}/')
+        # La ficha ya no tiene pestaña Historial: el registro se conserva en la base, sin coordenadas en la página.
+        self.assertEqual(response.context['historial'].first().resumen, 'Perímetro actualizado; superficie: 1 ha → 2 ha.')
+        html = response.content.decode()
+        self.assertNotIn('id="predio-history"', html)
+        for texto in ('Ver coordenadas registradas', 'Coordenadas anteriores'):
+            self.assertNotIn(texto, html)
         self.predio.refresh_from_db()
         self.assertEqual(self.predio.geojson, POLIGONO)  # el mapa del predio no cambia
 
