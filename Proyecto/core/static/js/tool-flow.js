@@ -58,7 +58,11 @@
 
   const plotById = (id) => plots.find((plot) => String(plot.id) === String(id)) || null;
   const cropById = (id) => crops.find((crop) => String(crop.id) === String(id)) || null;
-  const productById = (id) => allProducts.find((item) => String(item.id) === String(id)) || null;
+  // Los productos de la lista SAG llegan bajo demanda (catalogo-sag.js) y no están en #agro-catalog.
+  const productById = (id) =>
+    allProducts.find((item) => String(item.id) === String(id)) ||
+    (window.AgroCatalogoSAG && window.AgroCatalogoSAG.get(id)) ||
+    null;
   const shortGroup = (crop) => groupShort.get(crop.group) || crop.group || '';
   function emoji(crop) {
     return window.AgroCalculator ? window.AgroCalculator.cropEmoji(crop) : '🌱';
@@ -405,6 +409,10 @@
         h('dd', null, dose),
         h('dt', null, 'Fuente'),
         h('dd', null, item.sourceName || 'Sin fuente registrada'),
+        item.sag ? h('dt', null, 'Función (SAG)') : null,
+        item.sag ? h('dd', null, item.sag.function || '—') : null,
+        item.sag && window.AgroCatalogoSAG ? h('dt', null, 'Lista SAG') : null,
+        item.sag && window.AgroCatalogoSAG ? h('dd', null, window.AgroCatalogoSAG.estado(item).long) : null,
       ),
     );
   }

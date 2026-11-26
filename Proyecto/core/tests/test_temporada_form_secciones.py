@@ -5,7 +5,6 @@ El formulario, las validaciones y el guardado siguen siendo los de siempre (``Te
 valores guardados, que los errores se ven y que los botones conservan sus rutas.
 """
 
-import re
 from datetime import date
 from pathlib import Path
 
@@ -82,7 +81,8 @@ class TemporadaFormSeccionesTests(TestCase):
 
     def test_la_cabecera_identifica_el_predio_y_el_potrero_y_los_botones_conservan_sus_rutas(self):
         html = self.pagina()
-        self.assertIn('<h1 class="page-title">Completar planificación</h1>', html)
+        # La temporada del setUp tiene cultivo y ambas fechas: está completa, así que el título es «Editar».
+        self.assertIn('<h1 class="page-title">Editar planificación</h1>', html)
         self.assertIn('Fundo · Lumbrera', html)
         self.assertIn('temporada vigente', html)
         self.assertIn('temporadas anteriores', html)

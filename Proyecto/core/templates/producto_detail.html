@@ -2,7 +2,7 @@
 {% load static %}
 {% block title %}{{ product.nombre }} · Ficha técnica · AgroAsesor{% endblock %}
 {% block extra_css %}
-    <link rel="stylesheet" href="{% static 'css/productos.css' %}?v=3">
+    <link rel="stylesheet" href="{% static 'css/productos.css' %}?v=4">
 {% endblock %}
 {% block content %}
     <div class="page-hero no-print">
@@ -14,7 +14,7 @@
         </div>
         <div class="toolbar">
             <a class="button secondary" href="{% url 'producto_pdf' product.pk %}">Descargar ficha PDF</a>
-            {% if product.calculable %}<a class="button" href="{{ calc_url }}">Calcular cantidad</a>{% endif %}
+            {% if product.calculable %}<a class="button" href="{{ calc_url }}">Calcular cantidad</a>{% elif manual_calc %}<a class="button secondary" href="{{ calc_url }}">Calcular con mi dosis</a>{% endif %}
         </div>
     </div>
     <div class="sheet-layout">
@@ -28,7 +28,8 @@
                 <div class="sheet-badges">
                     <span class="badge {% if product.estado_verificacion == 'verified' %}{% elif product.estado_verificacion == 'unverified' %}amber{% else %}red{% endif %}">{{ product.status_label }}</span>
                     <span class="badge {% if product.is_current %}{% else %}red{% endif %}">{% if product.is_current %}Vigente{% else %}No vigente{% endif %}</span>
-                    {% if product.calculable %}<span class="badge">Dosis verificada</span>{% endif %}
+                    {% if product.calculable %}<span class="badge">Dosis verificada</span>{% else %}<span class="badge amber">Dosis no verificada</span>{% endif %}
+                    {% if product.sag %}<span class="badge{% if not product.sag.en_lista_vigente %} amber{% endif %}">{% if product.sag.en_lista_vigente %}En lista SAG orgánica{% else %}Fuera de la lista SAG{% endif %}</span>{% endif %}
                 </div>
             </header>
             {% if missing_data %}
@@ -112,11 +113,75 @@
                     {% endif %}
                 </dl>
             </section>
+            {% if product.sag %}
+                <section class="sheet-section">
+                    <h3>Lista SAG de fertilizantes y bioestimulantes (agricultura orgánica)</h3>
+                    <dl class="sheet-grid">
+                        <div>
+                            <dt>Estado de inclusión</dt>
+                            <dd>
+                                {% if product.sag.en_lista_vigente %}Incluido en la lista actualizada al {{ product.sag.fecha_lista|date:"d/m/Y" }}{% else %}No figura en la última lista importada (última vez: lista del {{ product.sag.fecha_lista|date:"d/m/Y" }}){% endif %}
+                            </dd>
+                        </div>
+                        <div>
+                            <dt>Función declarada</dt>
+                            <dd>
+                                {{ product.sag.funcion|default:"No indicada" }}
+                            </dd>
+                        </div>
+                        <div>
+                            <dt>Clasificación en AgroAsesor</dt>
+                            <dd>
+                                {{ product.sag.get_clasificacion_display }}
+                            </dd>
+                        </div>
+                        <div>
+                            <dt>Sustancia activa (según SAG)</dt>
+                            <dd>
+                                {{ product.sag.sustancia_activa|default:"No indicada" }}
+                            </dd>
+                        </div>
+                        <div>
+                            <dt>Fabricante / distribuidor (según SAG)</dt>
+                            <dd>
+                                {{ product.sag.fabricante|default:"No indicado" }}
+                            </dd>
+                        </div>
+                        <div>
+                            <dt>Fecha de autorización</dt>
+                            <dd>
+                                {{ product.sag.fecha_autorizacion|date:"d/m/Y"|default:"No indicada en la lista" }}
+                            </dd>
+                        </div>
+                        {% if product.sag.observaciones %}
+                            <div class="span-all">
+                                <dt>Observaciones del SAG</dt>
+                                <dd>
+                                    {{ product.sag.observaciones }}
+                                </dd>
+                            </div>
+                        {% endif %}
+                        <div class="span-all">
+                            <dt>Fuente oficial</dt>
+                            <dd>
+                                <a href="{{ product.sag.url_fuente }}" target="_blank" rel="noopener noreferrer">Servicio Agrícola y Ganadero · {{ product.sag.archivo_fuente }}</a>
+                            </dd>
+                        </div>
+                    </dl>
+                    <p class="muted small">La lista SAG autoriza el uso del producto en agricultura orgánica; no informa dosis. Por eso AgroAsesor no considera verificada ninguna dosis de este producto por estar en la lista.</p>
+                </section>
+            {% endif %}
             <section class="sheet-section">
                 <h3>Dosis y aplicación</h3>
                 <dl class="sheet-grid">
                     <div><dt>Dosis{% if product.is_phyto %} de etiqueta{% endif %}</dt><dd>{% if product.dosis_hectarea %}{{ product.dosis_hectarea|floatformat:"-3" }} {{ product.unidad_dosis }} {% if product.dosis_con_fuente %}<small class="ok">verificada</small>{% else %}<small class="warn">sin verificar</small>{% endif %}{% else %}No documentada{% endif %}</dd></div>
                     <div><dt>Dosis máxima</dt><dd>{% if product.dosis_maxima_hectarea %}{{ product.dosis_maxima_hectarea|floatformat:"-3" }} {{ product.unidad_dosis_maxima }}{% else %}—{% endif %}</dd></div>
+                    <div>
+                        <dt>Estado de verificación de la dosis</dt>
+                        <dd>
+                            {% if product.dosis_con_fuente %}Verificada con fuente{% elif product.dosis_hectarea %}Registrada sin verificar{% else %}Sin dosis documentada{% endif %}
+                        </dd>
+                    </div>
                     <div>
                         <dt>Fuente de la dosis</dt>
                         <dd>
@@ -129,7 +194,7 @@
                             {{ product.modo_aplicacion|default:"No registrado"|linebreaksbr }}
                         </dd>
                     </div>
-                    {% if product.category == "fertilizer" %}
+                    {% if product.show_npk %}
                         <div><dt>N</dt><dd>{{ product.nitrogeno_pct|default_if_none:"—" }}{% if product.nitrogeno_pct is not None %} %{% endif %}</dd></div>
                         <div><dt>P₂O₅</dt><dd>{{ product.fosforo_p2o5_pct|default_if_none:"—" }}{% if product.fosforo_p2o5_pct is not None %} %{% endif %}</dd></div>
                         <div><dt>K₂O</dt><dd>{{ product.potasio_k2o_pct|default_if_none:"—" }}{% if product.potasio_k2o_pct is not None %} %{% endif %}</dd></div>
@@ -231,6 +296,8 @@
                 <div class="action-list">
                     {% if product.calculable %}
                         <a class="action-item" href="{{ calc_url }}"><i data-lucide="calculator" aria-hidden="true"></i><span><strong>Calcular cantidad</strong><small>Cuánto llevar para un potrero</small></span></a>
+                    {% elif manual_calc %}
+                        <a class="action-item" href="{{ calc_url }}"><i data-lucide="calculator" aria-hidden="true"></i><span><strong>Calcular con mi dosis</strong><small>Sin dosis documentada: escribes la tuya y queda como simulación</small></span></a>
                     {% endif %}
                     <a class="action-item" href="{{ availability_url }}"><i data-lucide="warehouse" aria-hidden="true"></i><span><strong>Consultar disponibilidad</strong><small>¿Me alcanza lo que tengo?</small></span></a>
                     <a class="action-item" href="{{ plan_url }}"><i data-lucide="calendar-plus" aria-hidden="true"></i><span><strong>Planificar aplicación</strong><small>Registrar en el cuaderno de campo</small></span></a>

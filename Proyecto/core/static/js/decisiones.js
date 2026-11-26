@@ -57,7 +57,23 @@
     return (farm.plots || []).find((plot) => String(plot.id) === String(id)) || null;
   }
   function productById(id) {
-    return allProducts.find((item) => String(item.id) === String(id)) || null;
+    const found = allProducts.find((item) => String(item.id) === String(id));
+    return found || (window.AgroCatalogoSAG && window.AgroCatalogoSAG.get(id)) || null;
+  }
+  // Producto de la lista SAG traído bajo demanda (catalogo-sag.js): se suma a las listas de esta página.
+  function addSagProduct(item) {
+    if (!item || allProducts.some((known) => String(known.id) === String(item.id))) return;
+    allProducts.push(item);
+    if (item.usable !== false && item.active !== false) products.push(item);
+  }
+  // Estado en la lista SAG (vigente, histórico o sin registro) con los textos comunes de catalogo-sag.js.
+  function sagEstado(item) {
+    return window.AgroCatalogoSAG ? window.AgroCatalogoSAG.estado(item) : { key: '', short: '', long: '' };
+  }
+  // Unidades que el servidor convierte entre sí (core/calculos.py): kg ↔ g y L ↔ mL.
+  const UNIT_DIMENSION = { kg: 'masa', g: 'masa', l: 'volumen', ml: 'volumen', unidades: 'conteo' };
+  function dimension(unit) {
+    return UNIT_DIMENSION[String(unit || '').replace('/ha', '').toLowerCase()] || '';
   }
   function farmOf(plot) {
     return (farm.predios || []).find((item) => String(item.id) === String(plot.predio)) || null;
@@ -365,6 +381,8 @@
 
   function goToAvailability(info) {
     const form = document.getElementById('cover-form');
+    // Un producto de la lista SAG elegido en «Cuánto llevar» se suma antes de armar la lista del cultivo.
+    if (info.product && window.AgroCatalogoSAG) addSagProduct(window.AgroCatalogoSAG.get(info.product));
     form.elements.plot.value = info.plot || '';
     form.elements.plot.dispatchEvent(new Event('change'));
     if (info.crop) {
@@ -377,7 +395,10 @@
     }
     if (info.area) form.elements.area.value = info.area;
     if (info.dose && !form.elements.dose.readOnly) form.elements.dose.value = info.dose;
-    if (info.unit) form.elements.unit.value = info.unit;
+    if (info.unit) {
+      form.elements.unit.value = info.unit;
+      form.elements.unit.dispatchEvent(new Event('change'));
+    }
     form.dispatchEvent(new CustomEvent('flow:refresh'));
     showTool('alcanza', true);
     form.elements.stock.focus({ preventScroll: true });
@@ -393,22 +414,47 @@
     const productHelp = form.querySelector('[data-role=product-help]');
     const doseHelp = form.querySelector('[data-role=dose-help]');
     const targetField = form.querySelector('[data-role=target-field]');
+    const sagHost = form.querySelector('[data-role=sag-search]');
+    // La dosis que puso la calculadora (catálogo) se borra si cambias a un producto sin dosis: no se arrastra.
+    let autoDose = false;
+    let stockUnitTouched = false;
     function refresh() {
       const crop = selectedCrop(form);
       const items = crop ? products.filter((item) => belongsToCrop(item, crop) || (!item.cropId && !item.crop)) : [];
-      const options = items.map((item) =>
-        isPhyto(item) && !verifiedPhytoFor(item, crop)
-          ? { value: item.id, label: item.categoryLabel + ' · ' + item.name + ' · sin uso verificado', disabled: true }
-          : { value: item.id, label: item.categoryLabel + ' · ' + item.name },
+      const options = [];
+      // Semilla sin producto registrado: la densidad de siembra del cultivo, si el catálogo la tiene.
+      if (crop && crop.density !== null && crop.density !== undefined) {
+        options.push({
+          value: 'crop-density',
+          label: 'Semilla de ' + crop.name + ' · densidad del catálogo' + (crop.densitySource ? '' : ' (sin fuente)'),
+        });
+      }
+      items.forEach((item) =>
+        options.push(
+          isPhyto(item) && !verifiedPhytoFor(item, crop)
+            ? { value: item.id, label: item.categoryLabel + ' · ' + item.name + ' · sin uso verificado', disabled: true }
+            : {
+                value: item.id,
+                label:
+                  item.categoryLabel + ' · ' + item.name + (item.sag ? ' · ' + sagEstado(item).short + ' (sin dosis)' : ''),
+              },
+        ),
       );
       options.push({ value: 'manual', label: 'Producto no registrado (simulación)' });
       setOptions(f.product, options, crop ? 'Selecciona un producto' : 'Selecciona primero un cultivo');
+      if (sagHost) sagHost.hidden = !crop;
       sync();
+    }
+    function setCoverDose(value, unit) {
+      f.dose.value = value;
+      if (unit && [...f.unit.options].some((o) => o.value === unit)) f.unit.value = unit;
+      autoDose = true;
     }
     function sync() {
       const crop = selectedCrop(form);
       const item = productById(f.product.value);
       const phyto = item && isPhyto(item);
+      const density = f.product.value === 'crop-density' && crop;
       targetField.hidden = !phyto;
       if (phyto)
         setOptions(
@@ -419,35 +465,74 @@
       f.dose.readOnly = Boolean(phyto);
       f.unit.disabled = Boolean(phyto);
       if (item && item.doseVerified && item.dose) {
-        f.dose.value = item.dose;
-        if ([...f.unit.options].some((o) => o.value === item.unit)) f.unit.value = item.unit;
+        setCoverDose(item.dose, item.unit);
         doseHelp.textContent = 'Dosis documentada: ' + (item.doseSource || item.sourceName) + '.';
-      } else if (item) {
-        doseHelp.textContent =
-          'Sin dosis verificada (falta: ' +
-          missingData(item, crop).join(', ') +
-          '). Lo que ingreses será una simulación.';
+      } else if (density) {
+        setCoverDose(crop.density, (crop.unit || 'kg') + '/ha');
+        doseHelp.textContent = crop.densitySource
+          ? 'Densidad de siembra documentada: ' + crop.densitySource + '.'
+          : 'Densidad del catálogo sin fuente documentada: el resultado queda como dato de catálogo.';
       } else {
-        doseHelp.textContent = '';
+        if (autoDose) f.dose.value = '';
+        autoDose = false;
+        if (item && item.sag) {
+          doseHelp.textContent =
+            (sagEstado(item).key === 'historico' ? sagEstado(item).long + '. ' : '') +
+            'La lista SAG no informa dosis. Escribe la de la etiqueta o de tu asesor: el resultado queda como simulación (dato manual).';
+        } else if (item) {
+          doseHelp.textContent =
+            'Sin dosis verificada (falta: ' +
+            missingData(item, crop).join(', ') +
+            '). Lo que ingreses será una simulación.';
+        } else {
+          doseHelp.textContent = f.product.value === 'manual' ? 'Escribe la dosis de tu fuente técnica (simulación).' : '';
+        }
       }
-      productHelp.textContent = item
-        ? 'Registrado en catálogo; la cantidad disponible la indicas tú (no hay inventario registrado).'
-        : '';
+      productHelp.textContent =
+        item || density
+          ? 'Registrado en catálogo; la cantidad disponible la indicas tú (no hay inventario registrado).'
+          : '';
     }
     const syncHelp = setupPlotCrop(form, refresh);
     // Unidades visibles junto a cada campo: se actualizan con la unidad elegida.
+    // La cantidad disponible puede ir en otra unidad compatible con la dosis (500 g con una dosis en kg/ha):
+    // solo se ofrecen las compatibles y el servidor la convierte antes de comparar.
     function syncUnits() {
       const base = (f.unit.value || '').replace('/ha', '');
+      if (f.stock_unit) {
+        [...f.stock_unit.options].forEach((option) => {
+          option.disabled = dimension(option.value) !== dimension(f.unit.value);
+        });
+        const current = f.stock_unit.selectedOptions[0];
+        if (!stockUnitTouched || !current || current.disabled) f.stock_unit.value = base;
+      }
       const stockTag = form.querySelector('[data-unit-tag="stock"]');
       const doseTag = form.querySelector('[data-unit-tag="dose"]');
-      if (stockTag) stockTag.textContent = base;
+      if (stockTag) stockTag.textContent = f.stock_unit ? f.stock_unit.value : base;
       if (doseTag) doseTag.textContent = f.unit.value || '';
     }
     f.unit.addEventListener('change', syncUnits);
+    f.dose.addEventListener('input', () => {
+      autoDose = false; // la persona escribió su dosis: ya no es la del catálogo
+    });
+    if (f.stock_unit) {
+      f.stock_unit.addEventListener('change', () => {
+        stockUnitTouched = true;
+        syncUnits();
+      });
+    }
     f.product.addEventListener('change', () => {
       sync();
       syncUnits();
     });
+    if (window.AgroCatalogoSAG) {
+      window.AgroCatalogoSAG.attach(sagHost, (item) => {
+        addSagProduct(item);
+        refresh();
+        f.product.value = String(item.id);
+        f.product.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+    }
     form.addEventListener('flow:refresh', syncUnits);
     syncUnits();
     form.addEventListener('submit', async (event) => {
@@ -456,6 +541,7 @@
       const plot = selectedPlot(form);
       const crop = selectedCrop(form);
       const item = productById(f.product.value);
+      const density = f.product.value === 'crop-density';
       const base = validateBase(form);
       if (base) {
         error.textContent = base;
@@ -465,7 +551,7 @@
         error.textContent = 'Selecciona un cultivo.';
         return;
       }
-      if (!item && f.product.value !== 'manual') {
+      if (!item && !density && f.product.value !== 'manual') {
         error.textContent = 'Selecciona un producto.';
         return;
       }
@@ -475,6 +561,10 @@
       }
       if (!(Number(f.dose.value) > 0)) {
         error.textContent = 'Ingresa una dosis o requerimiento mayor que 0.';
+        return;
+      }
+      if (f.stock_unit && dimension(f.stock_unit.value) !== dimension(f.unit.value)) {
+        error.textContent = 'La unidad de lo que tienes no es compatible con la unidad de la dosis.';
         return;
       }
       const phyto = item && isPhyto(item);
@@ -494,11 +584,17 @@
           dose: f.dose.value,
           unit,
           stock: f.stock.value,
+          stock_unit: f.stock_unit ? f.stock_unit.value : '',
+          dose_basis: density ? 'crop_density' : '',
           crop: crop.name,
           product_id: item ? item.id : null,
           target: phyto ? f.target.value : '',
         });
         const enough = data.missingQty <= 0;
+        const entered =
+          data.stockUnit && data.stockUnit !== data.unit
+            ? ' (ingresaste ' + fmt(data.stockEntered, 3) + ' ' + data.stockUnit + ')'
+            : '';
         const surplus = Math.max(0, data.stock - data.needed);
         const shortfall = Math.max(0, data.needed - data.stock);
         const unitText = data.unit;
@@ -517,7 +613,7 @@
           ],
           figures: [
             ['Necesario', fmt(data.needed, 2) + ' ' + unitText],
-            ['Disponible', fmt(data.stock, 2) + ' ' + unitText],
+            ['Disponible', fmt(data.stock, 2) + ' ' + unitText + entered],
             enough
               ? ['Sobrante', fmt(surplus, 2) + ' ' + unitText, 'ok']
               : ['Faltante', fmt(shortfall, 2) + ' ' + unitText, 'warn'],
@@ -551,8 +647,13 @@
           rows: [
             ['Potrero', plot.farmName + ' · ' + plot.name],
             ['Cultivo', crop.name],
-            ['Producto', item ? item.name : 'Producto manual'],
+            ['Producto', item ? item.name : density ? 'Semilla de ' + crop.name : 'Producto manual'],
+            ['Lista SAG orgánica', window.AgroCatalogoSAG ? window.AgroCatalogoSAG.resultado(data.sag_status) : ''],
             ['Superficie que se puede cubrir', fmt(data.coveredHa, 4) + ' de ' + fmt(data.area, 4) + ' ha'],
+            [
+              'Hectáreas que alcanzarías con lo que tienes',
+              data.coverableHa !== undefined ? fmt(data.coverableHa, 4) + ' ha' : '',
+            ],
             ['Superficie sin cubrir', data.missingHa > 1e-9 ? fmt(data.missingHa, 4) + ' ha' : ''],
             ['Dosis', fmt(data.dose, 3) + ' ' + data.dose_unit],
             ['Fuente técnica', data.source || ''],
@@ -591,6 +692,22 @@
     if (cropId && cropById(cropId)) {
       form.elements.crop.value = cropId;
       form.elements.crop.dispatchEvent(new Event('change'));
+    }
+    // ?insumo= (desde la ficha del producto): se elige en «¿Me alcanza?». Si es de la lista SAG se trae del servidor.
+    const productId = params.get('insumo');
+    const choose = () => {
+      if (![...form.elements.product.options].some((o) => o.value === String(productId) && !o.disabled)) return;
+      form.elements.product.value = String(productId);
+      form.elements.product.dispatchEvent(new Event('change', { bubbles: true }));
+    };
+    if (productId && productById(productId)) choose();
+    else if (productId && window.AgroCatalogoSAG) {
+      window.AgroCatalogoSAG.byId(productId).then((item) => {
+        if (!item) return;
+        addSagProduct(item);
+        form.elements.crop.dispatchEvent(new Event('change')); // vuelve a armar la lista de productos
+        choose();
+      });
     }
     form.dispatchEvent(new CustomEvent('flow:refresh'));
     showTool(params.get('herramienta') || 'llevar');

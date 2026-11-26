@@ -1,6 +1,6 @@
 import time
 
-from tests.helpers import SECRETO, cabeceras, pedir
+from tests.helpers import cabeceras, pedir
 
 
 def test_sin_cabeceras_no_autenticado(client_bd):

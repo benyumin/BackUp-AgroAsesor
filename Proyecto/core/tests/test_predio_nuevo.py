@@ -12,7 +12,6 @@ from decimal import Decimal
 from pathlib import Path
 
 from django.contrib.auth import get_user_model
-from django.contrib.messages import get_messages
 from django.test import TestCase
 from django.utils import timezone
 

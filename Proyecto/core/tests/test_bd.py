@@ -36,7 +36,11 @@ class EstadoYRespaldoTests(TestCase):
             with mock.patch.object(dbutils, 'ruta_bd', return_value=base):
                 primero = dbutils.respaldar(directorio=Path(carpeta) / 'bk', mantener=1)
                 self.assertTrue(primero.exists())
-                self.assertEqual(sqlite3.connect(str(primero)).execute('SELECT x FROM t').fetchone()[0], 1)
+                copia = sqlite3.connect(str(primero))
+                try:
+                    self.assertEqual(copia.execute('SELECT x FROM t').fetchone()[0], 1)
+                finally:
+                    copia.close()  # en Windows un archivo abierto no se puede borrar al cerrar la carpeta temporal
 
 
 class CicloDeCuentaTests(TestCase):

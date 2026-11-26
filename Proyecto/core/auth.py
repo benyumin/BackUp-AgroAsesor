@@ -22,6 +22,8 @@ from django.http import JsonResponse
 from django.shortcuts import redirect, resolve_url
 from django.utils.http import url_has_allowed_host_and_scheme
 
+from . import limites
+
 
 class EmailBackend(ModelBackend):
     """Acceso con correo o con nombre de usuario (sin distinguir mayúsculas).
@@ -35,6 +37,18 @@ class EmailBackend(ModelBackend):
         if username is None or password is None:
             return None
         identificador = username.strip()
+        # Límite de intentos (también protege /admin/, que usa este mismo backend). PermissionDenied detiene la
+        # autenticación sin probar la contraseña; la vista muestra el aviso con limites.espera_login.
+        if limites.espera_login(request, identificador):
+            raise PermissionDenied
+        user = self._autenticar(identificador, password)
+        if user is None:
+            limites.fallo_login(request, identificador)
+        else:
+            limites.exito_login(identificador)
+        return user
+
+    def _autenticar(self, identificador, password):
         model = get_user_model()
         candidatos = list(
             model.objects.filter(Q(username__iexact=identificador) | Q(email__iexact=identificador)).order_by('pk')[:10]

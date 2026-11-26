@@ -13,7 +13,10 @@ from .models import (
     PredioHistorial,
     Potrero,
     ReferenciaAgronomica,
+    RegistroListaSAG,
+    RegistroPlaguicidaSAG,
     TemporadaCultivo,
+    VariedadSAG,
 )
 
 
@@ -142,6 +145,65 @@ class ReferenciaAgronomicaAdmin(admin.ModelAdmin):
 class TipoInsumoAdmin(admin.ModelAdmin):
     list_display = ('nombre',)
     search_fields = ('nombre',)
+
+
+@admin.register(RegistroListaSAG)
+class RegistroListaSAGAdmin(admin.ModelAdmin):
+    """Procedencia de los insumos importados de la lista SAG orgánica. Las columnas del archivo no se editan aquí:
+    se corrigen reimportando la lista oficial (``importar_lista_sag``)."""
+
+    list_display = ('nombre_comercial', 'fabricante', 'clasificacion', 'en_lista_vigente', 'fecha_lista')
+    list_filter = ('clasificacion', 'en_lista_vigente', 'insumo_creado_por_importacion', 'fecha_lista')
+    search_fields = ('nombre_comercial', 'fabricante', 'sustancia_activa', 'funcion')
+    raw_id_fields = ('insumo',)
+    readonly_fields = (
+        'clave',
+        'numero_lista',
+        'nombre_comercial',
+        'sustancia_activa',
+        'fabricante',
+        'funcion',
+        'clasificacion',
+        'fecha_autorizacion',
+        'observaciones',
+        'fecha_lista',
+        'archivo_fuente',
+        'url_fuente',
+        'en_lista_vigente',
+        'insumo_creado_por_importacion',
+        'importado',
+        'actualizado',
+    )
+
+    def has_add_permission(self, request):
+        return False
+
+
+@admin.register(RegistroPlaguicidaSAG)
+class RegistroPlaguicidaSAGAdmin(admin.ModelAdmin):
+    """Procedencia de los plaguicidas importados del SAG. Se corrigen reimportando (``importar_plaguicidas_sag``)."""
+
+    list_display = ('nombre_comercial', 'numero_sag', 'aptitud', 'titular', 'en_planilla_vigente', 'fecha_planilla')
+    list_filter = ('en_planilla_vigente', 'insumo_creado_por_importacion', 'fecha_planilla')
+    search_fields = ('nombre_comercial', 'numero_sag', 'titular', 'sustancias_activas', 'aptitud')
+    raw_id_fields = ('insumo',)
+    readonly_fields = [f.name for f in RegistroPlaguicidaSAG._meta.fields if f.name not in {'id', 'insumo'}]
+
+    def has_add_permission(self, request):
+        return False
+
+
+@admin.register(VariedadSAG)
+class VariedadSAGAdmin(admin.ModelAdmin):
+    """Variedades del registro SAG. Se corrigen reimportando (``importar_variedades_sag``)."""
+
+    list_display = ('variedad', 'cultivo', 'especie', 'registro', 'mantenedor', 'en_registro_vigente')
+    list_filter = ('registro', 'en_registro_vigente', 'cultivo')
+    search_fields = ('variedad', 'especie', 'mantenedor')
+    readonly_fields = [f.name for f in VariedadSAG._meta.fields if f.name != 'id']
+
+    def has_add_permission(self, request):
+        return False
 
 
 @admin.register(Insumo)

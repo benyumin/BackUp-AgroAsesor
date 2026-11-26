@@ -3,7 +3,6 @@
 Solo cambia la presentación: el cálculo sigue siendo ``journey_payload`` y las reglas de cada etapa no se tocan.
 """
 
-import re
 from datetime import date
 from pathlib import Path
 

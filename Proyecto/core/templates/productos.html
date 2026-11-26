@@ -2,14 +2,14 @@
 {% load static %}
 {% block title %}Catálogo de productos · AgroAsesor{% endblock %}
 {% block extra_css %}
-    <link rel="stylesheet" href="{% static 'css/productos.css' %}?v=3">
+    <link rel="stylesheet" href="{% static 'css/productos.css' %}?v=4">
 {% endblock %}
 {% block content %}
     <div class="page-hero">
         <div>
             <span class="eyebrow">Consultar productos</span>
             <h1 class="page-title">Catálogo de insumos agrícolas</h1>
-            <p class="page-sub">Semillas, fertilizantes y productos fitosanitarios registrados, con su estado de verificación, dosis documentadas y fuentes técnicas.</p>
+            <p class="page-sub">Semillas, fertilizantes, bioestimulantes y productos fitosanitarios registrados, con su estado de verificación, dosis documentadas y fuentes técnicas. Incluye la <a class="text-link" href="{{ sag_source_url }}" target="_blank" rel="noopener noreferrer">lista SAG de fertilizantes y bioestimulantes autorizados para agricultura orgánica</a>.</p>
         </div>
         <div class="toolbar">
             {% if request.user.is_staff %}<a class="button"
@@ -21,7 +21,7 @@
            class="category-chip{% if not product_filters.categoria %} is-active{% endif %}"><i data-lucide="layers" aria-hidden="true"></i><span>Todos</span><strong>{{ product_total }}</strong></a>
         {% for key, label, count in product_counts %}
             <a href="?categoria={{ key }}"
-               class="category-chip cat-{{ key }}{% if product_filters.categoria == key %} is-active{% endif %}"><i data-lucide="{% if key == 'seed' %}sprout{% elif key == 'fertilizer' %}flask-conical{% elif key == 'herbicide' %}leaf{% elif key == 'fungicide' %}microscope{% elif key == 'insecticide' %}bug{% else %}package{% endif %}"
+               class="category-chip cat-{{ key }}{% if product_filters.categoria == key %} is-active{% endif %}"><i data-lucide="{% if key == 'seed' %}sprout{% elif key == 'fertilizer' %}flask-conical{% elif key == 'biostimulant' %}sparkles{% elif key == 'herbicide' %}leaf{% elif key == 'fungicide' %}microscope{% elif key == 'insecticide' %}bug{% else %}package{% endif %}"
    aria-hidden="true"></i><span>{{ label }}</span><strong>{{ count }}</strong></a>
         {% endfor %}
     </nav>
@@ -42,6 +42,10 @@
         {% if product_filters.cultivo == crop.pk|stringformat:'s' %} selected{% endif %}>{{ crop.nombre }}</option>{% endfor %}</select></label>
             <label class="field"><span>Estado de verificación</span><select name="estado"><option value="">Todos</option>{% for value, label in product_statuses %}<option value="{{ value }}"
         {% if product_filters.estado == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+            <label class="field"><span>Lista SAG orgánica</span><select name="sag"><option value="">Todos</option>{% for value, label in product_sag_filters %}<option value="{{ value }}"
+        {% if product_filters.sag == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+            <label class="field"><span>Función según SAG</span><select name="funcion_sag"><option value="">Todas</option>{% for value, label in product_sag_classifications %}<option value="{{ value }}"
+        {% if product_filters.funcion_sag == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
             <label class="field">
                 <span>Ordenar por</span><select name="orden">
                     <option value="nombre"
@@ -58,7 +62,7 @@
        {% if product_filters.solo_calculables %} checked{% endif %}> Solo con dosis verificada (calculables)</label>
             <div class="toolbar"><button class="button" type="submit">Aplicar</button><a class="button secondary"
    href="{% url 'productos' %}">Limpiar</a></div>
-            <p class="muted small">El estado refleja lo registrado por el administrador del catálogo; no es una consulta en línea al SAG. Revisa siempre la etiqueta vigente.</p>
+            <p class="muted small">El estado refleja lo registrado por el administrador del catálogo; no es una consulta en línea al SAG. Estar en la lista SAG orgánica no verifica una dosis: esa lista no informa dosis. Revisa siempre la etiqueta vigente.</p>
         </form>
         <section class="catalog-results" aria-live="polite">
             <div class="results-bar"><p><strong>{{ product_count }}</strong> producto{{ product_count|pluralize }}{% if product_count != product_total %} de {{ product_total }}{% endif %}</p></div>
@@ -71,7 +75,8 @@
                                 <span class="badge {% if product.estado_verificacion == 'verified' %}{% elif product.estado_verificacion == 'unverified' %}amber{% else %}red{% endif %}">{{ product.status_label }}</span>
                             </header>
                             <h3><a href="{% url 'producto_detail' product.pk %}">{{ product.nombre }}</a></h3>
-                            <p class="product-sub">{{ product.ingrediente_activo|default:product.composicion_nutricional|default:product.variedad_semilla|default:product.fabricante|default:"Sin composición registrada" }}</p>
+                            {% if product.sag %}<p class="product-sag{% if not product.sag.en_lista_vigente %} is-out{% endif %}"><i data-lucide="badge-check" aria-hidden="true"></i> {% if product.sag.en_lista_vigente %}Lista SAG orgánica{% else %}Ya no figura en la lista SAG{% endif %} · {{ product.sag.get_clasificacion_display }}</p>{% endif %}
+                            <p class="product-sub">{{ product.ingrediente_activo|default:product.composicion_nutricional|default:product.variedad_semilla|default:"Sin composición registrada" }}{% if product.fabricante %} · {{ product.fabricante }}{% endif %}</p>
                             <dl>
                                 <div>
                                     <dt>Cultivo</dt>

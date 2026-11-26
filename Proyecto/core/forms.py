@@ -16,7 +16,7 @@ from .validators import (
 )
 from django.db import models
 from .calculos import productos_vigentes
-from .catalog import crop_group_name, default_zone, grouped_crop_choices
+from .catalog import crop_group_name, default_zone, grouped_crop_choices, importados_de_lista_sag
 from .geometry import polygon_area, coordinates_from_geojson
 
 
@@ -476,8 +476,19 @@ class ActividadAgricolaForm(forms.ModelForm):
             f'{season.temporada_agricola + " · " if season.temporada_agricola else ""}'
             f'{season.cultivo.nombre}{" · " + season.variedad if season.variedad else ""} · {season.get_estado_display()}'
         )
+        # Los productos importados de la lista SAG (cientos) no se listan todos: solo el que viene elegido
+        # (desde su ficha con ?insumo=, el formulario enviado o la actividad guardada).
+        elegido = str(
+            (self.data.get(self.add_prefix('insumo')) if self.is_bound else self.initial.get('insumo'))
+            or self.instance.insumo_id
+            or ''
+        )
+        visibles = ~importados_de_lista_sag()
+        if elegido.isdigit():
+            visibles |= models.Q(pk=elegido)
         self.fields['insumo'].queryset = (
             productos_vigentes()
+            .filter(visibles)
             .exclude(estado_verificacion__in=['restricted', 'cancelled'])
             .select_related('tipo', 'cultivo')
             .order_by('tipo__nombre', 'nombre')

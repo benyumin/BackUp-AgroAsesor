@@ -11,6 +11,10 @@ Operaciones disponibles (campo ``operation`` del JSON):
 ``seed_population``       dosis de semilla a partir de población, peso de mil semillas, germinación y pureza.
 ``fertilizer_nutrition``  kilos de fertilizante para aportar una necesidad de nutriente (N, P₂O₅ o K₂O).
 
+Unidades: kg ↔ g y L ↔ mL se convierten entre sí (ver :data:`UNIDADES`); masa, volumen y unidades no se mezclan.
+La cantidad disponible de «¿Me alcanza?» puede venir en otra unidad compatible (``stock_unit``) y se convierte a la
+unidad de la dosis antes de comparar. Una unidad que no está en la tabla se compara solo por igualdad de texto.
+
 Precisión: todas las operaciones se hacen con ``Decimal`` sobre los valores tal como llegan (la superficie se
 guarda con 4 decimales en el potrero). Solo se convierte a ``float`` al armar la respuesta JSON; el redondeo para
 mostrar lo hace la pantalla.
@@ -31,7 +35,7 @@ from django.db.models import Q
 from django.utils import timezone
 
 from .catalog import category_key
-from .models import Cultivo, Insumo, Potrero
+from .models import Cultivo, Insumo, Potrero, RegistroListaSAG
 
 ORIGIN_LABELS = {
     'documented': 'Dato documentado',
@@ -72,6 +76,8 @@ CAMPOS_DE_ENTRADA = (
     'need_per_ha',
     'need_source',
     'calculation_type',
+    'stock_unit',
+    'dose_basis',
     'bag_kg',
     'bag_price_clp',
 )
@@ -126,6 +132,31 @@ def productos_vigentes(hoy=None):
 def misma_unidad(a, b):
     """«kg/ha» y «kg» son la misma unidad para comparar (sin distinguir mayúsculas)."""
     return a.removesuffix('/ha').casefold() == b.removesuffix('/ha').casefold()
+
+
+# Unidades que se pueden convertir entre sí: dimensión y factor a la unidad base de esa dimensión.
+UNIDADES = {
+    'kg': ('masa', Decimal('1')),
+    'g': ('masa', Decimal('0.001')),
+    'l': ('volumen', Decimal('1')),
+    'ml': ('volumen', Decimal('0.001')),
+    'unidades': ('conteo', Decimal('1')),
+}
+
+
+def convertir(valor, desde, hacia):
+    """``valor`` expresado en ``desde`` convertido a ``hacia`` («g/ha» → «kg/ha», «L» → «mL»…).
+
+    Devuelve ``None`` si las unidades no son compatibles (masa con volumen, o alguna desconocida y distinta).
+    """
+    desde, hacia = str(desde or '').strip(), str(hacia or '').strip()
+    if misma_unidad(desde, hacia):
+        return valor
+    origen = UNIDADES.get(desde.removesuffix('/ha').casefold())
+    destino = UNIDADES.get(hacia.removesuffix('/ha').casefold())
+    if origen is None or destino is None or origen[0] != destino[0]:
+        return None
+    return valor * origen[1] / destino[1]
 
 
 def formato_superficie(valor):
@@ -236,15 +267,19 @@ def _dosis_y_unidad(datos, producto, cultivo, nombre_cultivo):
     else:
         dosis = numero_positivo(datos.get('dose'), 'La dosis')
         unidad = str(datos.get('unit') or '').strip()
-    if producto and producto.unidad_dosis and unidad and not misma_unidad(producto.unidad_dosis, unidad):
-        raise ErrorCalculo('La unidad ingresada no coincide con la unidad registrada del producto.')
+    if producto and producto.unidad_dosis and unidad and convertir(dosis, unidad, producto.unidad_dosis) is None:
+        raise ErrorCalculo(
+            f'La unidad ingresada ({unidad}) no es compatible con la unidad registrada del producto '
+            f'({producto.unidad_dosis}).'
+        )
     return dosis, unidad
 
 
-def referencia_del_catalogo(producto, cultivo, tipo):
+def referencia_del_catalogo(producto, cultivo, tipo, densidad_cultivo=False):
     """Dosis de referencia que tiene el catálogo para este cálculo, o ``None`` si no hay.
 
-    Primero la del producto elegido; si no hay producto y es un cálculo de semillas, la densidad del cultivo.
+    Primero la del producto elegido; si no hay producto y es un cálculo de semillas (o «¿Me alcanza?» con
+    ``densidad_cultivo``), la densidad de siembra del cultivo.
     Devuelve un diccionario con ``valor``, ``unidad``, ``respaldada`` (tiene fuente completa), ``fuente``, ``url`` y
     ``fecha``.
     """
@@ -257,7 +292,7 @@ def referencia_del_catalogo(producto, cultivo, tipo):
             'url': producto.etiqueta_url or producto.fuente_url,
             'fecha': producto.fecha_verificacion.isoformat() if producto.fecha_verificacion else '',
         }
-    if not producto and cultivo and tipo == 'semillas' and cultivo.densidad_siembra is not None:
+    if not producto and cultivo and (tipo == 'semillas' or densidad_cultivo) and cultivo.densidad_siembra is not None:
         return {
             'valor': cultivo.densidad_siembra,
             'unidad': (cultivo.unidad_siembra or 'kg') + '/ha',
@@ -269,6 +304,20 @@ def referencia_del_catalogo(producto, cultivo, tipo):
     return None
 
 
+def estado_sag(producto):
+    """Estado del producto en la lista SAG orgánica.
+
+    ``'vigente'`` si figura en la última lista importada, ``'historico'`` si figuró pero ya no aparece
+    (``en_lista_vigente`` falso; el registro se conserva) y ``''`` si no tiene registro SAG.
+    """
+    if producto is None:
+        return ''
+    vigente = RegistroListaSAG.objects.filter(insumo=producto).values_list('en_lista_vigente', flat=True).first()
+    if vigente is None:
+        return ''
+    return 'vigente' if vigente else 'historico'
+
+
 def clasificar_origen(dosis, unidad, referencia):
     """Origen de la dosis usada (``documented``, ``catalog``, ``adjusted`` o ``simulation``) y su fuente.
 
@@ -278,7 +327,8 @@ def clasificar_origen(dosis, unidad, referencia):
     procedencia = {'verified': False, 'source': '', 'source_url': '', 'source_date': ''}
     if referencia is None:
         return 'simulation', procedencia
-    if dosis != referencia['valor'] or not misma_unidad(unidad, referencia['unidad']):
+    # 500 g/ha frente a una referencia de 0,5 kg/ha es el mismo dato: se compara en la unidad de la referencia.
+    if convertir(dosis, unidad, referencia['unidad']) != referencia['valor']:
         return 'adjusted', procedencia
     if not referencia['respaldada']:
         return 'catalog', procedencia
@@ -304,15 +354,22 @@ def _calcular_dosis_o_cobertura(datos, operacion, tipo, potrero, superficie):
     dosis, unidad = _dosis_y_unidad(datos, producto, cultivo, nombre_cultivo)
     # Una dosis sobre el máximo documentado (con fuente) no se calcula: el resultado no sería válido.
     con_maximo = bool(producto and producto.dosis_maxima_hectarea is not None and producto.dosis_con_fuente)
-    if con_maximo and dosis > producto.dosis_maxima_hectarea:
+    unidad_maxima = (producto.unidad_dosis_maxima or producto.unidad_dosis) if con_maximo else ''
+    dosis_comparable = convertir(dosis, unidad, unidad_maxima) if con_maximo else None
+    if dosis_comparable is None:
+        dosis_comparable = dosis
+    if con_maximo and dosis_comparable > producto.dosis_maxima_hectarea:
         maximo = format(producto.dosis_maxima_hectarea.normalize(), 'f').replace('.', ',')
-        unidad_maxima = producto.unidad_dosis_maxima or producto.unidad_dosis
         raise ErrorCalculo(
             f'La dosis supera el máximo documentado para {producto.nombre} ({maximo} {unidad_maxima}). '
             'No es posible calcular con ese valor.'
         )
-    referencia = referencia_del_catalogo(producto, cultivo, tipo)
+    densidad_cultivo = operacion == 'coverage' and datos.get('dose_basis') == 'crop_density'
+    if densidad_cultivo and (producto or cultivo is None or cultivo.densidad_siembra is None):
+        raise ErrorCalculo('La densidad de siembra del catálogo solo se usa sin producto y con un cultivo que la tenga.')
+    referencia = referencia_del_catalogo(producto, cultivo, tipo, densidad_cultivo)
     origen, procedencia = clasificar_origen(dosis, unidad, referencia)
+    sag_status = estado_sag(producto)
     procedencia.update(
         {
             'origin': origen,
@@ -326,6 +383,9 @@ def _calcular_dosis_o_cobertura(datos, operacion, tipo, potrero, superficie):
             'max_unit': '',
             'simulation': origen != 'documented',
             'product': producto.nombre if producto else '',
+            # Estado en la lista SAG orgánica (ver estado_sag). La lista no informa dosis: la dosis es de la persona.
+            'sag_status': sag_status,
+            'sag_list': sag_status == 'vigente',
             'crop': cultivo.nombre if cultivo else '',
             'plot': potrero.nombre,
             'area': float(superficie),
@@ -339,7 +399,13 @@ def _calcular_dosis_o_cobertura(datos, operacion, tipo, potrero, superficie):
     unidad_cantidad = unidad.replace('/ha', '')
 
     if operacion == 'coverage':
-        disponible = numero_positivo(datos.get('stock'), 'La cantidad disponible', permitir_cero=True)
+        ingresado = numero_positivo(datos.get('stock'), 'La cantidad disponible', permitir_cero=True)
+        unidad_stock = str(datos.get('stock_unit') or '').strip() or unidad_cantidad
+        disponible = convertir(ingresado, unidad_stock, unidad) if unidad else ingresado
+        if disponible is None:
+            raise ErrorCalculo(
+                f'La cantidad disponible está en {unidad_stock} y la dosis en {unidad}: no son unidades compatibles.'
+            )
         necesaria = cantidad_por_dosis(superficie, dosis)
         superficie_cubierta = min(superficie, disponible / dosis)
         return {
@@ -351,7 +417,12 @@ def _calcular_dosis_o_cobertura(datos, operacion, tipo, potrero, superficie):
             'missingHa': float(max(Decimal('0'), superficie - superficie_cubierta)),
             'missingQty': float(max(Decimal('0'), necesaria - disponible)),
             'surplus': float(max(Decimal('0'), disponible - necesaria)),
+            # «stock» queda en la unidad de la dosis (como antes); lo ingresado se guarda aparte con su unidad.
             'stock': float(disponible),
+            'stockEntered': float(ingresado),
+            'stockUnit': unidad_stock,
+            # Hectáreas que alcanzaría a cubrir lo disponible, aunque superen la superficie elegida.
+            'coverableHa': float(disponible / dosis),
             'unit': unidad_cantidad,
             'inventory': 'simulation',
             **procedencia,

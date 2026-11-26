@@ -3,6 +3,7 @@
 El registro y la recuperación de contraseña están en ``core.auth`` y el acceso con Google en ``core.google_auth``.
 """
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
@@ -11,6 +12,7 @@ from django.shortcuts import redirect, render
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
 
+from .. import limites
 from ..auth import MENSAJE_VENCIDA, administrador_requerido, destino_inicial
 from ..forms import (
     PerfilForm,
@@ -42,6 +44,7 @@ def login_view(request):
         return redirect('password_reset')
     mode = 'register' if mode == 'register' else 'login'
     error = ''
+    status = 200
     if request.method == 'GET' and request.GET.get('vencida'):
         messages.warning(
             request, MENSAJE_VENCIDA
@@ -49,7 +52,13 @@ def login_view(request):
     identifier = (request.POST.get('username') or request.POST.get('email') or '').strip()
     registration = RegistroForm(request.POST if request.method == 'POST' and mode == 'register' else None)
     if request.method == 'POST':
-        if mode == 'register':
+        ip = limites.ip_cliente(request)
+        bloqueo_registro = (
+            limites.espera('registro-ip', ip, settings.LIMITE_REGISTRO_IP) if mode == 'register' else 0
+        )
+        if bloqueo_registro:
+            error, status = limites.mensaje_bloqueo(bloqueo_registro), 429
+        elif mode == 'register':
             if registration.is_valid():
                 try:
                     with transaction.atomic():
@@ -61,6 +70,8 @@ def login_view(request):
                 except IntegrityError:
                     error = 'El nombre de usuario o el correo electrónico ya está registrado.'
                 else:
+                    # Solo cuentan las cuentas creadas: un formulario con errores no gasta intentos.
+                    limites.registrar('registro-ip', ip, settings.LIMITE_REGISTRO_IP)
                     login(request, user, backend='core.auth.EmailBackend')
                     messages.success(request, 'Tu cuenta se creó correctamente. Ya iniciaste sesión.')
                     return redirect(destino_inicial(user))
@@ -70,7 +81,10 @@ def login_view(request):
                 username=identifier,
                 password=request.POST.get('password', ''),
             )
-            if user is None:
+            bloqueo = limites.espera_login(request, identifier) if user is None else 0
+            if bloqueo:
+                error, status = limites.mensaje_bloqueo(bloqueo), 429
+            elif user is None:
                 error = 'Usuario, correo electrónico o contraseña incorrectos.'
             else:
                 login(request, user)
@@ -91,6 +105,7 @@ def login_view(request):
                 else 'Únete a la red de agricultores líderes de la provincia de Melipilla.'
             ),
         },
+        status=status,
     )
 
 

@@ -85,6 +85,7 @@
     notes: $('calc-notes'),
     productInfo: $('calc-product-info'),
     plan: $('calc-plan'),
+    sagSearch: $('calc-sag-search'),
   };
   if (!ui.form) return;
 
@@ -129,7 +130,18 @@
     return plots.find((plot) => String(plot.id) === String(id)) || null;
   }
   function productById(id) {
-    return allProducts.find((item) => String(item.id) === String(id)) || null;
+    const found = allProducts.find((item) => String(item.id) === String(id));
+    return found || (window.AgroCatalogoSAG && window.AgroCatalogoSAG.get(id)) || null;
+  }
+  // Producto de la lista SAG elegido en el buscador: se suma a la lista de esta calculadora (sin dosis).
+  function addSagProduct(item) {
+    if (!item || allProducts.some((known) => String(known.id) === String(item.id))) return;
+    allProducts.push(item);
+    if (item.usable !== false && item.active !== false) products.push(item);
+  }
+  // Estado en la lista SAG (vigente, histórico o sin registro) con los textos comunes de catalogo-sag.js.
+  function sagEstado(item) {
+    return window.AgroCatalogoSAG ? window.AgroCatalogoSAG.estado(item) : { key: '', short: '', long: '' };
   }
   function isPhyto(item) {
     return Boolean(item) && PHYTO.has(item.category);
@@ -302,6 +314,10 @@
     );
     add('Fuente', item.doseSource || item.sourceName);
     add('Verificado el', fmtDate(item.verifiedAt));
+    if (item.sag) {
+      add('Lista SAG orgánica', sagEstado(item).long);
+      add('Función declarada (SAG)', item.sag.function);
+    }
     const url = safeUrl(item.labelUrl || item.sourceUrl);
     return (
       '<div class="note-card"><h3>' +
@@ -799,13 +815,15 @@
       setOptions(ui.product, options, null, keep);
       if (requested && hasOption(ui.product, 'p:' + requested)) ui.product.value = 'p:' + requested;
       ui.productField.hidden = !seeds.length;
+      // Las semillas no se mezclan con la lista SAG de fertilizantes y bioestimulantes.
+      if (ui.sagSearch) ui.sagSearch.hidden = true;
       ui.productHelp.textContent = crop
         ? seeds.length
           ? seeds.length + ' semilla(s) registrada(s) para ' + crop.name + '.'
           : ''
         : '';
     } else {
-      const keys = ['fertilizer', 'herbicide', 'fungicide', 'insecticide', 'other'];
+      const keys = ['fertilizer', 'biostimulant', 'herbicide', 'fungicide', 'insecticide', 'other'];
       const groups = [];
       keys.forEach((key) => {
         const items = crop
@@ -826,7 +844,11 @@
               value: String(item.id),
               label:
                 item.name +
-                (item.doseVerified ? ' · ' + fmt(item.dose, 3) + ' ' + item.unit : ' · dosis no verificada'),
+                (item.doseVerified
+                  ? ' · ' + fmt(item.dose, 3) + ' ' + item.unit
+                  : item.sag
+                    ? ' · ' + sagEstado(item).short + ' · sin dosis documentada'
+                    : ' · dosis no verificada'),
             };
           }),
         });
@@ -835,6 +857,7 @@
       setOptions(ui.product, groups, crop ? 'Selecciona un producto' : 'Selecciona primero un cultivo', keep);
       if (requested && hasOption(ui.product, requested)) ui.product.value = requested;
       ui.productField.hidden = false;
+      if (ui.sagSearch) ui.sagSearch.hidden = !crop;
       const count = crop ? products.filter((item) => item.category !== 'seed' && belongsToCrop(item, crop)).length : 0;
       ui.productHelp.textContent = !crop
         ? ''
@@ -893,13 +916,17 @@
         '.';
     } else {
       setDose(null);
-      ui.doseHelp.textContent = item
-        ? 'No hay dosis verificada. Falta: ' +
-          missingData(item, crop).join(', ') +
-          '. Puedes ingresar la dosis de tu fuente técnica.'
-        : sel.kind === 'manual'
-          ? 'Ingresa la dosis de tu fuente técnica.'
-          : 'Cantidad de producto por cada hectárea.';
+      ui.doseHelp.textContent =
+        item && item.sag
+          ? (sagEstado(item).key === 'historico' ? sagEstado(item).long + '. ' : '') +
+            'La lista SAG no informa dosis. Escribe la dosis de la etiqueta o de tu asesor: el resultado queda como simulación (dato manual).'
+          : item
+            ? 'No hay dosis verificada. Falta: ' +
+              missingData(item, crop).join(', ') +
+              '. Puedes ingresar la dosis de tu fuente técnica.'
+            : sel.kind === 'manual'
+              ? 'Ingresa la dosis de tu fuente técnica.'
+              : 'Cantidad de producto por cada hectárea.';
     }
     renderNotes();
     renderPreview();
@@ -1050,6 +1077,7 @@
           ['Tipo de cálculo', 'Cantidad por superficie (superficie × dosis)'],
           ['Origen de la dosis', originLabel(data, seeds)],
           ['Producto', productName],
+          ['Lista SAG orgánica', window.AgroCatalogoSAG ? window.AgroCatalogoSAG.resultado(data.sag_status) : ''],
           ['Equivalencia', packageText(data)],
           ['Objetivo de control', phyto ? ui.target.value : ''],
           ['Fecha de verificación', fmtDate(data.source_date)],
@@ -1321,5 +1349,28 @@
     syncCropHelp();
     setMode(initial);
     requestedProduct = null;
+    // ?insumo= de un producto de la lista SAG (no viene en la página): se trae del servidor y se elige.
+    const wanted = params.get('insumo');
+    if (wanted && !requested && window.AgroCatalogoSAG) {
+      window.AgroCatalogoSAG.byId(wanted).then((item) => {
+        if (!item) return;
+        addSagProduct(item);
+        if (mode !== 'insumos') return;
+        refreshProducts();
+        if (hasOption(ui.product, String(item.id))) {
+          ui.product.value = String(item.id);
+          syncProduct();
+        }
+      });
+    }
   })();
+
+  if (window.AgroCatalogoSAG) {
+    window.AgroCatalogoSAG.attach(ui.sagSearch, (item) => {
+      addSagProduct(item);
+      refreshProducts();
+      ui.product.value = String(item.id);
+      ui.product.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+  }
 })();

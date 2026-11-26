@@ -1,5 +1,9 @@
 import unicodedata
 
+from django.core.exceptions import ObjectDoesNotExist
+
+from django.db.models import Q
+
 from .models import (
     Cultivo,
     Insumo,
@@ -8,6 +12,7 @@ from .models import (
     ReferenciaAgronomica,
     Potrero,
     TemporadaCultivo,
+    VariedadSAG,
 )
 
 # Cultivos de referencia para la agricultura de la zona central de Chile, agrupados para que el
@@ -201,7 +206,8 @@ CATEGORY_KEYS = {
     'fertilizantes': 'fertilizer',
     'fertilizer': 'fertilizer',
     'enmienda': 'fertilizer',
-    'bioestimulante': 'other',
+    'bioestimulante': 'biostimulant',
+    'bioestimulantes': 'biostimulant',
     'herbicida': 'herbicide',
     'herbicidas': 'herbicide',
     'fungicida': 'fungicide',
@@ -214,6 +220,7 @@ CATEGORY_KEYS = {
 CATEGORY_LABELS = {
     'seed': 'Semillas',
     'fertilizer': 'Fertilizantes',
+    'biostimulant': 'Bioestimulantes',
     'herbicide': 'Herbicidas',
     'fungicide': 'Fungicidas',
     'insecticide': 'Insecticidas y acaricidas',
@@ -243,12 +250,113 @@ def crop_varieties():
         .values_list('cultivo_id', 'variedad_semilla')
     ):
         varieties.setdefault(str(crop_id), set()).add(variety)
+    for crop_id, variety in VariedadSAG.objects.filter(en_registro_vigente=True).values_list('cultivo_id', 'variedad'):
+        varieties.setdefault(str(crop_id), set()).add(variety)
     return {key: sorted(values, key=str.casefold) for key, values in varieties.items()}
+
+
+def sag_payload(insumo):
+    """Procedencia en la lista SAG orgánica (``None`` si el insumo no viene de esa lista)."""
+    try:
+        registro = insumo.registro_sag
+    except ObjectDoesNotExist:
+        return None
+    return {
+        'listed': registro.en_lista_vigente,
+        'function': registro.funcion,
+        'classification': registro.clasificacion,
+        'classificationLabel': registro.get_clasificacion_display(),
+        'authorizedAt': registro.fecha_autorizacion.isoformat() if registro.fecha_autorizacion else '',
+        'listDate': registro.fecha_lista.isoformat(),
+        'notes': registro.observaciones,
+        'url': registro.url_fuente,
+        'imported': registro.insumo_creado_por_importacion,
+    }
+
+
+def insumo_payload(insumo):
+    """Datos de un insumo para las calculadoras y el buscador (misma forma en ``agro-catalog`` y en la búsqueda
+    bajo demanda de ``/productos/buscar/``). Espera ``select_related('tipo', 'cultivo', 'zona', 'registro_sag')``.
+    """
+    return {
+        'id': str(insumo.pk),
+        'name': insumo.nombre,
+        'active': insumo.vigente_en,
+        'usable': insumo.vigente_en and insumo.estado_verificacion not in {'restricted', 'cancelled'},
+        'category': category_key(insumo.tipo.nombre),
+        'categoryLabel': CATEGORY_LABELS[category_key(insumo.tipo.nombre)],
+        'cropId': str(insumo.cultivo_id) if insumo.cultivo_id else '',
+        'zoneId': str(insumo.zona_id) if insumo.zona_id else '',
+        'applicationMode': insumo.modo_aplicacion,
+        'crop': insumo.cultivo.nombre if insumo.cultivo else '',
+        'type': insumo.tipo.nombre,
+        'dose': _num(insumo.dosis_hectarea),
+        'unit': insumo.unidad_dosis,
+        'maxDose': _num(insumo.dosis_maxima_hectarea),
+        'maxDoseUnit': insumo.unidad_dosis_maxima,
+        'validFrom': insumo.vigencia_desde.isoformat() if insumo.vigencia_desde else '',
+        'validUntil': insumo.vigencia_hasta.isoformat() if insumo.vigencia_hasta else '',
+        'zone': insumo.zona.nombre if insumo.zona else '',
+        'description': insumo.descripcion,
+        'manufacturer': insumo.fabricante,
+        'verificationStatus': insumo.estado_verificacion,
+        'verified': insumo.estado_verificacion == 'verified',
+        'sourceName': insumo.fuente_nombre,
+        'sourceUrl': insumo.fuente_url,
+        'verifiedAt': insumo.fecha_verificacion.isoformat() if insumo.fecha_verificacion else '',
+        'doseVerified': insumo.dosis_con_fuente,
+        'doseSource': insumo.dosis_fuente,
+        'labelUrl': insumo.etiqueta_url,
+        'safetySheetUrl': insumo.hoja_seguridad_url,
+        'activeIngredient': insumo.ingrediente_activo,
+        'concentration': insumo.concentracion,
+        'formulation': insumo.formulacion,
+        'sagRegistration': insumo.numero_autorizacion_sag,
+        'authorizedCrops': insumo.cultivos_autorizados,
+        'controlTargets': insumo.objetivos_control,
+        'restrictions': insumo.restricciones,
+        'preharvestInterval': insumo.periodo_carencia,
+        'reentryInterval': insumo.tiempo_reingreso,
+        'environmentalPrecautions': insumo.precauciones_ambientales,
+        'pollinatorWarning': insumo.advertencia_polinizadores,
+        'packageAmount': _num(insumo.presentacion_cantidad),
+        'packageUnit': insumo.presentacion_unidad,
+        'nutrientComposition': insumo.composicion_nutricional,
+        'nitrogenPct': _num(insumo.nitrogeno_pct),
+        'phosphorusP2o5Pct': _num(insumo.fosforo_p2o5_pct),
+        'potassiumK2oPct': _num(insumo.potasio_k2o_pct),
+        'seedVariety': insumo.variedad_semilla,
+        'seedType': insumo.tipo_semilla,
+        'targetPlantsM2': _num(insumo.plantas_objetivo_m2),
+        'thousandSeedWeightG': _num(insumo.peso_mil_semillas_g),
+        'germinationPct': _num(insumo.germinacion_pct),
+        'purityPct': _num(insumo.pureza_pct),
+        'verifiedUse': insumo.uso_verificado,
+        'sag': sag_payload(insumo),
+    }
+
+
+def importados_de_lista_sag():
+    """Condición de los insumos creados por una importación del SAG (lista orgánica o planilla de plaguicidas), no
+    curados por el administrador. Son cientos: no van en cada página, se buscan bajo demanda."""
+    return Q(registro_sag__insumo_creado_por_importacion=True) | Q(
+        registro_plaguicida__insumo_creado_por_importacion=True
+    )
+
+
+def insumos_del_catalogo():
+    """Insumos curados: todos menos los creados por la importación de la lista SAG."""
+    return Insumo.objects.exclude(importados_de_lista_sag())
 
 
 def catalog_payload():
     cultivos = list(Cultivo.objects.order_by('nombre'))
-    insumos = list(Insumo.objects.select_related('tipo', 'cultivo', 'zona').order_by('nombre'))
+    # Los ~750 productos importados de la lista SAG no van en cada página: las calculadoras los buscan bajo demanda.
+    insumos = list(
+        insumos_del_catalogo()
+        .select_related('tipo', 'cultivo', 'zona', 'registro_sag')
+        .order_by('nombre')
+    )
     zonas = list(Zona.objects.order_by('nombre'))
     regional_yields = [
         reference
@@ -306,64 +414,7 @@ def catalog_payload():
             }
             for cultivo in cultivos
         ],
-        'insumos': [
-            {
-                'id': str(insumo.pk),
-                'name': insumo.nombre,
-                'active': insumo.vigente_en,
-                'usable': insumo.vigente_en and insumo.estado_verificacion not in {'restricted', 'cancelled'},
-                'category': category_key(insumo.tipo.nombre),
-                'categoryLabel': CATEGORY_LABELS[category_key(insumo.tipo.nombre)],
-                'cropId': str(insumo.cultivo_id) if insumo.cultivo_id else '',
-                'zoneId': str(insumo.zona_id) if insumo.zona_id else '',
-                'applicationMode': insumo.modo_aplicacion,
-                'crop': insumo.cultivo.nombre if insumo.cultivo else '',
-                'type': insumo.tipo.nombre,
-                'dose': _num(insumo.dosis_hectarea),
-                'unit': insumo.unidad_dosis,
-                'maxDose': _num(insumo.dosis_maxima_hectarea),
-                'maxDoseUnit': insumo.unidad_dosis_maxima,
-                'validFrom': insumo.vigencia_desde.isoformat() if insumo.vigencia_desde else '',
-                'validUntil': insumo.vigencia_hasta.isoformat() if insumo.vigencia_hasta else '',
-                'zone': insumo.zona.nombre if insumo.zona else '',
-                'description': insumo.descripcion,
-                'manufacturer': insumo.fabricante,
-                'verificationStatus': insumo.estado_verificacion,
-                'verified': insumo.estado_verificacion == 'verified',
-                'sourceName': insumo.fuente_nombre,
-                'sourceUrl': insumo.fuente_url,
-                'verifiedAt': insumo.fecha_verificacion.isoformat() if insumo.fecha_verificacion else '',
-                'doseVerified': insumo.dosis_con_fuente,
-                'doseSource': insumo.dosis_fuente,
-                'labelUrl': insumo.etiqueta_url,
-                'safetySheetUrl': insumo.hoja_seguridad_url,
-                'activeIngredient': insumo.ingrediente_activo,
-                'concentration': insumo.concentracion,
-                'formulation': insumo.formulacion,
-                'sagRegistration': insumo.numero_autorizacion_sag,
-                'authorizedCrops': insumo.cultivos_autorizados,
-                'controlTargets': insumo.objetivos_control,
-                'restrictions': insumo.restricciones,
-                'preharvestInterval': insumo.periodo_carencia,
-                'reentryInterval': insumo.tiempo_reingreso,
-                'environmentalPrecautions': insumo.precauciones_ambientales,
-                'pollinatorWarning': insumo.advertencia_polinizadores,
-                'packageAmount': _num(insumo.presentacion_cantidad),
-                'packageUnit': insumo.presentacion_unidad,
-                'nutrientComposition': insumo.composicion_nutricional,
-                'nitrogenPct': _num(insumo.nitrogeno_pct),
-                'phosphorusP2o5Pct': _num(insumo.fosforo_p2o5_pct),
-                'potassiumK2oPct': _num(insumo.potasio_k2o_pct),
-                'seedVariety': insumo.variedad_semilla,
-                'seedType': insumo.tipo_semilla,
-                'targetPlantsM2': _num(insumo.plantas_objetivo_m2),
-                'thousandSeedWeightG': _num(insumo.peso_mil_semillas_g),
-                'germinationPct': _num(insumo.germinacion_pct),
-                'purityPct': _num(insumo.pureza_pct),
-                'verifiedUse': insumo.uso_verificado,
-            }
-            for insumo in insumos
-        ],
+        'insumos': [insumo_payload(insumo) for insumo in insumos],
         'semillas': [
             {
                 'id': str(cultivo.pk),
@@ -441,7 +492,17 @@ def empty_catalog_payload():
     }
 
 
-CATEGORIAS_INSUMO = ['Fertilizante', 'Herbicida', 'Fungicida', 'Insecticida', 'Acaricida', 'Otros', 'Semilla']
+CATEGORIAS_INSUMO = [
+    'Fertilizante',
+    'Bioestimulante',
+    'Enmienda',
+    'Herbicida',
+    'Fungicida',
+    'Insecticida',
+    'Acaricida',
+    'Otros',
+    'Semilla',
+]
 
 
 def ensure_insumo_categories():

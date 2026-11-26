@@ -688,6 +688,19 @@ def informe_producto(producto, faltantes, autor=''):
             ('Cultivos autorizados', ', '.join(producto.cultivos_autorizados or []) or 'No registrados'),
             ('Objetivos de control', ', '.join(producto.objetivos_control or []) or 'No registrados'),
         ]
+    sag = getattr(producto, 'sag', None)
+    if sag:
+        uso += [
+            (
+                'Lista SAG orgánica',
+                f'Incluido (lista del {sag.fecha_lista:%d/%m/%Y})'
+                if sag.en_lista_vigente
+                else f'No figura en la última lista importada (lista del {sag.fecha_lista:%d/%m/%Y})',
+            ),
+            ('Función declarada (SAG)', sag.funcion or 'No indicada'),
+            ('Fecha de autorización (SAG)', f'{sag.fecha_autorizacion:%d/%m/%Y}' if sag.fecha_autorizacion else 'No indicada'),
+            ('Fuente oficial', sag.url_fuente),
+        ]
     informe.seccion('Uso documentado', informe.datos(uso), numero_seccion=2)
     dosis = [
         ('Dosis de etiqueta' if producto.is_phyto else 'Dosis', _dosis(producto.dosis_hectarea, producto.unidad_dosis)
@@ -696,7 +709,7 @@ def informe_producto(producto, faltantes, autor=''):
         ('Fuente de la dosis', producto.dosis_fuente),
         ('Dosis con fuente verificada', 'Sí' if producto.dosis_con_fuente else 'No'),
     ]
-    if producto.category == 'fertilizer':
+    if getattr(producto, 'show_npk', producto.category == 'fertilizer'):
         dosis += [
             ('Nitrógeno (N)', f'{numero(producto.nitrogeno_pct, 2)} %' if producto.nitrogeno_pct is not None else '—'),
             ('Fósforo (P2O5)', f'{numero(producto.fosforo_p2o5_pct, 2)} %' if producto.fosforo_p2o5_pct is not None else '—'),

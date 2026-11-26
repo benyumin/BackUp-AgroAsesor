@@ -385,6 +385,130 @@ class Insumo(models.Model):
         )
 
 
+class RegistroListaSAG(models.Model):
+    """Procedencia de un insumo en la «Lista de fertilizantes y bioestimulantes autorizados para agricultura
+    orgánica» del SAG (archivo XLSX oficial importado con ``importar_lista_sag``).
+
+    Guarda las columnas del archivo tal como vienen, para no perder la fuente aunque el insumo se edite después.
+    La lista no informa dosis: estar en ella no verifica ninguna dosis ni el producto en sí.
+    """
+
+    class Clasificacion(models.TextChoices):
+        FERTILIZANTE = 'fertilizante', 'Fertilizante'
+        BIOESTIMULANTE = 'bioestimulante', 'Bioestimulante'
+        FERTILIZANTE_BIOESTIMULANTE = 'fertilizante_bioestimulante', 'Fertilizante y bioestimulante'
+        BIOFERTILIZANTE = 'biofertilizante', 'Biofertilizante o inoculante'
+        ENMIENDA = 'enmienda', 'Enmienda o acondicionador de suelo'
+        OTRO = 'otro', 'Otro uso declarado'
+
+    insumo = models.OneToOneField(Insumo, on_delete=models.PROTECT, related_name='registro_sag')
+    # Huella del nombre, fabricante y sustancia normalizados: identifica el registro entre versiones de la lista
+    # (el «N°» del archivo es solo la posición y cambia de una versión a otra).
+    clave = models.CharField(max_length=64, unique=True)
+    numero_lista = models.PositiveIntegerField(null=True, blank=True)
+    nombre_comercial = models.CharField(max_length=255)
+    sustancia_activa = models.TextField(blank=True)
+    fabricante = models.CharField(max_length=255, blank=True)
+    funcion = models.CharField(max_length=255, blank=True)
+    clasificacion = models.CharField(max_length=32, choices=Clasificacion.choices, db_index=True)
+    fecha_autorizacion = models.DateField(null=True, blank=True)
+    observaciones = models.TextField(blank=True)
+    fecha_lista = models.DateField(help_text='Fecha de actualización declarada en el archivo del SAG.')
+    archivo_fuente = models.CharField(max_length=255)
+    url_fuente = models.URLField()
+    en_lista_vigente = models.BooleanField(
+        default=True,
+        db_index=True,
+        help_text='Falso si el producto ya no aparece en la última lista importada (no se borra).',
+    )
+    # Falso cuando el registro se vinculó a un insumo que el administrador ya tenía en el catálogo.
+    insumo_creado_por_importacion = models.BooleanField(default=True, db_index=True)
+    importado = models.DateTimeField(auto_now_add=True)
+    actualizado = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['nombre_comercial', 'pk']
+        verbose_name = 'registro de la lista SAG orgánica'
+        verbose_name_plural = 'registros de la lista SAG orgánica'
+
+    def __str__(self):
+        return f'{self.nombre_comercial} · {self.fabricante or "sin fabricante"}'
+
+
+class RegistroPlaguicidaSAG(models.Model):
+    """Procedencia de un insumo en la «Planilla general de plaguicidas vigentes» del SAG (``importar_plaguicidas_sag``).
+
+    Solo se importan insecticidas, herbicidas y fungicidas. La aptitud y la formulación vienen de la planilla
+    resumida del SAG (la general no las trae). Ninguna de las dos informa cultivos, dosis ni carencia: estar aquí no
+    verifica el uso del producto.
+    """
+
+    insumo = models.OneToOneField(Insumo, on_delete=models.PROTECT, related_name='registro_plaguicida')
+    numero_sag = models.CharField(max_length=20, unique=True)
+    nombre_comercial = models.CharField(max_length=255)
+    titular = models.CharField(max_length=255, blank=True)
+    sustancias_activas = models.TextField(blank=True)
+    concentracion = models.CharField(max_length=255, blank=True)
+    aptitud = models.CharField(max_length=255)
+    formulacion = models.CharField(max_length=255, blank=True)
+    anio_primera_autorizacion = models.PositiveSmallIntegerField(null=True, blank=True)
+    anio_vencimiento = models.PositiveSmallIntegerField(null=True, blank=True)
+    fecha_planilla = models.DateField(help_text='Fecha de la planilla de vigentes del SAG.')
+    archivo_fuente = models.CharField(max_length=255)
+    url_fuente = models.URLField()
+    en_planilla_vigente = models.BooleanField(
+        default=True,
+        db_index=True,
+        help_text='Falso si el producto ya no aparece en la última planilla importada (no se borra).',
+    )
+    # Falso cuando el registro se vinculó a un insumo que el administrador ya tenía (mismo N° SAG).
+    insumo_creado_por_importacion = models.BooleanField(default=True, db_index=True)
+    importado = models.DateTimeField(auto_now_add=True)
+    actualizado = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['nombre_comercial', 'pk']
+        verbose_name = 'registro de plaguicida SAG'
+        verbose_name_plural = 'registros de plaguicidas SAG'
+
+    def __str__(self):
+        return f'{self.nombre_comercial} · N° SAG {self.numero_sag}'
+
+
+class VariedadSAG(models.Model):
+    """Variedad del «Registro de variedades aptas para certificación» del SAG (``importar_variedades_sag``).
+
+    Solo se guardan las especies que corresponden a un cultivo de la aplicación. Alimenta el selector de variedad
+    del potrero; no trae datos agronómicos.
+    """
+
+    class Registro(models.TextChoices):
+        COMERCIAL = 'comercial', 'Variedades comerciales'
+        LOCAL = 'local', 'Variedades locales'
+
+    cultivo = models.ForeignKey(Cultivo, on_delete=models.CASCADE, related_name='variedades_sag')
+    especie = models.CharField(max_length=150)
+    nombre_cientifico = models.CharField(max_length=150, blank=True)
+    variedad = models.CharField(max_length=150)
+    mantenedor = models.CharField(max_length=255, blank=True)
+    registro = models.CharField(max_length=12, choices=Registro.choices)
+    actualizacion = models.CharField(max_length=40, help_text='Actualización declarada en la hoja (p. ej. «ABRIL 2026»).')
+    archivo_fuente = models.CharField(max_length=255)
+    url_fuente = models.URLField()
+    en_registro_vigente = models.BooleanField(default=True, db_index=True)
+    importado = models.DateTimeField(auto_now_add=True)
+    actualizado = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['cultivo__nombre', 'variedad']
+        constraints = [models.UniqueConstraint(fields=['especie', 'variedad'], name='variedad_sag_unica')]
+        verbose_name = 'variedad del registro SAG'
+        verbose_name_plural = 'variedades del registro SAG'
+
+    def __str__(self):
+        return f'{self.variedad} ({self.especie})'
+
+
 class Agricultor(models.Model):
     # El nombre no se guarda aquí: vive en la cuenta (first_name y last_name). Aquí solo van los datos que Django no tiene.
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='agricultor')
