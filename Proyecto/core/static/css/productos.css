@@ -642,3 +642,28 @@
         display: none;
     }
 }
+
+.cat-biostimulant {
+    --cat: #4f8a6b;
+}
+
+/* Producto de la lista SAG de fertilizantes y bioestimulantes para agricultura orgánica. */
+.product-sag {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    color: var(--green);
+    font-size: 0.8rem;
+    font-weight: var(--fw-semibold);
+}
+
+.product-sag svg {
+    width: 14px;
+    height: 14px;
+    flex: none;
+}
+
+.product-sag.is-out {
+    color: var(--amber);
+}

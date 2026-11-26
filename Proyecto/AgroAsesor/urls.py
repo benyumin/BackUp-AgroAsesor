@@ -100,6 +100,7 @@ urlpatterns = [
     path("calculos/ejecutar/", views.calculate, name="calculate"),
     path("calculos/<int:pk>/pdf/", views.calculo_pdf, name="calculo_pdf"),
     path("productos/", views.productos, name="productos"),
+    path("productos/buscar/", views.productos_buscar, name="productos_buscar"),
     path("productos/<int:pk>/", views.producto_detail, name="producto_detail"),
     path("productos/<int:pk>/pdf/", views.producto_pdf, name="producto_pdf"),
     path("calendario/", views.calendario, name="calendario"),

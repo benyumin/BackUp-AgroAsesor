@@ -687,3 +687,43 @@
     .calc-hub-card:hover::before,
     .calc-hub-card:hover .btn-primary-agro svg { transform: none; }
 }
+
+/* Buscador de la lista SAG (catalogo-sag.js) dentro de las calculadoras. */
+.sag-search .sag-status:empty {
+    display: none;
+}
+
+.sag-results {
+    display: grid;
+    gap: 6px;
+    max-height: 280px;
+    margin: 6px 0 0;
+    padding: 0;
+    overflow-y: auto;
+    list-style: none;
+}
+
+.sag-result {
+    display: grid;
+    gap: 2px;
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.sag-result:hover,
+.sag-result:focus-visible {
+    border-color: var(--green);
+    background: var(--green-soft);
+}
+
+.sag-result small {
+    color: var(--muted);
+    overflow-wrap: anywhere;
+}

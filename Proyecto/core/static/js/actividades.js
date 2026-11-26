@@ -20,7 +20,7 @@
   const PHYTO = new Set(['herbicide', 'fungicide', 'insecticide']);
   const CATEGORY_BY_TYPE = {
     siembra: (item) => item.category === 'seed',
-    fertilizacion: (item) => item.category === 'fertilizer' || item.category === 'other',
+    fertilizacion: (item) => ['fertilizer', 'biostimulant', 'other'].includes(item.category),
     control_fitosanitario: (item) => PHYTO.has(item.category),
   };
 
@@ -168,6 +168,12 @@
         return;
       }
       const item = products.find((product) => String(product.id) === option.value);
+      // Un producto de la lista SAG no viene en el catálogo de la página: el servidor solo lo ofrece si es el elegido.
+      if (!item && option.value === current && type === 'fertilizacion') {
+        f.insumo.add(new Option(option.text, option.value));
+        count += 1;
+        return;
+      }
       if (!item || (matcher && !matcher(item))) return;
       if (item.crop && crop && item.crop !== crop) return;
       const label =

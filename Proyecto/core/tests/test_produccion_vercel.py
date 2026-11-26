@@ -9,6 +9,7 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 from django.test import SimpleTestCase
@@ -27,7 +28,8 @@ BASE = {
     'DJANGO_SECRET_KEY': 'clave-ficticia-solo-para-pruebas-0123456789',
     'DJANGO_ALLOWED_HOSTS': 'localhost',
     'DJANGO_CSRF_TRUSTED_ORIGINS': '',
-    'DATABASE_URL': 'sqlite:////tmp/agroasesor-prueba-settings.sqlite3',
+    # Carpeta temporal del sistema (en Windows no existe /tmp).
+    'DATABASE_URL': 'sqlite:///' + (Path(tempfile.gettempdir()) / 'agroasesor-prueba-settings.sqlite3').as_posix(),
 }
 SCRIPT = (
     'import json, os\n'

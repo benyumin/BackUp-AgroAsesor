@@ -23,7 +23,10 @@ from django.contrib.auth import views as auth_views
 from django.contrib.auth.forms import PasswordResetForm
 from django.core import mail
 from django.core.mail import EmailMultiAlternatives
+from django.http import HttpResponseRedirect
 from django.template import loader
+
+from . import limites
 
 logger = logging.getLogger(__name__)
 
@@ -112,6 +115,21 @@ class RecuperarContrasenaView(auth_views.PasswordResetView):
     form_class = RecuperarContrasenaForm
 
     def form_valid(self, form):
+        # Límite de solicitudes: por IP se avisa (no revela nada de la cuenta); por correo se responde igual que
+        # siempre («revisa tu correo») pero no se envía otro mensaje, así no se puede inundar un buzón ni saber si
+        # la dirección está registrada.
+        ip = limites.ip_cliente(self.request)
+        bloqueo = limites.espera('recuperar-ip', ip, settings.LIMITE_RECUPERAR_IP)
+        if bloqueo:
+            form.add_error(None, limites.mensaje_bloqueo(bloqueo))
+            respuesta = self.form_invalid(form)
+            respuesta.status_code = 429
+            return respuesta
+        limites.registrar('recuperar-ip', ip, settings.LIMITE_RECUPERAR_IP)
+        correo = form.cleaned_data.get('email', '')
+        if limites.espera('recuperar-correo', correo, settings.LIMITE_RECUPERAR_CORREO):
+            return HttpResponseRedirect(self.get_success_url())
+        limites.registrar('recuperar-correo', correo, settings.LIMITE_RECUPERAR_CORREO)
         try:
             return super().form_valid(form)
         except ErrorEnvioCorreo:

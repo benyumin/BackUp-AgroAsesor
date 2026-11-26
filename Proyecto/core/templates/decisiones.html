@@ -3,12 +3,13 @@
 {% block title %}Centro de decisiones · AgroAsesor{% endblock %}
 {% block extra_css %}
     <link rel="stylesheet" href="{% static 'css/decisiones.css' %}?v=19">
-    <link rel="stylesheet" href="{% static 'css/calculadora.css' %}?v=9">
+    <link rel="stylesheet" href="{% static 'css/calculadora.css' %}?v=10">
 {% endblock %}
 {% block content %}
     <section class="decision-center"
              data-calculate-url="{% url 'calculate' %}"
              data-pdf-url="{% url 'calculo_pdf' 0 %}"
+             data-sag-search-url="{% url 'productos_buscar' %}"
              data-staff="{% if request.user.is_staff %}1{% endif %}"
              data-tool="{{ initial_tool }}">
         {% if not catalog.cultivos or not catalog.insumos %}
@@ -147,6 +148,7 @@
                                     <select id="calc-product"></select>
                                     <small class="help" id="calc-product-help"></small>
                                 </label>
+                                <div id="calc-sag-search" hidden></div>
                                 <details class="calc-product-info" id="calc-product-info" hidden>
                                     <summary>Ver ficha del producto</summary>
                                     <div id="calc-notes"></div>
@@ -281,6 +283,7 @@
                                     <span>Producto</span><select name="product" data-role="product"></select>
                                     <small class="help" data-role="product-help"></small>
                                 </label>
+                                <div data-role="sag-search" hidden></div>
                                 <label class="field" data-role="target-field" hidden>
                                     <span>Objetivo de control autorizado</span><select name="target" data-role="target"></select>
                                 </label>
@@ -302,12 +305,12 @@
        required><em class="unit-tag" data-unit-tag="stock" aria-hidden="true"></em></span>
                                     </label>
                                     <label class="field">
-                                        <span>Unidad</span><select name="unit">
-                                            <option value="kg/ha">kg</option>
-                                            <option value="L/ha">L</option>
-                                            <option value="g/ha">g</option>
-                                            <option value="mL/ha">mL</option>
-                                            <option value="unidades/ha">unidades</option>
+                                        <span>Unidad de lo que tienes</span><select name="stock_unit">
+                                            <option value="kg">kg</option>
+                                            <option value="g">g</option>
+                                            <option value="L">L</option>
+                                            <option value="mL">mL</option>
+                                            <option value="unidades">unidades</option>
                                         </select>
                                     </label>
                                 </div>
@@ -328,6 +331,15 @@
        step="any"
        required><em class="unit-tag" data-unit-tag="dose" aria-hidden="true"></em></span>
                                         <small class="help" data-role="dose-help"></small>
+                                    </label>
+                                    <label class="field">
+                                        <span>Unidad de la dosis</span><select name="unit">
+                                            <option value="kg/ha">kg/ha</option>
+                                            <option value="L/ha">L/ha</option>
+                                            <option value="g/ha">g/ha</option>
+                                            <option value="mL/ha">mL/ha</option>
+                                            <option value="unidades/ha">unidades/ha</option>
+                                        </select>
                                     </label>
                                     <label class="field">
                                         <span>Superficie a cubrir (ha)</span><span class="unit-input"><input name="area"
@@ -379,8 +391,9 @@
     <script src="{% static 'js/terreno-mini.js' %}?v=3" defer></script>
     <script src="{% static 'js/calc-limites.js' %}?v=1" defer></script>
     <script src="{% static 'js/calc-resultado.js' %}?v=3" defer></script>
-    <script src="{% static 'js/calc-panel.js' %}?v=17" defer></script>
+    <script src="{% static 'js/catalogo-sag.js' %}?v=2" defer></script>
+    <script src="{% static 'js/calc-panel.js' %}?v=19" defer></script>
     <script src="{% static 'js/calc-flow.js' %}?v=8" defer></script>
-    <script src="{% static 'js/tool-flow.js' %}?v=6" defer></script>
-    <script src="{% static 'js/decisiones.js' %}?v=13" defer></script>
+    <script src="{% static 'js/tool-flow.js' %}?v=8" defer></script>
+    <script src="{% static 'js/decisiones.js' %}?v=15" defer></script>
 {% endblock %}

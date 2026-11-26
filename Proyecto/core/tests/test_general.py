@@ -312,8 +312,8 @@ class TerrainTests(TestCase):
         self.assertContains(page, 'Lo que sigue en tus potreros')
         self.assertContains(page, 'Agrega el primer potrero de «Mi campo»')
         self.assertContains(page, 'No tienes labores pendientes')
-        bare = Potrero.objects.create(predio=self.predio, nombre='Lote sin cultivo', superficie_ha=1)
-        nodate = Potrero.objects.create(predio=self.predio, nombre='Lote sin fecha', superficie_ha=1, cultivo=self.crop)
+        Potrero.objects.create(predio=self.predio, nombre='Lote sin cultivo', superficie_ha=1)
+        Potrero.objects.create(predio=self.predio, nombre='Lote sin fecha', superficie_ha=1, cultivo=self.crop)
         soon = Potrero.objects.create(
             predio=self.predio,
             nombre='Lote por sembrar',
@@ -837,7 +837,7 @@ class TerrainTests(TestCase):
             cultivo=self.crop,
             superficie_ha=Decimal('2'),
         )
-        second_plot = Potrero.objects.create(
+        Potrero.objects.create(
             predio=other_farm,
             nombre='Bajo sur',
             superficie_ha=Decimal('1'),
@@ -1009,7 +1009,7 @@ class TerrainTests(TestCase):
 
     def test_polygon_perimeter_is_closed_and_included_in_map_data(self):
         self.client.post(self.url, self.plot_data(perimetro=json.dumps(POLYGON)))
-        plot = Potrero.objects.get()
+        Potrero.objects.get()
         perimeter = polygon_perimeter(POLYGON)
         self.assertGreater(perimeter, Decimal('350'))
         self.assertLess(perimeter, Decimal('450'))
@@ -1331,7 +1331,7 @@ class ServerCalculationTests(TestCase):
             nombre='Lote ajeno',
             superficie_ha=1,
         )
-        private_calculation = CalculoAgricola.objects.create(
+        CalculoAgricola.objects.create(
             usuario=self.other,
             potrero=other_plot,
             operacion=CalculoAgricola.Operacion.RENDIMIENTO,

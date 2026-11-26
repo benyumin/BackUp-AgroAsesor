@@ -8,7 +8,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 
 from core.models import Cultivo, Insumo, Potrero, Predio, TipoInsumo, Zona
-from core.search import fold, highlight, run_search
+from core.search import fold, highlight
 
 User = get_user_model()
 PASSWORD = 'Clave-segura-123'

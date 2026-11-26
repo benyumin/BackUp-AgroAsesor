@@ -54,6 +54,7 @@ from .catalogo import (  # noqa: F401
     producto_detail,
     producto_pdf,
     productos,
+    productos_buscar,
 )
 from .clima_predio import (  # noqa: F401
     predio_clima_api,

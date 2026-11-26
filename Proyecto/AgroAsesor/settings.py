@@ -15,7 +15,9 @@ load_dotenv(BASE_DIR / '.env', override=False)
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-DEBUG = os.getenv('DJANGO_DEBUG', 'True').lower() == 'true'
+# En Vercel (que siempre define VERCEL=1) el valor por defecto es False: si alguien olvida DJANGO_DEBUG, producción no
+# queda con DEBUG activo (trazas de error públicas, cookies sin Secure). En local se mantiene True por comodidad.
+DEBUG = (os.getenv('DJANGO_DEBUG') or ('False' if os.getenv('VERCEL') else 'True')).strip().lower() == 'true'
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
 if not SECRET_KEY:
     if not DEBUG:
@@ -89,6 +91,13 @@ AUTHENTICATION_BACKENDS = ['core.auth.EmailBackend']
 GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID', '').strip()
 GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET', '').strip()
 GOOGLE_REDIRECT_URI = os.getenv('GOOGLE_REDIRECT_URI', '').strip()  # opcional: fija la URL de retorno
+# HTTPS estricto en producción (DEBUG=False). La cabecera HSTS solo se envía en peticiones HTTPS, así que en local por
+# http no tiene efecto. La redirección http→https solo se activa detrás de un proxy de confianza (Vercel o
+# DJANGO_CONFIAR_PROXY_HTTPS): sin él, Django no sabe si la petición original era HTTPS y entraría en un bucle.
+if not DEBUG:
+    SECURE_HSTS_SECONDS = int(os.getenv('DJANGO_HSTS_SEGUNDOS', '2592000') or 0)  # 30 días; 0 la desactiva
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = os.getenv('DJANGO_HSTS_SUBDOMINIOS', '').strip().lower() == 'true'
+    SECURE_SSL_REDIRECT = globals().get('SECURE_PROXY_SSL_HEADER') is not None
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = 'Lax'
 SESSION_COOKIE_SECURE = not DEBUG
@@ -261,4 +270,13 @@ CLIMA_ESPERA_LIMITE_SEGUNDOS = _env_entero('CLIMA_ESPERA_LIMITE_SEGUNDOS', 120, 
 CLIMA_ESPERA_LIMITE_MAX_SEGUNDOS = _env_entero('CLIMA_ESPERA_LIMITE_MAX_SEGUNDOS', 1800, 60, 7200)
 CLIMA_ESPERA_CONCURRENTE_SEGUNDOS = _env_entero('CLIMA_ESPERA_CONCURRENTE_SEGUNDOS', 3, 0, 10)  # espera acotada si otra petición ya consulta
 CLIMA_CACHE_COMPARTIDA = _env_si('CLIMA_CACHE_COMPARTIDA', True)  # tabla en la base de datos; False = solo memoria local
-CLIMA_API_KEY = os.getenv('OPEN_METEO_API_KEY', '').strip()  # opcional: clave de pago de Open-Meteo (cuenta comercial)
+CLIMA_API_KEY = os.getenv('OPEN_METEO_API_KEY', '').strip()
+
+# Límite de intentos (ver core/limites.py). Se guarda en la tabla de caché compartida, común a todas las instancias.
+# Cada valor es (máximo de intentos, ventana en segundos). LIMITE_INTENTOS_ACTIVO=False lo desactiva por completo.
+LIMITE_INTENTOS_ACTIVO = _env_si('LIMITE_INTENTOS_ACTIVO', True)
+LIMITE_LOGIN_CUENTA = (_env_entero('LIMITE_LOGIN_CUENTA', 8, 1, 1000), 15 * 60)  # fallos por usuario/correo
+LIMITE_LOGIN_IP = (_env_entero('LIMITE_LOGIN_IP', 30, 1, 10000), 15 * 60)  # fallos por dirección IP
+LIMITE_REGISTRO_IP = (_env_entero('LIMITE_REGISTRO_IP', 10, 1, 10000), 60 * 60)  # registros intentados por IP
+LIMITE_RECUPERAR_IP = (_env_entero('LIMITE_RECUPERAR_IP', 10, 1, 10000), 60 * 60)  # solicitudes por IP
+LIMITE_RECUPERAR_CORREO = (_env_entero('LIMITE_RECUPERAR_CORREO', 3, 1, 1000), 60 * 60)  # correos a una dirección  # opcional: clave de pago de Open-Meteo (cuenta comercial)
